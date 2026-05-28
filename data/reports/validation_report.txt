@@ -1,0 +1,2 @@
+DATA VALIDATION PASSED
+Total records validated: 20

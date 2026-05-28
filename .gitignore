@@ -7,3 +7,5 @@ data/processed/*.csv
 database/*.db
 logs/*.log
 .env
+models/*.pkl
+__pycache__/

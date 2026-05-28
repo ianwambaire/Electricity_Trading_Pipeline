@@ -1,9 +1,11 @@
 import time
-from ingest_data import ingest_data
+
 from clean_data import clean_data, save_clean_data
-from validate_data import validate_data
-from store_data import initialize_database, store_clean_data, log_pipeline_run
+from ingest_data import ingest_data
+from notifications.email_alert import send_failure_alert
+from store_data import initialize_database, log_pipeline_run, store_clean_data
 from utils.logger import get_logger
+from validate_data import validate_data
 
 
 logger = get_logger(__name__)
@@ -33,8 +35,18 @@ def run_pipeline():
             log_pipeline_run(
                 status="FAILED",
                 records_processed=records_processed,
-                message="Data validation failed."
+                message="Data validation failed.",
             )
+
+            send_failure_alert(
+                subject="Electricity Trading Pipeline Validation Failed",
+                message=(
+                    "The electricity trading pipeline stopped because data validation failed.\n\n"
+                    f"Records processed before failure: {records_processed}\n\n"
+                    "Check the validation report, data quality results, and pipeline logs."
+                ),
+            )
+
             logger.error("Pipeline failed because validation did not pass.")
             return False
 
@@ -47,7 +59,7 @@ def run_pipeline():
         log_pipeline_run(
             status="SUCCESS",
             records_processed=records_processed,
-            message="Pipeline completed successfully."
+            message="Pipeline completed successfully.",
         )
 
         logger.info("Pipeline completed successfully.")
@@ -59,7 +71,17 @@ def run_pipeline():
         log_pipeline_run(
             status="FAILED",
             records_processed=records_processed,
-            message=str(error)
+            message=str(error),
+        )
+
+        send_failure_alert(
+            subject="Electricity Trading Pipeline Failed",
+            message=(
+                "The electricity trading pipeline crashed during execution.\n\n"
+                f"Error details:\n{error}\n\n"
+                f"Records processed before failure: {records_processed}\n\n"
+                "Check logs/pipeline.log and the pipeline_runs table for more details."
+            ),
         )
 
         logger.exception(f"Pipeline failed: {error}")
@@ -80,6 +102,17 @@ def run_pipeline_with_retries(max_retries=3, delay_seconds=5):
             time.sleep(delay_seconds)
 
     logger.error("Pipeline failed after all retry attempts.")
+
+    send_failure_alert(
+        subject="Electricity Trading Pipeline Failed After Retries",
+        message=(
+            "The electricity trading pipeline failed after all retry attempts.\n\n"
+            f"Total attempts: {max_retries}\n"
+            f"Delay between attempts: {delay_seconds} seconds\n\n"
+            "Immediate attention is required."
+        ),
+    )
+
     return False
 
 

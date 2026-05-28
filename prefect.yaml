@@ -1,0 +1,43 @@
+---
+# Welcome to your prefect.yaml file! You can use this file for
+# storing and managing configuration for deploying your flows.
+# We recommend committing this file to source control along
+# with your flow code.
+
+# Generic metadata about this project
+name: electricity-trading-pipeline
+prefect-version: 3.7.2
+
+# build section allows you to manage and build docker images
+build: null
+
+# push section allows you to manage if and how this project
+# is uploaded to remote locations
+push: null
+
+# pull section allows you to provide instructions for cloning
+# this project in remote locations
+pull:
+- prefect.deployments.steps.git_clone:
+    repository: https://github.com/ianwambaire/Electricity_Trading_Pipeline.git
+    branch: main
+
+# the deployments section allows you to provide configuration
+# for deploying flows
+deployments:
+- name: hourly-electricity-pipeline
+  version: null
+  tags: []
+  concurrency_limit: null
+  description: null
+  entrypoint: src/scheduled_pipeline.py:scheduled_electricity_pipeline
+  parameters: {}
+  work_pool:
+    name: electricity-pool
+    work_queue_name: null
+    job_variables: {}
+  schedules:
+  - cron: 0 * * * *
+    timezone: UTC
+    day_or: true
+    active: true

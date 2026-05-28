@@ -76,6 +76,29 @@ def add_ml_features(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
+def fill_missing_weather_values(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.copy()
+
+    weather_columns = [
+        "weather_temperature",
+        "avg_temperature",
+        "max_temperature",
+        "min_temperature",
+        "wind_speed",
+    ]
+
+    for column in weather_columns:
+        if column in data.columns:
+            data[column] = data[column].interpolate()
+            data[column] = data[column].bfill()
+            data[column] = data[column].ffill()
+
+    if "precipitation" in data.columns:
+        data["precipitation"] = data["precipitation"].fillna(0)
+
+    return data
+
+
 def build_dataset() -> pd.DataFrame:
     electricity_data = load_eia_data()
     weather_data = load_weather_data()
@@ -97,6 +120,9 @@ def build_dataset() -> pd.DataFrame:
     final_data["demand_mw"] = final_data["electricity_sales"]
     final_data["supply_mw"] = final_data["electricity_sales"] * 1.05
     final_data["weather_temperature"] = final_data["avg_temperature"]
+
+    final_data = fill_missing_weather_values(final_data)
+
     final_data["energy_source"] = "Mixed"
 
     final_data = add_time_features(final_data)

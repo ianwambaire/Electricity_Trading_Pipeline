@@ -1,0 +1,10 @@
+feature,importance
+weather_temperature,0.38067675291375636
+demand_mw,0.15494337974132355
+supply_demand_gap,0.14603480431048074
+supply_mw,0.14172766905319906
+day_of_week_encoded,0.09138078654911527
+month,0.08523660743212506
+hour,0.0
+day,0.0
+energy_source_encoded,0.0

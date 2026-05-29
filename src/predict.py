@@ -1,12 +1,15 @@
 import sqlite3
-import pandas as pd
-import joblib
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import joblib
+import pandas as pd
 
 
 DATABASE_PATH = Path("database/electricity_trading.db")
 MODEL_PATH = Path("models/electricity_price_model.pkl")
+FEATURES_PATH = Path("models/model_features.pkl")
+MODEL_METADATA_PATH = Path("models/model_metadata.pkl")
 
 
 def load_latest_data():
@@ -31,17 +34,7 @@ def prepare_prediction_features(data: pd.DataFrame):
     data["day_of_week_encoded"] = pd.factorize(data["day_of_week"])[0]
     data["energy_source_encoded"] = pd.factorize(data["energy_source"])[0]
 
-    feature_columns = [
-        "demand_mw",
-        "supply_mw",
-        "weather_temperature",
-        "hour",
-        "day",
-        "month",
-        "supply_demand_gap",
-        "day_of_week_encoded",
-        "energy_source_encoded"
-    ]
+    feature_columns = joblib.load(FEATURES_PATH)
 
     return data[feature_columns]
 
@@ -54,7 +47,17 @@ def predict_price(features):
     return prediction[0]
 
 
-def store_prediction(predicted_price):
+def load_model_metadata():
+    if MODEL_METADATA_PATH.exists():
+        return joblib.load(MODEL_METADATA_PATH)
+
+    return {
+        "model_name": "Unknown",
+        "version": "v2.0",
+    }
+
+
+def store_prediction(predicted_price, model_version):
     connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
 
@@ -70,9 +73,9 @@ def store_prediction(predicted_price):
         """,
         (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            predicted_price,
-            "v1.0"
-        )
+            float(predicted_price),
+            model_version,
+        ),
     )
 
     connection.commit()
@@ -83,15 +86,24 @@ def main():
     print("Loading latest market data...")
     data = load_latest_data()
 
+    if data.empty:
+        raise ValueError("No market data available for prediction.")
+
     print("Preparing prediction features...")
     features = prepare_prediction_features(data)
 
     print("Generating prediction...")
     predicted_price = predict_price(features)
 
+    metadata = load_model_metadata()
+    model_version = metadata.get("version", "v2.0")
+    model_name = metadata.get("model_name", "Unknown")
+
+    print(f"Selected Model: {model_name}")
+    print(f"Model Version: {model_version}")
     print(f"Predicted Electricity Price: {predicted_price:.2f}")
 
-    store_prediction(predicted_price)
+    store_prediction(predicted_price, model_version)
 
     print("Prediction stored successfully.")
 

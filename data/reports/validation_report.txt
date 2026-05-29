@@ -1,2 +1,2 @@
 DATA VALIDATION PASSED
-Total records validated: 120
+Total records validated: 300

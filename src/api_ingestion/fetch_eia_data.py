@@ -81,11 +81,29 @@ def fetch_eia_electricity_data(
             }
         )
 
-        data["timestamp"] = pd.to_datetime(data["timestamp"])
+        required_columns = [
+            "timestamp",
+            "market_price",
+            "electricity_sales",
+            "electricity_revenue",
+            "region",
+        ]
+
+        missing_columns = [column for column in required_columns if column not in data.columns]
+
+        if missing_columns:
+            raise ValueError(f"EIA response missing expected columns: {missing_columns}")
+
+        data["timestamp"] = pd.to_datetime(data["timestamp"], errors="coerce")
         data["market_price"] = pd.to_numeric(data["market_price"], errors="coerce")
         data["electricity_sales"] = pd.to_numeric(data["electricity_sales"], errors="coerce")
         data["electricity_revenue"] = pd.to_numeric(data["electricity_revenue"], errors="coerce")
 
+        if "sector" not in data.columns:
+            data["sector"] = sector_id
+
+        data = data.dropna(subset=["timestamp", "market_price", "electricity_sales"])
+        data = data.drop_duplicates(subset=["timestamp", "region", "sector"])
         data = data.sort_values("timestamp")
 
         EIA_ELECTRICITY_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +113,7 @@ def fetch_eia_electricity_data(
 
         print(f"EIA electricity data saved to {EIA_ELECTRICITY_PATH}")
         print(f"Rows fetched: {len(data)}")
+        print(f"Date range: {data['timestamp'].min().date()} to {data['timestamp'].max().date()}")
 
         return data
 

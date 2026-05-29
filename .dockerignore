@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+mlruns/
+artifacts/
+logs/
+database/*.db
+data/backups/
+.DS_Store

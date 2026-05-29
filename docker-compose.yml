@@ -1,0 +1,29 @@
+services:
+  dashboard:
+    build: .
+    container_name: electricity_dashboard
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: streamlit run src/dashboard.py --server.address=0.0.0.0 --server.port=8501
+
+  mlflow:
+    build: .
+    container_name: electricity_mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    command: mlflow server --host 0.0.0.0 --port 5000
+
+  prefect:
+    build: .
+    container_name: electricity_prefect
+    ports:
+      - "4200:4200"
+    volumes:
+      - .:/app
+    command: prefect server start --host 0.0.0.0

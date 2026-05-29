@@ -131,3 +131,5 @@ temp/
 # System Files
 # =========================
 Thumbs.db
+mlruns/
+artifacts/

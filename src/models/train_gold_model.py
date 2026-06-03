@@ -1,12 +1,12 @@
 import os
 import pandas as pd
 import joblib
+import mlflow
+import mlflow.sklearn
 
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import GradientBoostingRegressor
 
 
 DATA_PATH = "data/features/gold_model_features.csv"
@@ -14,28 +14,42 @@ MODEL_DIR = "artifacts/models"
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
+mlflow.set_experiment("electricity-price-forecasting-entsoe")
+
 
 def evaluate_model(name, model, X_train, X_test, y_train, y_test):
-    model.fit(X_train, y_train)
+    with mlflow.start_run(run_name=name):
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
 
-    predictions = model.predict(X_test)
+        mae = mean_absolute_error(y_test, predictions)
+        rmse = mean_squared_error(y_test, predictions) ** 0.5
+        r2 = r2_score(y_test, predictions)
 
-    mae = mean_absolute_error(y_test, predictions)
-    rmse = mean_squared_error(y_test, predictions) ** 0.5
-    r2 = r2_score(y_test, predictions)
+        mlflow.log_param("model_name", name)
+        mlflow.log_param("training_rows", X_train.shape[0])
+        mlflow.log_param("testing_rows", X_test.shape[0])
+        mlflow.log_param("features", X_train.shape[1])
 
-    print(f"\n{name}")
-    print(f"MAE: {mae:.2f}")
-    print(f"RMSE: {rmse:.2f}")
-    print(f"R² Score: {r2:.2f}")
+        mlflow.log_metric("mae", mae)
+        mlflow.log_metric("rmse", rmse)
+        mlflow.log_metric("r2", r2)
 
-    return {
-        "model_name": name,
-        "mae": mae,
-        "rmse": rmse,
-        "r2": r2,
-        "model": model,
-    }
+        mlflow.sklearn.log_model(model, name="model")
+
+        print(f"\n{name}")
+        print(f"MAE: {mae:.2f}")
+        print(f"RMSE: {rmse:.2f}")
+        print(f"R² Score: {r2:.2f}")
+
+        return {
+            "model_name": name,
+            "mae": mae,
+            "rmse": rmse,
+            "r2": r2,
+            "model": model,
+        }
 
 
 def main():
@@ -46,12 +60,7 @@ def main():
 
     target = "target_price_next_hour"
 
-    drop_columns = [
-        "timestamp",
-        target,
-    ]
-
-    X = df.drop(columns=drop_columns)
+    X = df.drop(columns=["timestamp", target])
     y = df[target]
 
     split_index = int(len(df) * 0.8)

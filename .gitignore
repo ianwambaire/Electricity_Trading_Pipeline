@@ -4,7 +4,15 @@
 
 # =========================
 
-**pycache**/
+# Python cache
+__pycache__/
+
+# MLflow database
+mlflow.db
+
+# Python cache files
+*.pyc
+
 *.py[cod]
 *$py.class
 
@@ -205,7 +213,6 @@ temp/
 # System Files
 
 # =========================
-
 Thumbs.db
 
 data/reports/

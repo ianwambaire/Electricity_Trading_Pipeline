@@ -1,105 +1,161 @@
 # =========================
+
 # Python
+
 # =========================
-__pycache__/
+
+**pycache**/
 *.py[cod]
 *$py.class
 
+# =========================
+
 # Virtual Environment
+
+# =========================
+
 venv/
 .env/
-
-# Environment Variables
 .env
 *.env
 
 # =========================
+
 # macOS
+
 # =========================
+
 .DS_Store
 
 # =========================
+
 # VS Code
+
 # =========================
+
 .vscode/
 
 # =========================
+
 # Jupyter Notebooks
+
 # =========================
+
 .ipynb_checkpoints/
 
 # =========================
+
 # Logs
+
 # =========================
+
 logs/
 *.log
 
 # =========================
+
 # SQLite Database
+
 # =========================
+
 *.db
 *.sqlite3
 
 # =========================
+
 # Data Files
+
 # =========================
 
-# Raw external API data
-data/external/*.csv
+# Raw ENTSO-E / Weather Data
+
+data/raw/
+
+# Processed Data
+
+data/processed/
+
+# Feature Engineering Outputs
+
+data/features/
+
+# External Data
+
+data/external/
 
 # Backups
+
 data/backups/
 
-# Processed datasets
-data/final/*.csv
-data/processed/*.csv
-
 # Reports
-data/reports/*.txt
 
-# Optional raw data ignore
-# Uncomment if datasets become too large
-# data/raw/*.csv
+data/reports/
+
+# Predictions
+
+predictions/
 
 # =========================
-# Machine Learning Models
+
+# Machine Learning Artifacts
+
 # =========================
-models/
+
 *.pkl
 *.joblib
 *.h5
 *.onnx
 
-# Predictions
-predictions/
+# MLflow
+
+mlruns/
+
+# Model Artifacts
+
+artifacts/
 
 # =========================
+
 # Streamlit
+
 # =========================
+
 .streamlit/
 
 # =========================
+
 # Testing / Coverage
+
 # =========================
+
 .coverage
 htmlcov/
 .pytest_cache/
 
 # =========================
+
 # Build / Distribution
+
 # =========================
+
 build/
 dist/
 *.egg-info/
 
 # =========================
+
 # Docker
+
 # =========================
+
 docker-compose.override.yml
 
 # =========================
+
 # Terraform
+
 # =========================
+
 .terraform/
 *.tfstate
 *.tfstate.*
@@ -109,27 +165,48 @@ override.tf.json
 terraform.tfvars
 
 # =========================
-# AWS
+
+# DVC (Future)
+
 # =========================
+
+.dvc/cache/
+
+# =========================
+
+# AWS
+
+# =========================
+
 .aws/
 
 # =========================
+
 # Temporary Files
+
 # =========================
+
 tmp/
 temp/
 *.tmp
 
 # =========================
+
 # Secrets / Keys
+
 # =========================
+
 *.pem
 *.key
 *.crt
 
 # =========================
+
 # System Files
+
 # =========================
+
 Thumbs.db
-mlruns/
-artifacts/
+
+data/reports/
+data/final/

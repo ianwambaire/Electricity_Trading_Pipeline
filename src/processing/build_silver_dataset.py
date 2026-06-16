@@ -5,8 +5,6 @@ def clean_prices():
     prices = pd.read_csv("data/raw/entsoe/prices.csv")
     prices["timestamp"] = pd.to_datetime(prices["timestamp"], utc=True)
     prices = prices.set_index("timestamp").sort_index()
-
-    prices = prices.rename(columns={"price_eur_mwh": "price_eur_mwh"})
     return prices
 
 
@@ -24,9 +22,13 @@ def clean_load():
 def clean_generation():
     generation = pd.read_csv("data/raw/entsoe/generation.csv", low_memory=False)
 
-    generation["timestamp"] = pd.to_datetime(generation["timestamp"], errors="coerce", utc=True)
-    generation = generation.dropna(subset=["timestamp"])
+    generation["timestamp"] = pd.to_datetime(
+        generation["timestamp"],
+        errors="coerce",
+        utc=True
+    )
 
+    generation = generation.dropna(subset=["timestamp"])
     generation = generation.set_index("timestamp").sort_index()
 
     for col in generation.columns:
@@ -46,7 +48,11 @@ def clean_generation():
         "Wind Onshore",
     ]
 
-    existing_columns = [col for col in useful_columns if col in hourly_generation.columns]
+    existing_columns = [
+        col for col in useful_columns
+        if col in hourly_generation.columns
+    ]
+
     hourly_generation = hourly_generation[existing_columns]
 
     hourly_generation = hourly_generation.rename(
@@ -71,13 +77,41 @@ def clean_generation():
     return hourly_generation
 
 
+def clean_weather():
+    weather = pd.read_csv("data/raw/weather/open_meteo_weather.csv")
+
+    weather["timestamp"] = pd.to_datetime(weather["timestamp"])
+
+    weather["timestamp"] = (
+        weather["timestamp"]
+        .dt.tz_localize(
+            "Europe/Berlin",
+            nonexistent="shift_forward",
+            ambiguous="NaT"
+        )
+        .dt.tz_convert("UTC")
+    )
+
+    weather = weather.dropna(subset=["timestamp"])
+    weather = weather.set_index("timestamp").sort_index()
+
+    for col in weather.columns:
+        weather[col] = pd.to_numeric(weather[col], errors="coerce")
+
+    # In case DST creates duplicate UTC timestamps, average them
+    weather = weather.groupby(weather.index).mean()
+
+    return weather
+
 def build_silver_dataset():
     prices = clean_prices()
     load = clean_load()
     generation = clean_generation()
+    weather = clean_weather()
 
     df = prices.join(load, how="inner")
     df = df.join(generation, how="inner")
+    df = df.join(weather, how="inner")
 
     df = df.reset_index()
 

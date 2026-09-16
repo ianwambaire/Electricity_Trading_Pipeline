@@ -1,4 +1,5 @@
 from pathlib import Path
+import sqlite3
 
 import pandas as pd
 import plotly.express as px
@@ -11,6 +12,8 @@ GOLD_DATA = Path("data/features/gold_model_features.csv")
 PREDICTIONS_DATA = Path("data/reports/actual_vs_predicted.csv")
 ANOMALIES_DATA = Path("data/reports/detected_anomalies.csv")
 FEATURE_IMPORTANCE_DATA = Path("data/reports/feature_importance.csv")
+MODEL_COMPARISON_DATA = Path("data/reports/gold_model_comparison.csv")
+PIPELINE_DATABASE = Path("database/electricity_trading.db")
 
 
 st.set_page_config(
@@ -196,10 +199,49 @@ PLOTLY_LAYOUT = dict(
 CHART_COLORS = ["#2563EB", "#06B6D4", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"]
 
 
+@st.cache_data
 def load_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_csv(path)
+
+    try:
+        return pd.read_csv(path)
+    except (OSError, ValueError, pd.errors.ParserError):
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=30)
+def load_latest_pipeline_run(path: Path):
+    if not path.exists():
+        return None, f"Pipeline database not found at {path}."
+
+    connection = None
+    try:
+        connection = sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True)
+        row = connection.execute(
+            """
+            SELECT id, run_time, status, records_processed, message
+            FROM pipeline_runs
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    except sqlite3.Error as exc:
+        return None, f"Could not read pipeline history: {exc}"
+    finally:
+        if connection is not None:
+            connection.close()
+
+    if row is None:
+        return None, "No pipeline runs have been recorded yet."
+
+    return {
+        "id": row[0],
+        "run_time": row[1],
+        "status": row[2],
+        "records_processed": row[3],
+        "message": row[4],
+    }, None
 
 
 def fmt(value):
@@ -212,6 +254,23 @@ def fmt_int(value):
     if pd.isna(value):
         return "N/A"
     return f"{int(value):,}"
+
+
+def fmt_timestamp(value):
+    if value is None or pd.isna(value):
+        return "N/A"
+    return pd.Timestamp(value).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def has_columns(data: pd.DataFrame, columns) -> bool:
+    return not data.empty and set(columns).issubset(data.columns)
+
+
+def show_data_warning(label: str, path: Path):
+    st.warning(
+        f"{label} is unavailable or unreadable at `{path}`. "
+        "Run the ENTSO-E pipeline to regenerate it."
+    )
 
 
 def section_header(label):
@@ -256,25 +315,65 @@ gold_data = load_csv(GOLD_DATA)
 predictions = load_csv(PREDICTIONS_DATA)
 anomalies = load_csv(ANOMALIES_DATA)
 feature_importance = load_csv(FEATURE_IMPORTANCE_DATA)
+model_comparison = load_csv(MODEL_COMPARISON_DATA)
+latest_pipeline_run, pipeline_run_error = load_latest_pipeline_run(PIPELINE_DATABASE)
 
-if silver_data.empty:
-    st.error("Run the ENTSO-E pipeline first: python src/orchestration/run_entsoe_pipeline.py")
-    st.stop()
-
-silver_data["timestamp"] = pd.to_datetime(silver_data["timestamp"])
+if "timestamp" in silver_data.columns:
+    silver_data["timestamp"] = pd.to_datetime(
+        silver_data["timestamp"], errors="coerce", utc=True
+    )
 
 if not gold_data.empty and "timestamp" in gold_data.columns:
-    gold_data["timestamp"] = pd.to_datetime(gold_data["timestamp"])
+    gold_data["timestamp"] = pd.to_datetime(
+        gold_data["timestamp"], errors="coerce", utc=True
+    )
 
 if not predictions.empty and "timestamp" in predictions.columns:
-    predictions["timestamp"] = pd.to_datetime(predictions["timestamp"])
+    predictions["timestamp"] = pd.to_datetime(
+        predictions["timestamp"], errors="coerce", utc=True
+    )
 
 if not anomalies.empty and "timestamp" in anomalies.columns:
-    anomalies["timestamp"] = pd.to_datetime(anomalies["timestamp"])
+    anomalies["timestamp"] = pd.to_datetime(
+        anomalies["timestamp"], errors="coerce", utc=True
+    )
 
+silver_ready = has_columns(
+    silver_data,
+    ["timestamp", "price_eur_mwh", "load_mw", "wind_total_mw", "solar_mw"],
+)
+latest_timestamp = silver_data["timestamp"].max() if silver_ready else None
+earliest_timestamp = silver_data["timestamp"].min() if silver_ready else None
+latest_price = (
+    silver_data.dropna(subset=["timestamp"])
+    .sort_values("timestamp")
+    .tail(1)["price_eur_mwh"]
+    .iloc[0]
+    if silver_ready and silver_data["timestamp"].notna().any()
+    else None
+)
 
-latest_timestamp = silver_data["timestamp"].max()
-latest_price = silver_data.sort_values("timestamp").tail(1)["price_eur_mwh"].iloc[0]
+best_model = None
+comparison_columns = ["model_name", "mae", "rmse", "r2"]
+if has_columns(model_comparison, comparison_columns):
+    model_comparison = model_comparison.copy()
+    for column in ["mae", "rmse", "r2"]:
+        model_comparison[column] = pd.to_numeric(model_comparison[column], errors="coerce")
+    valid_models = model_comparison.dropna(subset=comparison_columns)
+    if not valid_models.empty:
+        best_model = valid_models.sort_values(["rmse", "mae"]).iloc[0]
+
+gold_feature_count = (
+    len(
+        [
+            column
+            for column in gold_data.columns
+            if column not in {"timestamp", "target_price_next_hour"}
+        ]
+    )
+    if not gold_data.empty
+    else None
+)
 
 
 with st.sidebar:
@@ -291,7 +390,7 @@ with st.sidebar:
     st.markdown('<div class="nav-section-label">Navigation</div>', unsafe_allow_html=True)
 
     page = st.radio(
-        label="",
+        label="Dashboard page",
         options=[
             "Executive Overview",
             "Market Intelligence",
@@ -309,15 +408,19 @@ with st.sidebar:
         <div style="font-family:'IBM Plex Mono',monospace; font-size:0.62rem; color:#2D4A7A; line-height:1.8;">
             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
                 <span>RECORDS</span>
-                <span style="color:#4B6A9B">{fmt_int(len(silver_data))}</span>
+                <span style="color:#4B6A9B">{fmt_int(len(silver_data)) if not silver_data.empty else 'N/A'}</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
                 <span>MARKET</span>
                 <span style="color:#4B6A9B">DE_LU</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
-                <span>SYSTEM</span>
-                <span style="color:#10B981">LIVE</span>
+                <span>DATASET</span>
+                <span style="color:#4B6A9B">HISTORICAL</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px;">
+                <span>PIPELINE</span>
+                <span style="color:#4B6A9B">{latest_pipeline_run['status'] if latest_pipeline_run else 'UNKNOWN'}</span>
             </div>
         </div>
         """,
@@ -329,83 +432,73 @@ if page == "Executive Overview":
     page_title(
         "Executive Overview",
         "Market Dashboard",
-        "GERMANY-LUXEMBOURG ELECTRICITY TRADING INTELLIGENCE PLATFORM",
+        "HISTORICAL GERMANY-LUXEMBOURG ELECTRICITY MARKET ANALYSIS",
     )
 
-    section_header("Key Metrics")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Hourly Records", fmt_int(len(silver_data)))
-    col2.metric("Latest Price", f"{fmt(latest_price)} EUR/MWh")
-    col3.metric("Avg Load", f"{fmt(silver_data['load_mw'].mean())} MW")
-    col4.metric("Anomalies", fmt_int(len(anomalies)))
+    if not silver_ready:
+        show_data_warning("Silver dataset", SILVER_DATA)
+    else:
+        st.caption(
+            f"Historical dataset coverage: {fmt_timestamp(earliest_timestamp)} to "
+            f"{fmt_timestamp(latest_timestamp)}."
+        )
 
-    section_header("Market Overview")
-    col5, col6 = st.columns(2)
+        section_header("Key Metrics")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Hourly Records", fmt_int(len(silver_data)))
+        col2.metric("Latest Price", f"{fmt(latest_price)} EUR/MWh")
+        col3.metric("Avg Load", f"{fmt(silver_data['load_mw'].mean())} MW")
+        col4.metric(
+            "Anomalies", fmt_int(len(anomalies)) if not anomalies.empty else "N/A"
+        )
 
-    with col5:
-        st.markdown('<div class="chart-title">ELECTRICITY PRICE TREND</div>', unsafe_allow_html=True)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=silver_data["timestamp"],
-            y=silver_data["price_eur_mwh"],
-            mode="lines",
-            line=dict(color="#2563EB", width=1.3),
-            name="Price EUR/MWh",
-        ))
-        apply_chart_theme(fig)
-        st.plotly_chart(fig, use_container_width=True)
+        section_header("Market Overview")
+        col5, col6 = st.columns(2)
 
-    with col6:
-        st.markdown('<div class="chart-title">LOAD AND RENEWABLE GENERATION</div>', unsafe_allow_html=True)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=silver_data["timestamp"],
-            y=silver_data["load_mw"],
-            mode="lines",
-            line=dict(color="#06B6D4", width=1.2),
-            name="Load MW",
-        ))
-        fig.add_trace(go.Scatter(
-            x=silver_data["timestamp"],
-            y=silver_data["wind_total_mw"] + silver_data["solar_mw"],
-            mode="lines",
-            line=dict(color="#10B981", width=1.2),
-            name="Wind + Solar MW",
-        ))
-        apply_chart_theme(fig)
-        st.plotly_chart(fig, use_container_width=True)
+        with col5:
+            st.markdown('<div class="chart-title">ELECTRICITY PRICE TREND</div>', unsafe_allow_html=True)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=silver_data["timestamp"],
+                y=silver_data["price_eur_mwh"],
+                mode="lines",
+                line=dict(color="#2563EB", width=1.3),
+                name="Price EUR/MWh",
+            ))
+            apply_chart_theme(fig)
+            st.plotly_chart(fig, width="stretch")
 
-    section_header("Latest Market Records")
-    st.dataframe(
-        silver_data.sort_values("timestamp", ascending=False).head(10),
-        use_container_width=True,
-        hide_index=True,
-    )
+        with col6:
+            st.markdown('<div class="chart-title">LOAD AND RENEWABLE GENERATION</div>', unsafe_allow_html=True)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=silver_data["timestamp"],
+                y=silver_data["load_mw"],
+                mode="lines",
+                line=dict(color="#06B6D4", width=1.2),
+                name="Load MW",
+            ))
+            fig.add_trace(go.Scatter(
+                x=silver_data["timestamp"],
+                y=silver_data["wind_total_mw"] + silver_data["solar_mw"],
+                mode="lines",
+                line=dict(color="#10B981", width=1.2),
+                name="Wind + Solar MW",
+            ))
+            apply_chart_theme(fig)
+            st.plotly_chart(fig, width="stretch")
+
+        section_header("Latest Historical Records")
+        st.dataframe(
+            silver_data.sort_values("timestamp", ascending=False).head(10),
+            width="stretch",
+            hide_index=True,
+        )
 
 
 elif page == "Market Intelligence":
     page_title("Market Intelligence", "Price and Generation Analysis")
 
-    section_header("Price Statistics")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Min Price", fmt(silver_data["price_eur_mwh"].min()))
-    col2.metric("Max Price", fmt(silver_data["price_eur_mwh"].max()))
-    col3.metric("Avg Price", fmt(silver_data["price_eur_mwh"].mean()))
-    col4.metric("Volatility", fmt(silver_data["price_eur_mwh"].std()))
-
-    section_header("Market Price Movement")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=silver_data["timestamp"],
-        y=silver_data["price_eur_mwh"],
-        mode="lines",
-        line=dict(color="#2563EB", width=1.3),
-        name="Electricity Price",
-    ))
-    apply_chart_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
-
-    section_header("Generation Mix")
     generation_cols = [
         "biomass_mw",
         "lignite_mw",
@@ -417,61 +510,107 @@ elif page == "Market Intelligence":
         "wind_total_mw",
     ]
 
-    gen_avg = silver_data[generation_cols].mean().reset_index()
-    gen_avg.columns = ["source", "average_mw"]
+    market_columns = generation_cols + [
+        "timestamp",
+        "price_eur_mwh",
+        "temperature_2m",
+        "wind_speed_10m",
+    ]
+    if not has_columns(silver_data, market_columns):
+        show_data_warning("Silver market dataset", SILVER_DATA)
+    else:
+        st.caption(
+            f"Historical dataset coverage: {fmt_timestamp(earliest_timestamp)} to "
+            f"{fmt_timestamp(latest_timestamp)}."
+        )
 
-    fig = px.bar(
-        gen_avg.sort_values("average_mw", ascending=False),
-        x="source",
-        y="average_mw",
-        color="source",
-        color_discrete_sequence=CHART_COLORS,
-    )
-    apply_chart_theme(fig)
-    fig.update_layout(showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+        section_header("Price Statistics")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Min Price", fmt(silver_data["price_eur_mwh"].min()))
+        col2.metric("Max Price", fmt(silver_data["price_eur_mwh"].max()))
+        col3.metric("Avg Price", fmt(silver_data["price_eur_mwh"].mean()))
+        col4.metric("Volatility", fmt(silver_data["price_eur_mwh"].std()))
 
-    section_header("Weather Conditions")
-    col1, col2 = st.columns(2)
-
-    with col1:
+        section_header("Market Price Movement")
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=silver_data["timestamp"],
-            y=silver_data["temperature_2m"],
+            y=silver_data["price_eur_mwh"],
             mode="lines",
-            line=dict(color="#F59E0B", width=1.2),
-            name="Temperature",
+            line=dict(color="#2563EB", width=1.3),
+            name="Electricity Price",
         ))
         apply_chart_theme(fig)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
-    with col2:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=silver_data["timestamp"],
-            y=silver_data["wind_speed_10m"],
-            mode="lines",
-            line=dict(color="#06B6D4", width=1.2),
-            name="Wind Speed",
-        ))
+        section_header("Generation Mix")
+        gen_avg = silver_data[generation_cols].mean().reset_index()
+        gen_avg.columns = ["source", "average_mw"]
+
+        fig = px.bar(
+            gen_avg.sort_values("average_mw", ascending=False),
+            x="source",
+            y="average_mw",
+            color="source",
+            color_discrete_sequence=CHART_COLORS,
+        )
         apply_chart_theme(fig)
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, width="stretch")
+
+        section_header("Weather Conditions")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=silver_data["timestamp"],
+                y=silver_data["temperature_2m"],
+                mode="lines",
+                line=dict(color="#F59E0B", width=1.2),
+                name="Temperature",
+            ))
+            apply_chart_theme(fig)
+            st.plotly_chart(fig, width="stretch")
+
+        with col2:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=silver_data["timestamp"],
+                y=silver_data["wind_speed_10m"],
+                mode="lines",
+                line=dict(color="#06B6D4", width=1.2),
+                name="Wind Speed",
+            ))
+            apply_chart_theme(fig)
+            st.plotly_chart(fig, width="stretch")
 
 
 elif page == "Forecasting":
     page_title("Forecasting", "Actual vs Predicted Price Forecast")
 
-    if predictions.empty:
-        st.warning("No forecast results found. Run: python src/models/prediction_visualization.py")
+    if best_model is None:
+        show_data_warning("Gold model comparison", MODEL_COMPARISON_DATA)
     else:
         section_header("Model Metrics")
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Best Model", "XGBoost")
-        col2.metric("MAE", "9.10")
-        col3.metric("RMSE", "18.91")
-        col4.metric("R² Score", "0.90")
+        col1.metric("Best Model", str(best_model["model_name"]))
+        col2.metric("MAE", fmt(best_model["mae"]))
+        col3.metric("RMSE", fmt(best_model["rmse"]))
+        col4.metric("R² Score", fmt(best_model["r2"]))
+        st.caption("Best model selected by the lowest RMSE, matching the training pipeline.")
 
+        section_header("Four-Model Comparison")
+        st.dataframe(
+            model_comparison.sort_values("rmse"),
+            width="stretch",
+            hide_index=True,
+        )
+
+    prediction_columns = ["timestamp", "actual_price", "predicted_price"]
+    if not has_columns(predictions, prediction_columns):
+        show_data_warning("Actual-vs-predicted report", PREDICTIONS_DATA)
+    else:
         section_header("Actual vs Predicted")
         plot_data = predictions.tail(500)
 
@@ -491,21 +630,22 @@ elif page == "Forecasting":
             name="Predicted Price",
         ))
         apply_chart_theme(fig)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         section_header("Forecast Records")
         st.dataframe(
             predictions.sort_values("timestamp", ascending=False).head(20),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
 
 elif page == "Anomaly Detection":
-    page_title("Anomaly Detection", "Unusual Market Event Monitoring")
+    page_title("Anomaly Detection", "Unusual Historical Market Events")
 
-    if anomalies.empty:
-        st.warning("No anomalies found. Run: python src/models/anomaly_detection.py")
+    anomaly_columns = ["timestamp", "price_eur_mwh", "load_mw"]
+    if not has_columns(anomalies, anomaly_columns):
+        show_data_warning("Detected-anomalies report", ANOMALIES_DATA)
     else:
         section_header("Anomaly Summary")
         col1, col2, col3, col4 = st.columns(4)
@@ -514,29 +654,32 @@ elif page == "Anomaly Detection":
         col3.metric("Min Anomaly Price", fmt(anomalies["price_eur_mwh"].min()))
         col4.metric("Avg Anomaly Load", f"{fmt(anomalies['load_mw'].mean())} MW")
 
-        section_header("Price Anomalies")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=silver_data["timestamp"],
-            y=silver_data["price_eur_mwh"],
-            mode="lines",
-            line=dict(color="#2563EB", width=1),
-            name="Price",
-        ))
-        fig.add_trace(go.Scatter(
-            x=anomalies["timestamp"],
-            y=anomalies["price_eur_mwh"],
-            mode="markers",
-            marker=dict(color="#EF4444", size=6),
-            name="Anomaly",
-        ))
-        apply_chart_theme(fig)
-        st.plotly_chart(fig, use_container_width=True)
+        if silver_ready:
+            section_header("Price Anomalies")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=silver_data["timestamp"],
+                y=silver_data["price_eur_mwh"],
+                mode="lines",
+                line=dict(color="#2563EB", width=1),
+                name="Price",
+            ))
+            fig.add_trace(go.Scatter(
+                x=anomalies["timestamp"],
+                y=anomalies["price_eur_mwh"],
+                mode="markers",
+                marker=dict(color="#EF4444", size=6),
+                name="Anomaly",
+            ))
+            apply_chart_theme(fig)
+            st.plotly_chart(fig, width="stretch")
+        else:
+            show_data_warning("Silver dataset for anomaly context", SILVER_DATA)
 
         section_header("Top Anomaly Events")
         st.dataframe(
             anomalies.sort_values("price_eur_mwh", ascending=False).head(20),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -544,11 +687,12 @@ elif page == "Anomaly Detection":
 elif page == "Model Insights":
     page_title("Model Insights", "Feature Importance and Model Drivers")
 
-    if feature_importance.empty:
-        st.warning("No feature importance file found. Run: python src/models/feature_importance.py")
+    if not has_columns(feature_importance, ["feature", "importance"]):
+        show_data_warning("Feature-importance report", FEATURE_IMPORTANCE_DATA)
     else:
         section_header("Top Feature Drivers")
-        top_features = feature_importance.head(15)
+        ranked_features = feature_importance.sort_values("importance", ascending=False)
+        top_features = ranked_features.head(15)
 
         fig = px.bar(
             top_features.sort_values("importance"),
@@ -560,24 +704,37 @@ elif page == "Model Insights":
         )
         apply_chart_theme(fig)
         fig.update_layout(showlegend=False, coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         section_header("Feature Importance Table")
         st.dataframe(
-            feature_importance,
-            use_container_width=True,
+            ranked_features,
+            width="stretch",
             hide_index=True,
         )
 
         section_header("Interpretation")
+        leading_features = ", ".join(ranked_features.head(5)["feature"].astype(str))
         st.info(
-            "The most influential variables are price history, rolling market prices, renewable share, "
-            "hour-of-day effects, generation mix, and weather-related variables."
+            f"The current feature-importance report ranks these as the five leading model drivers: "
+            f"{leading_features}."
         )
 
 
 elif page == "Pipeline Summary":
     page_title("Pipeline Summary", "Automated DataOps Workflow")
+
+    section_header("Latest Pipeline Run")
+    if latest_pipeline_run is None:
+        st.warning(pipeline_run_error)
+    else:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Pipeline Status", str(latest_pipeline_run["status"]))
+        col2.metric("Latest Run Time", str(latest_pipeline_run["run_time"]))
+        col3.metric(
+            "Records Processed", fmt_int(latest_pipeline_run["records_processed"])
+        )
+        st.info(str(latest_pipeline_run["message"] or "No pipeline message recorded."))
 
     section_header("Pipeline Architecture")
     st.code(
@@ -592,34 +749,57 @@ Silver Cleaned Dataset
     ↓
 Gold Feature Dataset
     ↓
-XGBoost Model Training
+Four-Model Training and Best-Model Selection
     ↓
 MLflow Experiment Tracking
     ↓
 Forecast Visualization
     ↓
 Anomaly Detection
+    ↓
+Feature Importance
         """,
         language="text",
     )
 
     section_header("Dataset Status")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Silver Rows", fmt_int(len(silver_data)))
-    col2.metric("Gold Rows", fmt_int(len(gold_data)))
-    col3.metric("Feature Count", fmt_int(gold_data.shape[1] if not gold_data.empty else 0))
+    col1.metric(
+        "Silver Rows", fmt_int(len(silver_data)) if not silver_data.empty else "N/A"
+    )
+    col2.metric(
+        "Gold Rows", fmt_int(len(gold_data)) if not gold_data.empty else "N/A"
+    )
+    col3.metric("Model Features", fmt_int(gold_feature_count))
+
+    if silver_ready:
+        st.caption(
+            f"Silver historical coverage: {fmt_timestamp(earliest_timestamp)} to "
+            f"{fmt_timestamp(latest_timestamp)}."
+        )
+    else:
+        show_data_warning("Silver dataset", SILVER_DATA)
+
+    if has_columns(gold_data, ["timestamp"]):
+        st.caption(
+            f"Gold historical coverage: {fmt_timestamp(gold_data['timestamp'].min())} to "
+            f"{fmt_timestamp(gold_data['timestamp'].max())}."
+        )
+    else:
+        show_data_warning("Gold feature dataset", GOLD_DATA)
 
     section_header("Available Data Products")
     st.dataframe(
         pd.DataFrame(
             [
-                {"Layer": "Silver", "Path": str(SILVER_DATA), "Status": "Available"},
-                {"Layer": "Gold", "Path": str(GOLD_DATA), "Status": "Available"},
+                {"Layer": "Silver", "Path": str(SILVER_DATA), "Status": "Available" if not silver_data.empty else "Missing"},
+                {"Layer": "Gold", "Path": str(GOLD_DATA), "Status": "Available" if not gold_data.empty else "Missing"},
+                {"Layer": "Model Comparison", "Path": str(MODEL_COMPARISON_DATA), "Status": "Available" if not model_comparison.empty else "Missing"},
                 {"Layer": "Predictions", "Path": str(PREDICTIONS_DATA), "Status": "Available" if not predictions.empty else "Missing"},
                 {"Layer": "Anomalies", "Path": str(ANOMALIES_DATA), "Status": "Available" if not anomalies.empty else "Missing"},
                 {"Layer": "Feature Importance", "Path": str(FEATURE_IMPORTANCE_DATA), "Status": "Available" if not feature_importance.empty else "Missing"},
             ]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )

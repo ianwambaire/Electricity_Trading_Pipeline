@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
 
 
 def calculate_file_sha256(path: Path, chunk_size: int = 1024 * 1024) -> str:
@@ -50,6 +50,10 @@ def write_training_manifest(
     train_row_count: int,
     test_row_count: int,
     selected_model: str,
+    selection_method: str,
+    cv_method: str,
+    cv_splits: int,
+    best_hyperparameters: dict,
     mae: float,
     rmse: float,
     r2: float,
@@ -83,7 +87,14 @@ def write_training_manifest(
             "train_row_count": int(train_row_count),
             "test_row_count": int(test_row_count),
             "selected_model": selected_model,
-            "metrics": {
+            "selection_method": selection_method,
+            "cross_validation": {
+                "method": cv_method,
+                "splits": int(cv_splits),
+                "scoring": "RMSE",
+            },
+            "best_hyperparameters": best_hyperparameters,
+            "final_metrics": {
                 "mae": float(mae),
                 "rmse": float(rmse),
                 "r2": float(r2),

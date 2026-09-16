@@ -4,15 +4,15 @@ This directory is the local output location for current model artifacts.
 
 The primary training script generates:
 
-- `artifacts/models/best_gold_model.joblib` — the model with the lowest chronological test RMSE;
+- `artifacts/models/best_gold_model.joblib` — the model selected using the lowest training-only time-series cross-validation RMSE;
 - `artifacts/models/gold_model_features.joblib` — the ordered feature list required by that model; and
-- `artifacts/models/training_manifest.json` — dataset identity, source range, split sizes, selected model, metrics, MLflow run ID, and Git commit SHA when available.
+- `artifacts/models/training_manifest.json` — dataset identity, source range, split sizes, CV configuration, selected hyperparameters, final metrics, MLflow run ID, and Git commit SHA when available.
 
 These binary files are reproducible outputs of the training pipeline and are intentionally excluded from Git. MLflow also stores serialized models and environment metadata in the local `mlruns/` or `mlartifacts/` stores.
 
 ## Artifact roles
 
-- **Candidate artifacts:** each of the four evaluated models is tracked in its own MLflow run.
+- **Candidate artifacts:** each of the four evaluated models is tracked in its own MLflow run. Tree-based candidates use training-only `TimeSeriesSplit` tuning; Linear Regression remains untuned.
 - **Current selected model:** `best_gold_model.joblib` and `gold_model_features.joblib` remain at their existing paths so the local reporting pipeline continues to work unchanged.
 - **Release metadata:** `training_manifest.json` links the selected model to the exact gold dataset using its SHA-256 identifier.
 - **External releases:** Colab can direct the same three selected-model files and the comparison CSV to a configurable Google Drive release folder.

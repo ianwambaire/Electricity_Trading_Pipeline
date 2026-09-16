@@ -35,7 +35,7 @@ ENTSO-E API                    Open-Meteo Archive API
                   |
  Linear Regression | Random Forest | Gradient Boosting | XGBoost
                   |
-       Lowest chronological test RMSE selected
+       Lowest training-only time-series CV RMSE selected
                   |
     MLflow tracking + local model/report artifacts
                   |
@@ -282,15 +282,25 @@ The current trainer compares:
 - Gradient Boosting Regressor
 - XGBoost Regressor
 
-Rows are ordered by timestamp and split chronologically: the first 80% is used for training and the final 20% for testing. The model with the lowest test RMSE is saved as the best model.
+Rows are ordered by timestamp and split chronologically: the first 80% is used
+for model development and the final 20% is kept as the final holdout test set.
+The training portion uses three-fold `TimeSeriesSplit` evaluation without
+shuffling. Linear Regression remains an untuned baseline; Random Forest,
+Gradient Boosting, and XGBoost each use a six-candidate randomized search over a
+small parameter space. The holdout is evaluated only after training-only tuning
+is complete. The model family with the lowest cross-validation RMSE is selected
+from the development partition; final holdout metrics are reporting-only.
 
 ### Evaluation metrics
 
 - **MAE — Mean Absolute Error:** average absolute forecast error.
-- **RMSE — Root Mean Squared Error:** error measure that penalizes larger misses more heavily; used for best-model selection.
+- **RMSE — Root Mean Squared Error:** error measure that penalizes larger misses more heavily; cross-validation RMSE is used for model-family selection, while holdout RMSE is reported only for final evaluation.
 - **R² — Coefficient of determination:** proportion of target variance explained by the model on the test set.
 
-MLflow records model parameters, training/testing row counts, metrics, and serialized model artifacts. Local CSV reports record the four-model comparison and prediction results.
+MLflow records tuning status, best parameters, CV RMSE, final test metrics,
+training/testing row counts, dataset version, Git SHA, and one serialized model
+artifact per candidate run. Local CSV reports record the four-model comparison
+and prediction results.
 
 ### Dataset and model version metadata
 
@@ -302,6 +312,7 @@ Every completed training cycle writes
 - the gold source date range and row count;
 - feature, chronological training, and test row counts;
 - the selected model and its MAE, RMSE, and R²;
+- the selection method, CV method and split count, and selected hyperparameters;
 - the selected model's MLflow run ID; and
 - the current Git commit SHA when Git metadata is available.
 
@@ -327,7 +338,7 @@ PYTHONPATH=src python src/models/train_gold_model.py \
 ```
 
 The models, hyperparameters, chronological 80/20 split, MLflow experiment
-name, and lowest-RMSE selection are identical in both commands.
+name, and lowest-time-series-CV-RMSE selection are identical in both commands.
 
 ### Optional Colab training
 

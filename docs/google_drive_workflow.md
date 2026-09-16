@@ -45,9 +45,10 @@ Set:
 - `MLFLOW_TRACKING_URI` when a non-default tracking destination is needed.
 
 The notebook invokes `src/models/train_gold_model.py`; it does not contain a
-second training implementation. The four models, hyperparameters,
-chronological 80/20 split, experiment name, and lowest-RMSE selection remain
-the same as local training.
+second training implementation. The four models, training-only
+`TimeSeriesSplit` tuning, chronological 80/20 holdout, experiment name, and
+lowest-time-series-CV-RMSE selection remain the same as local training. The final
+chronological holdout is used only for reporting after model-family selection.
 
 ## Manual archive guidance
 

@@ -4,8 +4,8 @@ This directory is the local output location for current model artifacts.
 
 The primary training script generates:
 
-- `models/best_gold_model.joblib` — the model with the lowest chronological test RMSE;
-- `models/gold_model_features.joblib` — the ordered feature list required by that model.
+- `artifacts/models/best_gold_model.joblib` — the model with the lowest chronological test RMSE;
+- `artifacts/models/gold_model_features.joblib` — the ordered feature list required by that model.
 
 These binary files are reproducible outputs of the training pipeline and are intentionally excluded from Git. MLflow also stores serialized models and environment metadata in the local `mlruns/` or `mlartifacts/` stores.
 

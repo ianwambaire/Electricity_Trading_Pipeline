@@ -25,19 +25,15 @@ pull:
 # the deployments section allows you to provide configuration
 # for deploying flows
 deployments:
-- name: hourly-electricity-pipeline
+- name: powerflow-entsoe-pipeline
   version: null
   tags: []
   concurrency_limit: null
-  description: null
-  entrypoint: src/scheduled_pipeline.py:scheduled_electricity_pipeline
+  description: PowerFlow ENTSO-E silver/gold forecasting pipeline
+  entrypoint: src/scheduled_pipeline.py:powerflow_entsoe_pipeline
   parameters: {}
   work_pool:
     name: electricity-pool
     work_queue_name: null
     job_variables: {}
-  schedules:
-  - cron: 0 * * * *
-    timezone: UTC
-    day_or: true
-    active: true
+  schedules: []

@@ -59,7 +59,7 @@ The active flow is `PowerFlow ENTSO-E Pipeline` in `src/scheduled_pipeline.py`. 
 9. Detect market anomalies.
 10. Generate feature importance.
 
-The Prefect deployment is intentionally unscheduled because the current ingestion scripts use fixed historical date ranges. Legacy EIA/California scripts remain in the repository for reference but are not part of the primary Prefect flow.
+The Prefect deployment is intentionally unscheduled because the current ingestion scripts use fixed historical date ranges. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
 
 ## Technologies
 
@@ -87,6 +87,7 @@ The Prefect deployment is intentionally unscheduled because the current ingestio
 │   ├── ingestion/           ENTSO-E and Open-Meteo ingestion
 │   ├── processing/          Silver and gold dataset construction
 │   ├── models/              Training, prediction reports, anomalies, importance
+│   ├── legacy/              Retained EIA-era pipeline and old dashboard
 │   ├── notifications/       Failure email notification
 │   ├── orchestration/       Local ENTSO-E flow entry point
 │   ├── utils/               File/console logging
@@ -96,6 +97,9 @@ The Prefect deployment is intentionally unscheduled because the current ingestio
 │   └── validate_data.py     Legacy, silver, and gold validation
 ├── docker-compose.yml
 ├── prefect.yaml
+├── pytest.ini
+├── requirements-dev.txt
+├── tests/                   Lightweight offline tests for current behavior
 └── requirements.txt
 ```
 
@@ -113,6 +117,12 @@ python3.12 -m venv venv
 source venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+```
+
+For local test development, install the additional test dependency:
+
+```bash
+python -m pip install -r requirements-dev.txt
 ```
 
 On Windows PowerShell, activate the environment with:
@@ -174,6 +184,15 @@ Individual dataset validation can be run without writing quality results:
 python src/validate_data.py silver --no-log
 python src/validate_data.py gold --no-log
 ```
+
+Run the lightweight offline test suite with:
+
+```bash
+python -m pytest
+```
+
+The suite uses temporary databases and generated in-memory samples. It does not
+call external APIs, retrain models, or modify the active datasets and database.
 
 ### 3. Run the Streamlit dashboard
 

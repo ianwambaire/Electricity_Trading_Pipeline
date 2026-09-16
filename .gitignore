@@ -23,8 +23,12 @@ mlflow.db
 # =========================
 
 venv/
+.venv/
+env/
 .env/
 .env
+.env.*
+!.env.example
 *.env
 
 # =========================
@@ -42,6 +46,10 @@ venv/
 # =========================
 
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # =========================
 
@@ -67,7 +75,11 @@ logs/
 # =========================
 
 *.db
+*.db-*
+*.sqlite
+*.sqlite-*
 *.sqlite3
+*.sqlite3-*
 
 # =========================
 
@@ -86,6 +98,10 @@ data/processed/
 # Feature Engineering Outputs
 
 data/features/
+
+# Final Generated Datasets
+
+data/final/
 
 # External Data
 
@@ -117,6 +133,7 @@ predictions/
 # MLflow
 
 mlruns/
+mlartifacts/
 
 # Model Artifacts
 
@@ -124,11 +141,12 @@ artifacts/
 
 # =========================
 
-# Streamlit
+# Streamlit secrets
 
 # =========================
 
-.streamlit/
+.streamlit/secrets.toml
+.streamlit/secrets.*.toml
 
 # =========================
 
@@ -139,6 +157,10 @@ artifacts/
 .coverage
 htmlcov/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.prefect/
 
 # =========================
 
@@ -214,6 +236,3 @@ temp/
 
 # =========================
 Thumbs.db
-
-data/reports/
-data/final/

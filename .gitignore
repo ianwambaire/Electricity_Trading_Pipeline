@@ -135,9 +135,10 @@ predictions/
 mlruns/
 mlartifacts/
 
-# Model Artifacts
+# Model Artifacts (keep storage policy documentation)
 
-artifacts/
+artifacts/*
+!artifacts/README.md
 
 # =========================
 

@@ -20,6 +20,7 @@ def initialize_database():
 
 
 def store_clean_data(data: pd.DataFrame):
+    """Store data for the legacy EIA pipeline; unused by the ENTSO-E flow."""
     connection = sqlite3.connect(DATABASE_PATH)
 
     data.to_sql(

@@ -37,6 +37,10 @@ Model-ready feature tables. The primary output is:
 
 It contains calendar features, lags, rolling statistics, renewable-generation measures, and the next-hour price target.
 
+The trainer computes a SHA-256 hash of the exact gold CSV bytes. The resulting
+identifier, `gold-sha256-<digest>`, is stored in the generated model manifest.
+This identifies the model input precisely without duplicating the dataset.
+
 ### `final/`
 
 Final combined datasets from the retained legacy EIA/Open-Meteo pipeline. This directory is generated and is not used by the current dashboard.
@@ -88,3 +92,7 @@ Active raw, silver, gold, final, report, external, and backup outputs are exclud
 - **Google Drive:** archived large source datasets, dated dataset snapshots, and final dataset backups that need to be retained or shared.
 
 No automated Google Drive upload is implemented. Archiving is currently a manual project-management decision.
+
+Recommended Drive locations are `PowerFlow/datasets/snapshots/` for reviewed
+gold snapshots and `PowerFlow/datasets/archives/` for older large exports. See
+[`docs/google_drive_workflow.md`](../docs/google_drive_workflow.md).

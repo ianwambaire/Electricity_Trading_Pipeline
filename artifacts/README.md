@@ -5,9 +5,20 @@ This directory is the local output location for current model artifacts.
 The primary training script generates:
 
 - `artifacts/models/best_gold_model.joblib` — the model with the lowest chronological test RMSE;
-- `artifacts/models/gold_model_features.joblib` — the ordered feature list required by that model.
+- `artifacts/models/gold_model_features.joblib` — the ordered feature list required by that model; and
+- `artifacts/models/training_manifest.json` — dataset identity, source range, split sizes, selected model, metrics, MLflow run ID, and Git commit SHA when available.
 
 These binary files are reproducible outputs of the training pipeline and are intentionally excluded from Git. MLflow also stores serialized models and environment metadata in the local `mlruns/` or `mlartifacts/` stores.
+
+## Artifact roles
+
+- **Candidate artifacts:** each of the four evaluated models is tracked in its own MLflow run.
+- **Current selected model:** `best_gold_model.joblib` and `gold_model_features.joblib` remain at their existing paths so the local reporting pipeline continues to work unchanged.
+- **Release metadata:** `training_manifest.json` links the selected model to the exact gold dataset using its SHA-256 identifier.
+- **External releases:** Colab can direct the same three selected-model files and the comparison CSV to a configurable Google Drive release folder.
+
+The trainer accepts `--data-path`, `--output-dir`, `--comparison-path`, and
+`--mlflow-tracking-uri`. Their defaults preserve the existing local paths.
 
 ## Storage policy
 
@@ -16,3 +27,5 @@ These binary files are reproducible outputs of the training pipeline and are int
 - **Google Drive:** selected release models, milestone artifacts, and MLflow archives or backups that need longer-term retention or sharing.
 
 Do not place credentials in model metadata or artifact filenames. No automatic Google Drive upload or formal production model registry is currently implemented.
+
+See [`docs/google_drive_workflow.md`](../docs/google_drive_workflow.md) for the recommended external folder layout and manual release workflow.

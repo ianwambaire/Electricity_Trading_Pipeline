@@ -82,7 +82,9 @@ The Prefect deployment is intentionally unscheduled because the current ingestio
 ├── data/                    Raw, silver, gold, reports, backups, and sample data
 ├── database/
 │   └── schema.sql           Tracked SQLite schema
+├── docs/                    External storage and workflow guidance
 ├── models/                  Legacy locally generated model files
+├── notebooks/               Optional Google Colab training entry point
 ├── src/
 │   ├── ingestion/           ENTSO-E and Open-Meteo ingestion
 │   ├── processing/          Silver and gold dataset construction
@@ -290,6 +292,55 @@ Rows are ordered by timestamp and split chronologically: the first 80% is used f
 
 MLflow records model parameters, training/testing row counts, metrics, and serialized model artifacts. Local CSV reports record the four-model comparison and prediction results.
 
+### Dataset and model version metadata
+
+Every completed training cycle writes
+`artifacts/models/training_manifest.json`. The manifest records:
+
+- the exact gold dataset SHA-256 and deterministic
+  `gold-sha256-<digest>` version;
+- the gold source date range and row count;
+- feature, chronological training, and test row counts;
+- the selected model and its MAE, RMSE, and R²;
+- the selected model's MLflow run ID; and
+- the current Git commit SHA when Git metadata is available.
+
+The dataset version hashes the existing gold CSV; it does not create another
+dataset copy. The existing selected-model paths remain unchanged for local
+pipeline compatibility. MLflow runs hold candidate models, while the manifest
+connects the selected local artifact to its data and experiment metadata.
+
+Run only the existing training stage with default local paths:
+
+```bash
+PYTHONPATH=src python src/models/train_gold_model.py
+```
+
+Optional path arguments support supplied gold datasets and release folders:
+
+```bash
+PYTHONPATH=src python src/models/train_gold_model.py \
+  --data-path /path/to/gold_model_features.csv \
+  --output-dir /path/to/model-release \
+  --comparison-path /path/to/model-release/gold_model_comparison.csv \
+  --mlflow-tracking-uri sqlite:///mlflow.db
+```
+
+The models, hyperparameters, chronological 80/20 split, MLflow experiment
+name, and lowest-RMSE selection are identical in both commands.
+
+### Optional Colab training
+
+[`notebooks/colab_training.ipynb`](notebooks/colab_training.ipynb) clones or
+updates the repository, installs its dependencies, optionally mounts Google
+Drive, validates a supplied gold dataset path, and invokes the existing trainer.
+Drive is disabled by default and is never required for local development.
+
+Configure the notebook's `SUPPLIED_GOLD_DATA_PATH`, `USE_GOOGLE_DRIVE`,
+`DRIVE_PROJECT_ROOT`, and `RELEASE_NAME` values before running it top-to-bottom.
+See [`docs/google_drive_workflow.md`](docs/google_drive_workflow.md) for the
+recommended manual archive and release layout.
+
 ## Storage and version control
 
 PowerFlow separates reviewable source assets from reproducible runtime outputs.
@@ -317,11 +368,30 @@ A fresh clone normally will not contain:
 
 The pipeline regenerates its active data and model products. Large snapshots or selected release artifacts may be archived outside Git in Google Drive.
 
+The recommended Drive hierarchy is:
+
+```text
+PowerFlow/
+├── datasets/
+│   ├── snapshots/
+│   └── archives/
+├── models/
+│   └── releases/
+├── experiments/
+│   └── mlflow-archives/
+└── backups/
+```
+
+Drive upload and synchronization remain manual; no Drive API credentials or
+personal Drive paths are stored in the repository.
+
 ## Current status
 
 - ENTSO-E and Open-Meteo ingestion are implemented for the fixed historical range.
 - Silver and gold construction and validation are implemented.
 - Four-model comparison, MLflow tracking, best-model selection, reporting, anomaly detection, and feature importance are implemented.
+- Training produces deterministic dataset identity and selected-model manifest metadata.
+- Optional Colab training reuses the active trainer and can write reviewed release artifacts to a configurable Drive folder.
 - The current Streamlit dashboard reads the generated ENTSO-E CSV products.
 - The Prefect flow and unscheduled deployment configuration are defined; a Prefect API server is required to execute the flow.
 - SQLite stores pipeline-run and data-quality history.

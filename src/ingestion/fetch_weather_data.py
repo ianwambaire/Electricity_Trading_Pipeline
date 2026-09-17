@@ -5,9 +5,9 @@ import pandas as pd
 import requests
 
 if __package__:
-    from .historical_range import get_historical_date_range, iter_year_chunks
+    from .historical_range import get_historical_date_range, iter_time_chunks
 else:
-    from historical_range import get_historical_date_range, iter_year_chunks
+    from historical_range import get_historical_date_range, iter_time_chunks
 
 
 RAW_WEATHER_DIR = Path("data/raw/weather")
@@ -27,7 +27,7 @@ def combine_weather_chunks(chunks: list[pd.DataFrame]) -> pd.DataFrame:
         raise ValueError("At least one non-empty Open-Meteo chunk is required.")
 
     combined = pd.concat(chunks, ignore_index=True)
-    combined["timestamp"] = pd.to_datetime(combined["timestamp"])
+    combined["timestamp"] = pd.to_datetime(combined["timestamp"], utc=True)
     return (
         combined.drop_duplicates(subset=["timestamp"], keep="last")
         .sort_values("timestamp")
@@ -43,7 +43,7 @@ def fetch_open_meteo_weather(
     historical_range = get_historical_date_range(start_date, end_date)
     chunks = []
 
-    for chunk_start, chunk_end in iter_year_chunks(historical_range):
+    for chunk_start, chunk_end in iter_time_chunks(historical_range):
         chunk_end_inclusive = (chunk_end - pd.Timedelta(days=1)).date()
         params = {
             "latitude": 52.52,
@@ -51,7 +51,7 @@ def fetch_open_meteo_weather(
             "start_date": chunk_start.date().isoformat(),
             "end_date": chunk_end_inclusive.isoformat(),
             "hourly": WEATHER_VARIABLES,
-            "timezone": "Europe/Berlin",
+            "timezone": "UTC",
         }
         print(
             "Fetching Open-Meteo historical weather: "

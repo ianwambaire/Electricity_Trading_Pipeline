@@ -1,40 +1,48 @@
 import pandas as pd
 
 
+def set_utc_timestamp_index(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.copy()
+    data["timestamp"] = pd.to_datetime(
+        data["timestamp"],
+        errors="coerce",
+        utc=True,
+    )
+    data = data.dropna(subset=["timestamp"])
+    data = data.set_index("timestamp").sort_index()
+    return data.loc[~data.index.duplicated(keep="last")]
+
+
+def aggregate_quarter_hourly(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.copy()
+    data.index = pd.to_datetime(data.index, utc=True)
+    return data.sort_index().resample("h").mean()
+
+
 def clean_prices():
     prices = pd.read_csv("data/raw/entsoe/prices.csv")
-    prices["timestamp"] = pd.to_datetime(prices["timestamp"], utc=True)
-    prices = prices.set_index("timestamp").sort_index()
-    return prices
+    return set_utc_timestamp_index(prices)
 
 
 def clean_load():
     load = pd.read_csv("data/raw/entsoe/load.csv")
-    load["timestamp"] = pd.to_datetime(load["timestamp"], utc=True)
-    load = load.set_index("timestamp").sort_index()
+    load = set_utc_timestamp_index(load)
 
     load["load_mw"] = pd.to_numeric(load["load_mw"], errors="coerce")
 
-    hourly_load = load.resample("h").mean()
+    hourly_load = aggregate_quarter_hourly(load)
     return hourly_load
 
 
 def clean_generation():
     generation = pd.read_csv("data/raw/entsoe/generation.csv", low_memory=False)
 
-    generation["timestamp"] = pd.to_datetime(
-        generation["timestamp"],
-        errors="coerce",
-        utc=True
-    )
-
-    generation = generation.dropna(subset=["timestamp"])
-    generation = generation.set_index("timestamp").sort_index()
+    generation = set_utc_timestamp_index(generation)
 
     for col in generation.columns:
         generation[col] = pd.to_numeric(generation[col], errors="coerce")
 
-    hourly_generation = generation.resample("h").mean()
+    hourly_generation = aggregate_quarter_hourly(generation)
 
     useful_columns = [
         "Biomass",
@@ -79,27 +87,21 @@ def clean_generation():
 
 def clean_weather():
     weather = pd.read_csv("data/raw/weather/open_meteo_weather.csv")
-
-    weather["timestamp"] = pd.to_datetime(weather["timestamp"])
-
-    weather["timestamp"] = (
-        weather["timestamp"]
-        .dt.tz_localize(
-            "Europe/Berlin",
-            nonexistent="shift_forward",
-            ambiguous="NaT"
-        )
-        .dt.tz_convert("UTC")
+    raw_timestamps = weather["timestamp"].astype(str)
+    explicit_timezone = raw_timestamps.str.contains(
+        r"(?:Z|[+-][0-9]{2}:[0-9]{2})$",
+        regex=True,
     )
+    if not explicit_timezone.all():
+        raise ValueError(
+            "Open-Meteo timestamps must be explicitly UTC. "
+            "Re-run src/ingestion/fetch_weather_data.py."
+        )
 
-    weather = weather.dropna(subset=["timestamp"])
-    weather = weather.set_index("timestamp").sort_index()
+    weather = set_utc_timestamp_index(weather)
 
     for col in weather.columns:
         weather[col] = pd.to_numeric(weather[col], errors="coerce")
-
-    # In case DST creates duplicate UTC timestamps, average them
-    weather = weather.groupby(weather.index).mean()
 
     return weather
 
@@ -113,7 +115,7 @@ def build_silver_dataset():
     df = df.join(generation, how="inner")
     df = df.join(weather, how="inner")
 
-    df = df.reset_index()
+    df = df.sort_index().reset_index()
 
     df.to_csv("data/processed/silver_electricity_market_data.csv", index=False)
 

@@ -6,8 +6,8 @@ def build_gold_dataset():
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     df = df.sort_values("timestamp")
-    # Germany shut down its final nuclear plants in April 2023.
-# Missing nuclear generation values are treated as 0 MW.
+    # Germany's final nuclear plants stopped reporting from local midnight on
+    # 2023-04-16 (2023-04-15 22:00 UTC). Later missing values represent 0 MW.
     df["nuclear_mw"] = df["nuclear_mw"].fillna(0)
 
     # Time-based features

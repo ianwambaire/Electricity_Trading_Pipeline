@@ -243,17 +243,17 @@ Docker Compose starts the dashboard on port `8501`, MLflow on host port `5001`, 
 
 ### ENTSO-E Transparency Platform
 
-The primary ingestion script requests the Germany-Luxembourg bidding zone (`DE_LU`). The shared default historical range is `2019-01-01` through `2025-09-30`, inclusive, and can be overridden with command-line arguments or the `POWERFLOW_HISTORY_START_DATE` and `POWERFLOW_HISTORY_END_DATE` environment variables. ENTSO-E requests are divided into non-overlapping yearly chunks. The default ends before the Single Day-Ahead Coupling switched from hourly to 15-minute market time units on `2025-10-01`; extending beyond that date requires an explicit hourly price-aggregation decision that is outside the current processing logic.
+The primary ingestion script requests the Germany-Luxembourg bidding zone (`DE_LU`). The shared default historical range is `2019-01-01` through `2025-09-30`, inclusive, using UTC boundaries, and can be overridden with command-line arguments or the `POWERFLOW_HISTORY_START_DATE` and `POWERFLOW_HISTORY_END_DATE` environment variables. ENTSO-E requests use continuous, non-overlapping six-month windows to remain below the client's annual query boundary. The default ends before the Single Day-Ahead Coupling switched from hourly to 15-minute market time units on `2025-10-01`; extending beyond that date requires an explicit hourly price-aggregation decision that is outside the current processing logic.
 
 - day-ahead electricity prices;
 - actual electricity load; and
 - generation by production type.
 
-Germany's nuclear series has no populated ENTSO-E observations after `2023-04-15 23:45 Europe/Berlin`, following the final plant shutdowns. The existing pipeline preserves the feature and applies its documented zero-generation treatment rather than dropping it.
+Germany's nuclear series has no populated ENTSO-E observations after `2023-04-15 23:45 Europe/Berlin`. The first null hour begins at local midnight on `2023-04-16`, equivalent to `2023-04-15 22:00 UTC`; this explains the two null hourly observations that appear before `2023-04-16` when judged by UTC calendar date. The pipeline preserves the feature and applies its documented zero-generation treatment from that local shutdown boundary rather than dropping it.
 
 ### Open-Meteo
 
-The primary weather ingestion uses the same configurable range and yearly chunks for hourly historical observations in Berlin:
+The primary weather ingestion uses the same configurable UTC range and six-month chunks for hourly historical observations at the Berlin coordinates. Open-Meteo is requested in UTC so the repeated autumn local hour remains two distinct real hours and DST cannot create gaps in the joined timeline:
 
 - temperature;
 - relative humidity;
@@ -267,7 +267,7 @@ The repository also retains an earlier California EIA/Open-Meteo pipeline, but i
 
 ### Raw
 
-`data/raw/` contains direct ENTSO-E and Open-Meteo extracts. ENTSO-E load and generation inputs may be quarter-hourly.
+`data/raw/` contains direct ENTSO-E and Open-Meteo extracts. ENTSO-E load and generation inputs may be quarter-hourly; they are converted to UTC before hourly aggregation. Silver validation requires unique, strictly increasing timestamps at exact one-hour UTC intervals.
 
 ### Silver
 

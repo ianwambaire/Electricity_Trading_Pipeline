@@ -9,7 +9,8 @@ DEFAULT_START_DATE = "2019-01-01"
 DEFAULT_END_DATE = "2025-09-30"
 START_DATE_ENV = "POWERFLOW_HISTORY_START_DATE"
 END_DATE_ENV = "POWERFLOW_HISTORY_END_DATE"
-MARKET_TIMEZONE = "Europe/Berlin"
+CANONICAL_TIMEZONE = "UTC"
+API_CHUNK_MONTHS = 6
 
 
 @dataclass(frozen=True)
@@ -20,12 +21,15 @@ class HistoricalDateRange:
     end_date: date
 
     @property
-    def entsoe_start(self) -> pd.Timestamp:
-        return pd.Timestamp(self.start_date, tz=MARKET_TIMEZONE)
+    def start_utc(self) -> pd.Timestamp:
+        return pd.Timestamp(self.start_date, tz=CANONICAL_TIMEZONE)
 
     @property
-    def entsoe_end_exclusive(self) -> pd.Timestamp:
-        return pd.Timestamp(self.end_date + timedelta(days=1), tz=MARKET_TIMEZONE)
+    def end_utc_exclusive(self) -> pd.Timestamp:
+        return pd.Timestamp(
+            self.end_date + timedelta(days=1),
+            tz=CANONICAL_TIMEZONE,
+        )
 
 
 def _parse_iso_date(value: str, label: str) -> date:
@@ -52,12 +56,21 @@ def get_historical_date_range(
     return historical_range
 
 
-def iter_year_chunks(historical_range: HistoricalDateRange):
-    """Yield non-overlapping, end-exclusive windows of at most one year."""
-    chunk_start = historical_range.entsoe_start
-    final_end = historical_range.entsoe_end_exclusive
+def iter_time_chunks(
+    historical_range: HistoricalDateRange,
+    chunk_months: int = API_CHUNK_MONTHS,
+):
+    """Yield continuous, non-overlapping, end-exclusive UTC API windows."""
+    if chunk_months <= 0:
+        raise ValueError("chunk_months must be positive.")
+
+    chunk_start = historical_range.start_utc
+    final_end = historical_range.end_utc_exclusive
 
     while chunk_start < final_end:
-        chunk_end = min(chunk_start + pd.DateOffset(years=1), final_end)
+        chunk_end = min(
+            chunk_start + pd.DateOffset(months=chunk_months),
+            final_end,
+        )
         yield chunk_start, chunk_end
         chunk_start = chunk_end

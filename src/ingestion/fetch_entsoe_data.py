@@ -8,9 +8,9 @@ from dotenv import load_dotenv
 from entsoe import EntsoePandasClient
 
 if __package__:
-    from .historical_range import get_historical_date_range, iter_year_chunks
+    from .historical_range import get_historical_date_range, iter_time_chunks
 else:
-    from historical_range import get_historical_date_range, iter_year_chunks
+    from historical_range import get_historical_date_range, iter_time_chunks
 
 
 COUNTRY_CODE = "DE_LU"
@@ -63,7 +63,7 @@ def combine_time_chunks(chunks: list[pd.Series | pd.DataFrame]):
 
 def fetch_in_chunks(client, query_method, historical_range, dataset_name):
     chunks = []
-    for chunk_start, chunk_end in iter_year_chunks(historical_range):
+    for chunk_start, chunk_end in iter_time_chunks(historical_range):
         print(
             f"Fetching {dataset_name}: "
             f"{chunk_start.date()} to {(chunk_end - pd.Timedelta(days=1)).date()}"

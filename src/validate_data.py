@@ -30,7 +30,8 @@ SILVER_REQUIRED_COLUMNS = [
 ]
 
 # Nuclear generation is intentionally excluded because Germany's final nuclear
-# plants closed in April 2023 and the gold builder converts later nulls to 0 MW.
+# plants stopped reporting from local midnight on 2023-04-16
+# (2023-04-15 22:00 UTC), and the gold builder converts later nulls to 0 MW.
 SILVER_ESSENTIAL_FORECASTING_FIELDS = [
     column for column in SILVER_REQUIRED_COLUMNS
     if column not in {"timestamp", "nuclear_mw"}
@@ -72,6 +73,7 @@ GOLD_MODEL_FEATURE_COLUMNS = [
 
 GOLD_TARGET_COLUMN = "target_price_next_hour"
 MIN_GOLD_ROWS = 10
+NUCLEAR_SHUTDOWN_UTC = pd.Timestamp("2023-04-15T22:00:00Z")
 # The gold builder needs a 168-hour lag, a next-hour target, and at least ten
 # resulting rows for the existing chronological 80/20 model split.
 MIN_SILVER_ROWS = 168 + 1 + MIN_GOLD_ROWS
@@ -175,6 +177,77 @@ def _validate_numeric_columns(
     )
 
 
+def _validate_hourly_continuity(
+    data: pd.DataFrame,
+    dataset_name: str,
+    errors: list[str],
+    log_results: bool,
+):
+    if "timestamp" not in data.columns:
+        return
+
+    timestamps = pd.to_datetime(data["timestamp"], errors="coerce", utc=True)
+    valid_timestamps = pd.DatetimeIndex(timestamps.dropna())
+    if valid_timestamps.empty:
+        missing_timestamps = []
+        continuous = False
+    else:
+        expected = pd.date_range(
+            valid_timestamps.min(),
+            valid_timestamps.max(),
+            freq="h",
+            tz="UTC",
+        )
+        missing_timestamps = expected.difference(valid_timestamps)
+        spacing = timestamps.diff().dropna()
+        continuous = (
+            timestamps.notna().all()
+            and timestamps.is_unique
+            and timestamps.is_monotonic_increasing
+            and spacing.eq(pd.Timedelta(hours=1)).all()
+            and len(missing_timestamps) == 0
+        )
+
+    missing_display = [timestamp.isoformat() for timestamp in missing_timestamps]
+    _log_check(
+        f"{dataset_name} Hourly Continuity Check",
+        continuous,
+        "Timestamps are strictly increasing at exactly one-hour UTC intervals.",
+        f"Missing or irregular hourly UTC timestamps: {missing_display}",
+        errors,
+        log_results,
+    )
+
+
+def _validate_nuclear_shutdown_missingness(
+    data: pd.DataFrame,
+    errors: list[str],
+    log_results: bool,
+):
+    if "timestamp" not in data.columns or "nuclear_mw" not in data.columns:
+        return
+
+    timestamps = pd.to_datetime(data["timestamp"], errors="coerce", utc=True)
+    unexpected_nulls = data["nuclear_mw"].isna() & (
+        timestamps < NUCLEAR_SHUTDOWN_UTC
+    )
+    unexpected_timestamps = [
+        timestamp.isoformat()
+        for timestamp in timestamps[unexpected_nulls].dropna()
+    ]
+    _log_check(
+        "ENTSO-E Silver Nuclear Availability Check",
+        not unexpected_timestamps,
+        (
+            "Nuclear nulls occur only from Germany's local-time shutdown "
+            "boundary onward."
+        ),
+        f"Unexpected pre-shutdown nuclear nulls: {unexpected_timestamps}",
+        errors,
+        log_results,
+    )
+
+
 def validate_silver_data(data: pd.DataFrame, log_results: bool = True) -> bool:
     if log_results:
         initialize_database()
@@ -194,7 +267,8 @@ def validate_silver_data(data: pd.DataFrame, log_results: bool = True) -> bool:
         log_results,
     )
 
-    _validate_timestamp(data, "ENTSO-E Silver", errors, log_results, require_order=False)
+    _validate_timestamp(data, "ENTSO-E Silver", errors, log_results, require_order=True)
+    _validate_hourly_continuity(data, "ENTSO-E Silver", errors, log_results)
 
     duplicate_rows = int(data.duplicated().sum())
     _log_check(
@@ -220,6 +294,7 @@ def validate_silver_data(data: pd.DataFrame, log_results: bool = True) -> bool:
         errors,
         log_results,
     )
+    _validate_nuclear_shutdown_missingness(data, errors, log_results)
 
     numeric_columns = [
         column for column in SILVER_REQUIRED_COLUMNS

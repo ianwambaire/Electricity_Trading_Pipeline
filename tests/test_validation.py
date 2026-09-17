@@ -58,3 +58,9 @@ def test_malformed_timestamp_fails_validation(valid_silver_data):
     valid_silver_data.loc[valid_silver_data.index[-1], "timestamp"] = "not-a-timestamp"
 
     assert not validate_silver_data(valid_silver_data, log_results=False)
+
+
+def test_missing_hour_fails_silver_temporal_integrity(valid_silver_data):
+    data_with_gap = valid_silver_data.drop(index=10).reset_index(drop=True)
+
+    assert not validate_silver_data(data_with_gap, log_results=False)

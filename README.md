@@ -354,6 +354,19 @@ development winner are selected using aggregate 2022–2024 RMSE. Targets from
 2025 remain untouched. Coefficient diagnostics use standardized coefficients
 and report feature correlation as a warning against causal interpretation.
 
+After the model design is frozen, the one-time release command trains Ordinary
+Linear Regression with the Full PowerFlow feature set on targets before 2025 and
+evaluates the 2025 final holdout:
+
+```bash
+PYTHONPATH=src python src/models/run_final_holdout_evaluation.py
+```
+
+The command writes separate final-release reports and artifacts and refuses to
+run again once `artifacts/models/final_model_release_manifest.json` exists. The
+2025 results are for final reporting only and are not used for tuning, feature
+selection, or model-family selection.
+
 ### Dataset and model version metadata
 
 Every completed training cycle writes

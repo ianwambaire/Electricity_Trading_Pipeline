@@ -55,7 +55,8 @@ Generated analysis and model outputs, including:
 - feature-importance CSV and PNG outputs;
 - expanding-window backtest comparison and aggregate CSVs;
 - feature-ablation, market-regime, and yearly price-distribution CSVs;
-- focused model-tuning, regime, and linear-coefficient diagnostic CSVs; and
+- focused model-tuning, regime, and linear-coefficient diagnostic CSVs;
+- one-time final-holdout metrics, baseline, and regime CSVs; and
 - validation reports.
 
 These reports can be regenerated and are excluded from Git.

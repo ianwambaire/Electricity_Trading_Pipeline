@@ -306,6 +306,28 @@ training/testing row counts, dataset version, Git SHA, and one serialized model
 artifact per candidate run. Local CSV reports record the four-model comparison
 and prediction results.
 
+### Expanding-window backtesting
+
+Before tuned model selection, the standalone backtest compares three forecasting
+baselines and the four untuned model families across calendar-year validation
+periods. Period boundaries use the timestamp of the forecast target, not merely
+the feature row timestamp:
+
+- train through 2021 and validate on 2022;
+- expand training through 2022 and validate on 2023; and
+- expand training through 2023 and validate on 2024.
+
+Targets from `2025-01-01` onward remain excluded as the final chronological
+holdout. Run the backtest independently of the Prefect training pipeline:
+
+```bash
+PYTHONPATH=src python src/models/run_backtest.py
+```
+
+The command writes `data/reports/backtest_model_comparison.csv` and
+`data/reports/backtest_model_aggregate.csv`. It fits untuned models only and
+does not run `RandomizedSearchCV`.
+
 ### Dataset and model version metadata
 
 Every completed training cycle writes

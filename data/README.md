@@ -52,7 +52,8 @@ Generated analysis and model outputs, including:
 - model-comparison CSVs;
 - actual-versus-predicted CSV and PNG outputs;
 - anomaly CSV and PNG outputs;
-- feature-importance CSV and PNG outputs; and
+- feature-importance CSV and PNG outputs;
+- expanding-window backtest comparison and aggregate CSVs; and
 - validation reports.
 
 These reports can be regenerated and are excluded from Git.

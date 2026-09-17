@@ -340,6 +340,20 @@ targets, and fits the same untuned model configurations. Generated reports cover
 feature-group performance, negative/normal/high/extreme price regimes, and
 development-period target distributions by year.
 
+The focused development-tuning experiment evaluates regularized and robust
+linear models alongside the strongest feature configuration for each tree-model
+family:
+
+```bash
+PYTHONPATH=src python src/models/run_focused_tuning.py
+```
+
+Scaling is contained inside each linear model's scikit-learn pipeline and is fit
+only on the applicable expanding training window. Hyperparameters and the final
+development winner are selected using aggregate 2022–2024 RMSE. Targets from
+2025 remain untouched. Coefficient diagnostics use standardized coefficients
+and report feature correlation as a warning against causal interpretation.
+
 ### Dataset and model version metadata
 
 Every completed training cycle writes

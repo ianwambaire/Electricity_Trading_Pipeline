@@ -59,7 +59,7 @@ The active flow is `PowerFlow ENTSO-E Pipeline` in `src/scheduled_pipeline.py`. 
 9. Detect market anomalies.
 10. Generate feature importance.
 
-The Prefect deployment is intentionally unscheduled because the current ingestion scripts use fixed historical date ranges. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
+The Prefect deployment is intentionally unscheduled because the ingestion performs a configured historical backfill rather than a recurring incremental update. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
 
 ## Technologies
 
@@ -146,6 +146,8 @@ Then replace the placeholders locally. Never commit `.env`.
 | Variable | Purpose |
 |---|---|
 | `ENTSOE_API_KEY` | Required by the primary ENTSO-E ingestion stage |
+| `POWERFLOW_HISTORY_START_DATE` | Optional inclusive history start; defaults to `2019-01-01` |
+| `POWERFLOW_HISTORY_END_DATE` | Optional inclusive history end; defaults to `2025-09-30` |
 | `EIA_API_KEY` | Used only by retained legacy EIA ingestion scripts |
 | `ALERT_EMAIL_SENDER` | Optional Gmail sender for failure notifications |
 | `ALERT_EMAIL_PASSWORD` | Optional Gmail app password |
@@ -241,15 +243,17 @@ Docker Compose starts the dashboard on port `8501`, MLflow on host port `5001`, 
 
 ### ENTSO-E Transparency Platform
 
-The primary ingestion script currently requests the Germany-Luxembourg bidding zone (`DE_LU`) for fixed historical dates from January 2022 through January 2025:
+The primary ingestion script requests the Germany-Luxembourg bidding zone (`DE_LU`). The shared default historical range is `2019-01-01` through `2025-09-30`, inclusive, and can be overridden with command-line arguments or the `POWERFLOW_HISTORY_START_DATE` and `POWERFLOW_HISTORY_END_DATE` environment variables. ENTSO-E requests are divided into non-overlapping yearly chunks. The default ends before the Single Day-Ahead Coupling switched from hourly to 15-minute market time units on `2025-10-01`; extending beyond that date requires an explicit hourly price-aggregation decision that is outside the current processing logic.
 
 - day-ahead electricity prices;
 - actual electricity load; and
 - generation by production type.
 
+Germany's nuclear series has no populated ENTSO-E observations after `2023-04-15 23:45 Europe/Berlin`, following the final plant shutdowns. The existing pipeline preserves the feature and applies its documented zero-generation treatment rather than dropping it.
+
 ### Open-Meteo
 
-The primary weather ingestion requests hourly historical observations for Berlin from January 2022 through December 2024:
+The primary weather ingestion uses the same configurable range and yearly chunks for hourly historical observations in Berlin:
 
 - temperature;
 - relative humidity;
@@ -398,7 +402,7 @@ personal Drive paths are stored in the repository.
 
 ## Current status
 
-- ENTSO-E and Open-Meteo ingestion are implemented for the fixed historical range.
+- ENTSO-E and Open-Meteo ingestion share a configurable historical range, defaulting to `2019-01-01` through `2025-09-30`.
 - Silver and gold construction and validation are implemented.
 - Four-model comparison, MLflow tracking, best-model selection, reporting, anomaly detection, and feature importance are implemented.
 - Training produces deterministic dataset identity and selected-model manifest metadata.

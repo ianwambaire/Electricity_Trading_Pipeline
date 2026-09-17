@@ -24,9 +24,12 @@ if __package__:
     )
     from .model_evaluation import (
         build_comparison_dataframe,
+        build_cv_diagnostics_dataframe,
+        build_fold_diagnostics,
         build_time_series_cv,
         chronological_holdout_split,
         select_best_result,
+        summarize_cv_rmse,
     )
 else:
     from artifact_metadata import (
@@ -36,15 +39,19 @@ else:
     )
     from model_evaluation import (
         build_comparison_dataframe,
+        build_cv_diagnostics_dataframe,
+        build_fold_diagnostics,
         build_time_series_cv,
         chronological_holdout_split,
         select_best_result,
+        summarize_cv_rmse,
     )
 
 
 DATA_PATH = Path("data/features/gold_model_features.csv")
 MODEL_DIR = Path("artifacts/models")
 MODEL_COMPARISON_PATH = Path("data/reports/gold_model_comparison.csv")
+CV_DIAGNOSTICS_PATH = Path("data/reports/cv_diagnostics.csv")
 MLFLOW_TRACKING_URI = "sqlite:///mlflow.db"
 MLFLOW_EXPERIMENT_NAME = "electricity-price-forecasting-entsoe"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -125,7 +132,8 @@ def fit_candidate(configuration, X_train, y_train, cross_validator):
             n_jobs=1,
         )
         estimator.fit(X_train, y_train)
-        return estimator, float(-cv_scores.mean()), {}
+        fold_rmse = [-float(score) for score in cv_scores]
+        return estimator, fold_rmse, {}
 
     search = RandomizedSearchCV(
         estimator=estimator,
@@ -140,7 +148,11 @@ def fit_candidate(configuration, X_train, y_train, cross_validator):
     )
     search.fit(X_train, y_train)
 
-    return search.best_estimator_, float(-search.best_score_), search.best_params_
+    fold_rmse = [
+        -float(search.cv_results_[f"split{fold}_test_score"][search.best_index_])
+        for fold in range(cross_validator.n_splits)
+    ]
+    return search.best_estimator_, fold_rmse, search.best_params_
 
 
 def evaluate_model(
@@ -149,16 +161,24 @@ def evaluate_model(
     X_test,
     y_train,
     y_test,
+    train_timestamps,
     cross_validator,
     run_metadata,
 ):
     name = configuration["name"]
 
     with mlflow.start_run(run_name=name) as run:
-        model, cv_rmse, best_hyperparameters = fit_candidate(
+        model, fold_rmse, best_hyperparameters = fit_candidate(
             configuration,
             X_train,
             y_train,
+            cross_validator,
+        )
+        cv_summary = summarize_cv_rmse(fold_rmse)
+        fold_diagnostics = build_fold_diagnostics(
+            name,
+            fold_rmse,
+            train_timestamps,
             cross_validator,
         )
 
@@ -186,7 +206,22 @@ def evaluate_model(
         for key, value in best_hyperparameters.items():
             mlflow.log_param(f"best_{key}", value)
 
-        mlflow.log_metric("cv_rmse", cv_rmse)
+        mlflow.log_metric("cv_rmse", cv_summary["cv_rmse"])
+        mlflow.log_metric("cv_rmse_std", cv_summary["cv_rmse_std"])
+        mlflow.log_metric("cv_rmse_min", cv_summary["cv_rmse_min"])
+        mlflow.log_metric("cv_rmse_max", cv_summary["cv_rmse_max"])
+        for diagnostic in fold_diagnostics:
+            prefix = f"cv_fold_{diagnostic['fold']}"
+            mlflow.log_metric(f"{prefix}_rmse", diagnostic["fold_rmse"])
+            for field in (
+                "training_start_timestamp",
+                "training_end_timestamp",
+                "validation_start_timestamp",
+                "validation_end_timestamp",
+                "train_row_count",
+                "validation_row_count",
+            ):
+                mlflow.log_param(f"{prefix}_{field}", diagnostic[field])
         mlflow.log_metric("test_mae", test_mae)
         mlflow.log_metric("test_rmse", test_rmse)
         mlflow.log_metric("test_r2", test_r2)
@@ -199,7 +234,8 @@ def evaluate_model(
 
         print(f"\n{name}")
         print(f"Tuning status: {configuration['tuning_status']}")
-        print(f"CV RMSE: {cv_rmse:.2f}")
+        print(f"CV RMSE: {cv_summary['cv_rmse']:.2f}")
+        print(f"CV RMSE standard deviation: {cv_summary['cv_rmse_std']:.2f}")
         print(f"Test MAE: {test_mae:.2f}")
         print(f"Test RMSE: {test_rmse:.2f}")
         print(f"Test R² Score: {test_r2:.2f}")
@@ -209,7 +245,8 @@ def evaluate_model(
         return {
             "model_name": name,
             "tuning_status": configuration["tuning_status"],
-            "cv_rmse": cv_rmse,
+            **cv_summary,
+            "fold_diagnostics": fold_diagnostics,
             "test_mae": test_mae,
             "test_rmse": test_rmse,
             "test_r2": test_r2,
@@ -235,14 +272,17 @@ def main(
     data_path: Path = DATA_PATH,
     model_dir: Path = MODEL_DIR,
     comparison_path: Path = MODEL_COMPARISON_PATH,
+    cv_diagnostics_path: Path = CV_DIAGNOSTICS_PATH,
     mlflow_tracking_uri: str = MLFLOW_TRACKING_URI,
 ):
     data_path = Path(data_path)
     model_dir = Path(model_dir)
     comparison_path = Path(comparison_path)
+    cv_diagnostics_path = Path(cv_diagnostics_path)
 
     model_dir.mkdir(parents=True, exist_ok=True)
     comparison_path.parent.mkdir(parents=True, exist_ok=True)
+    cv_diagnostics_path.parent.mkdir(parents=True, exist_ok=True)
 
     mlflow.set_tracking_uri(mlflow_tracking_uri)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
@@ -255,6 +295,7 @@ def main(
         data,
         TARGET_COLUMN,
     )
+    train_timestamps = data.loc[X_train.index, "timestamp"].reset_index(drop=True)
     cross_validator = build_time_series_cv(CV_SPLITS)
 
     training_timestamp = datetime.now(timezone.utc).isoformat()
@@ -287,6 +328,7 @@ def main(
                 X_test,
                 y_train,
                 y_test,
+                train_timestamps,
                 cross_validator,
                 run_metadata,
             )
@@ -296,6 +338,8 @@ def main(
     selected_model = best_result["model_name"]
     comparison = build_comparison_dataframe(results, selected_model)
     comparison.to_csv(comparison_path, index=False)
+    cv_diagnostics = build_cv_diagnostics_dataframe(results)
+    cv_diagnostics.to_csv(cv_diagnostics_path, index=False)
     tag_model_runs(results, selected_model)
 
     model_path = model_dir / "best_gold_model.joblib"
@@ -335,6 +379,7 @@ def main(
     print(f"Selection method: {SELECTION_METHOD}")
     print(f"Saved to {model_path}")
     print(f"Training manifest saved to {manifest_path}")
+    print(f"CV diagnostics saved to {cv_diagnostics_path}")
 
 
 def parse_args():
@@ -360,6 +405,13 @@ def parse_args():
         "--mlflow-tracking-uri",
         default=os.getenv("POWERFLOW_MLFLOW_TRACKING_URI", MLFLOW_TRACKING_URI),
     )
+    parser.add_argument(
+        "--cv-diagnostics-path",
+        type=Path,
+        default=Path(
+            os.getenv("POWERFLOW_CV_DIAGNOSTICS_PATH", CV_DIAGNOSTICS_PATH)
+        ),
+    )
     return parser.parse_args()
 
 
@@ -369,5 +421,6 @@ if __name__ == "__main__":
         data_path=arguments.data_path,
         model_dir=arguments.output_dir,
         comparison_path=arguments.comparison_path,
+        cv_diagnostics_path=arguments.cv_diagnostics_path,
         mlflow_tracking_uri=arguments.mlflow_tracking_uri,
     )

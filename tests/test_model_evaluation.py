@@ -1,11 +1,14 @@
 import pandas as pd
+import pytest
 
 from models.model_evaluation import (
     COMPARISON_COLUMNS,
     build_comparison_dataframe,
+    build_fold_diagnostics,
     build_time_series_cv,
     chronological_holdout_split,
     select_best_result,
+    summarize_cv_rmse,
 )
 
 
@@ -26,6 +29,9 @@ def model_result(name, cv_rmse, test_rmse):
         "model_name": name,
         "tuning_status": "tuned_timeseries_cv",
         "cv_rmse": cv_rmse,
+        "cv_rmse_std": 1.0,
+        "cv_rmse_min": cv_rmse - 1.0,
+        "cv_rmse_max": cv_rmse + 1.0,
         "test_mae": test_rmse - 1,
         "test_rmse": test_rmse,
         "test_r2": 0.8,
@@ -52,6 +58,37 @@ def test_time_series_cv_never_shuffles_or_reverses_time():
         assert list(training_indices) == sorted(training_indices)
         assert list(validation_indices) == sorted(validation_indices)
         assert training_indices.max() < validation_indices.min()
+
+
+def test_fold_diagnostics_are_ordered_and_train_precedes_validation():
+    timestamps = sample_training_frame(16)["timestamp"]
+    diagnostics = build_fold_diagnostics(
+        "Linear Regression",
+        [3.0, 2.0, 1.0],
+        timestamps,
+        build_time_series_cv(n_splits=3),
+    )
+
+    assert [row["fold"] for row in diagnostics] == [1, 2, 3]
+    for row in diagnostics:
+        assert pd.Timestamp(row["training_start_timestamp"]) <= pd.Timestamp(
+            row["training_end_timestamp"]
+        )
+        assert pd.Timestamp(row["training_end_timestamp"]) < pd.Timestamp(
+            row["validation_start_timestamp"]
+        )
+        assert pd.Timestamp(row["validation_start_timestamp"]) <= pd.Timestamp(
+            row["validation_end_timestamp"]
+        )
+
+
+def test_cv_standard_deviation_uses_all_fold_scores():
+    summary = summarize_cv_rmse([1.0, 2.0, 3.0])
+
+    assert summary["cv_rmse"] == 2.0
+    assert summary["cv_rmse_std"] == pytest.approx(0.8164965809)
+    assert summary["cv_rmse_min"] == 1.0
+    assert summary["cv_rmse_max"] == 3.0
 
 
 def test_tuning_folds_are_restricted_to_training_portion():

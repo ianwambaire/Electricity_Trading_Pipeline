@@ -328,6 +328,18 @@ The command writes `data/reports/backtest_model_comparison.csv` and
 `data/reports/backtest_model_aggregate.csv`. It fits untuned models only and
 does not run `RandomizedSearchCV`.
 
+For research diagnostics, run the cumulative feature-ablation and market-regime
+experiment separately:
+
+```bash
+PYTHONPATH=src python src/models/run_feature_ablation.py
+```
+
+It uses the same expanding 2022–2024 development folds, excludes all 2025
+targets, and fits the same untuned model configurations. Generated reports cover
+feature-group performance, negative/normal/high/extreme price regimes, and
+development-period target distributions by year.
+
 ### Dataset and model version metadata
 
 Every completed training cycle writes

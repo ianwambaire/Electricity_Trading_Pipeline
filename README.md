@@ -2,7 +2,7 @@
 
 PowerFlow is an end-to-end electricity-market data and machine-learning project for exploring German-Luxembourg day-ahead prices, system load, generation mix, weather conditions, price forecasts, and anomalous market events.
 
-The primary pipeline collects historical ENTSO-E and Open-Meteo data, builds silver and gold datasets, validates them, compares four regression models, tracks experiments with MLflow, and produces CSV artifacts consumed by a Streamlit dashboard.
+The primary pipeline collects historical ENTSO-E and Open-Meteo data, builds and validates silver and gold datasets, verifies the frozen final model release, and produces prediction and analytics artifacts consumed by a Streamlit dashboard. Model-development experiments remain available as separate commands but are no longer part of the recurring Prefect flow.
 
 ## Problem
 
@@ -33,11 +33,9 @@ ENTSO-E API                    Open-Meteo Archive API
                   |
       data/features/gold_model_features.csv
                   |
- Linear Regression | Random Forest | Gradient Boosting | XGBoost
+ Frozen StandardScaler → Ordinary Linear Regression release
                   |
-       Lowest training-only time-series CV RMSE selected
-                  |
-    MLflow tracking + local model/report artifacts
+       Prediction and analytics reports
                   |
            Streamlit dashboard
 ```
@@ -54,7 +52,7 @@ The active flow is `PowerFlow ENTSO-E Pipeline` in `src/scheduled_pipeline.py`. 
 4. Validate the silver dataset.
 5. Build the gold feature dataset.
 6. Validate the gold dataset.
-7. Train and compare four forecasting models.
+7. Verify the frozen final model and its ordered 31-feature contract.
 8. Generate the actual-versus-predicted report.
 9. Detect market anomalies.
 10. Generate feature importance.
@@ -180,7 +178,7 @@ export PREFECT_API_URL=http://127.0.0.1:4200/api
 python src/orchestration/run_entsoe_pipeline.py
 ```
 
-The command invokes the same Prefect flow referenced by `prefect.yaml`. It requires API access and can take several minutes. Model training can create substantial local MLflow artifacts.
+The command invokes the same Prefect flow referenced by `prefect.yaml`. It requires API access and can take several minutes. The flow uses the frozen release artifacts and does not rerun model tuning or the one-time final holdout evaluation.
 
 Individual dataset validation can be run without writing quality results:
 
@@ -465,7 +463,7 @@ personal Drive paths are stored in the repository.
 
 - ENTSO-E and Open-Meteo ingestion share a configurable historical range, defaulting to `2019-01-01` through `2025-09-30`.
 - Silver and gold construction and validation are implemented.
-- Four-model comparison, MLflow tracking, best-model selection, reporting, anomaly detection, and feature importance are implemented.
+- Model-development comparisons and MLflow tracking are retained as separate research workflows; the primary pipeline now uses the frozen final Ordinary Linear Regression release for prediction and coefficient-based feature influence reporting.
 - Training produces deterministic dataset identity and selected-model manifest metadata.
 - Optional Colab training reuses the active trainer and can write reviewed release artifacts to a configurable Drive folder.
 - The current Streamlit dashboard reads the generated ENTSO-E CSV products.

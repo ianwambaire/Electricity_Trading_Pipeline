@@ -13,9 +13,9 @@ These binary files are reproducible outputs of the training pipeline and are int
 ## Artifact roles
 
 - **Candidate artifacts:** each of the four evaluated models is tracked in its own MLflow run. Tree-based candidates use training-only `TimeSeriesSplit` tuning; Linear Regression remains untuned.
-- **Current selected model:** `best_gold_model.joblib` and `gold_model_features.joblib` remain at their existing paths so the local reporting pipeline continues to work unchanged.
+- **Development artifacts:** `best_gold_model.joblib` and `gold_model_features.joblib` remain available for historical development reproducibility but are no longer used by the primary prediction pipeline.
 - **Release metadata:** `training_manifest.json` links the selected model to the exact gold dataset using its SHA-256 identifier.
-- **Final evaluated release:** `final_gold_model.joblib`, `final_gold_model_features.joblib`, and `final_model_release_manifest.json` contain the frozen Ordinary Linear Regression release and its one-time 2025 holdout evidence. These files do not replace the existing pipeline artifacts automatically.
+- **Final evaluated release:** `final_gold_model.joblib`, `final_gold_model_features.joblib`, and `final_model_release_manifest.json` contain the frozen Ordinary Linear Regression release and its one-time 2025 holdout evidence. These are the active artifacts used by prediction reporting and the dashboard.
 - **External releases:** Colab can direct the same three selected-model files and the comparison CSV to a configurable Google Drive release folder.
 
 The trainer accepts `--data-path`, `--output-dir`, `--comparison-path`, and

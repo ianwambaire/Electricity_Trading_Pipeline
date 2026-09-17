@@ -6,13 +6,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from dashboard_data import load_final_release_metadata
+
 
 SILVER_DATA = Path("data/processed/silver_electricity_market_data.csv")
 GOLD_DATA = Path("data/features/gold_model_features.csv")
 PREDICTIONS_DATA = Path("data/reports/actual_vs_predicted.csv")
 ANOMALIES_DATA = Path("data/reports/detected_anomalies.csv")
 FEATURE_IMPORTANCE_DATA = Path("data/reports/feature_importance.csv")
-MODEL_COMPARISON_DATA = Path("data/reports/gold_model_comparison.csv")
+FINAL_RELEASE_MANIFEST = Path("artifacts/models/final_model_release_manifest.json")
+FINAL_HOLDOUT_METRICS = Path("data/reports/final_holdout_metrics.csv")
 PIPELINE_DATABASE = Path("database/electricity_trading.db")
 
 
@@ -199,7 +202,7 @@ PLOTLY_LAYOUT = dict(
 CHART_COLORS = ["#2563EB", "#06B6D4", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"]
 
 
-@st.cache_data
+@st.cache_data(ttl=30)
 def load_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
@@ -254,6 +257,12 @@ def fmt_int(value):
     if pd.isna(value):
         return "N/A"
     return f"{int(value):,}"
+
+
+def fmt_date(value):
+    if value is None or pd.isna(value):
+        return "N/A"
+    return pd.Timestamp(value).strftime("%Y-%m-%d")
 
 
 def fmt_timestamp(value):
@@ -315,7 +324,10 @@ gold_data = load_csv(GOLD_DATA)
 predictions = load_csv(PREDICTIONS_DATA)
 anomalies = load_csv(ANOMALIES_DATA)
 feature_importance = load_csv(FEATURE_IMPORTANCE_DATA)
-model_comparison = load_csv(MODEL_COMPARISON_DATA)
+final_release, final_release_error = load_final_release_metadata(
+    FINAL_RELEASE_MANIFEST,
+    FINAL_HOLDOUT_METRICS,
+)
 latest_pipeline_run, pipeline_run_error = load_latest_pipeline_run(PIPELINE_DATABASE)
 
 if "timestamp" in silver_data.columns:
@@ -352,16 +364,6 @@ latest_price = (
     if silver_ready and silver_data["timestamp"].notna().any()
     else None
 )
-
-best_model = None
-comparison_columns = ["model_name", "mae", "rmse", "r2"]
-if has_columns(model_comparison, comparison_columns):
-    model_comparison = model_comparison.copy()
-    for column in ["mae", "rmse", "r2"]:
-        model_comparison[column] = pd.to_numeric(model_comparison[column], errors="coerce")
-    valid_models = model_comparison.dropna(subset=comparison_columns)
-    if not valid_models.empty:
-        best_model = valid_models.sort_values(["rmse", "mae"]).iloc[0]
 
 gold_feature_count = (
     len(
@@ -589,22 +591,24 @@ elif page == "Market Intelligence":
 elif page == "Forecasting":
     page_title("Forecasting", "Actual vs Predicted Price Forecast")
 
-    if best_model is None:
-        show_data_warning("Gold model comparison", MODEL_COMPARISON_DATA)
+    if final_release is None:
+        st.warning(final_release_error)
     else:
-        section_header("Model Metrics")
+        section_header("Final Model Metrics")
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Best Model", str(best_model["model_name"]))
-        col2.metric("MAE", fmt(best_model["mae"]))
-        col3.metric("RMSE", fmt(best_model["rmse"]))
-        col4.metric("R² Score", fmt(best_model["r2"]))
-        st.caption("Best model selected by the lowest RMSE, matching the training pipeline.")
-
-        section_header("Four-Model Comparison")
-        st.dataframe(
-            model_comparison.sort_values("rmse"),
-            width="stretch",
-            hide_index=True,
+        col1.metric("Final Model", str(final_release["model_name"]))
+        col2.metric("MAE", fmt(final_release["mae"]))
+        col3.metric("RMSE", fmt(final_release["rmse"]))
+        col4.metric("R² Score", f"{final_release['r2']:.3f}")
+        st.caption(
+            f"Final evaluation period: {fmt_date(final_release['holdout_start'])} to "
+            f"{fmt_date(final_release['holdout_end'])} · "
+            f"{final_release['improvement_vs_persistence_pct']:.2f}% RMSE improvement "
+            "over persistence."
+        )
+        st.info(
+            "Model limitation: forecast performance is weaker during extreme "
+            "price events at or above EUR 200/MWh."
         )
 
     prediction_columns = ["timestamp", "actual_price", "predicted_price"]
@@ -685,7 +689,7 @@ elif page == "Anomaly Detection":
 
 
 elif page == "Model Insights":
-    page_title("Model Insights", "Feature Importance and Model Drivers")
+    page_title("Model Insights", "Final Model Feature Influence")
 
     if not has_columns(feature_importance, ["feature", "importance"]):
         show_data_warning("Feature-importance report", FEATURE_IMPORTANCE_DATA)
@@ -716,8 +720,9 @@ elif page == "Model Insights":
         section_header("Interpretation")
         leading_features = ", ".join(ranked_features.head(5)["feature"].astype(str))
         st.info(
-            f"The current feature-importance report ranks these as the five leading model drivers: "
-            f"{leading_features}."
+            "The final linear model has the largest absolute standardized "
+            f"coefficients for: {leading_features}. Correlated predictors mean "
+            "these magnitudes should not be interpreted as causal effects."
         )
 
 
@@ -749,11 +754,9 @@ Silver Cleaned Dataset
     ↓
 Gold Feature Dataset
     ↓
-Four-Model Training and Best-Model Selection
+Frozen Final Model Verification
     ↓
-MLflow Experiment Tracking
-    ↓
-Forecast Visualization
+Final Model Predictions
     ↓
 Anomaly Detection
     ↓
@@ -794,7 +797,8 @@ Feature Importance
             [
                 {"Layer": "Silver", "Path": str(SILVER_DATA), "Status": "Available" if not silver_data.empty else "Missing"},
                 {"Layer": "Gold", "Path": str(GOLD_DATA), "Status": "Available" if not gold_data.empty else "Missing"},
-                {"Layer": "Model Comparison", "Path": str(MODEL_COMPARISON_DATA), "Status": "Available" if not model_comparison.empty else "Missing"},
+                {"Layer": "Final Model Release", "Path": str(FINAL_RELEASE_MANIFEST), "Status": "Available" if final_release is not None else "Missing"},
+                {"Layer": "Final Holdout Metrics", "Path": str(FINAL_HOLDOUT_METRICS), "Status": "Available" if FINAL_HOLDOUT_METRICS.exists() else "Missing"},
                 {"Layer": "Predictions", "Path": str(PREDICTIONS_DATA), "Status": "Available" if not predictions.empty else "Missing"},
                 {"Layer": "Anomalies", "Path": str(ANOMALIES_DATA), "Status": "Available" if not anomalies.empty else "Missing"},
                 {"Layer": "Feature Importance", "Path": str(FEATURE_IMPORTANCE_DATA), "Status": "Available" if not feature_importance.empty else "Missing"},

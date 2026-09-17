@@ -1,51 +1,57 @@
-import pandas as pd
-import joblib
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import pandas as pd
 
-# Load model
-model = joblib.load("artifacts/models/best_gold_model.joblib")
+if __package__:
+    from .final_model_runtime import load_final_model_release
+else:
+    from final_model_runtime import load_final_model_release
 
-# Load feature names
-features = joblib.load("artifacts/models/gold_model_features.joblib")
 
-# Create dataframe
-importance_df = pd.DataFrame({
-    "feature": features,
-    "importance": model.feature_importances_
-})
+CSV_OUTPUT_PATH = Path("data/reports/feature_importance.csv")
+PLOT_OUTPUT_PATH = Path("data/reports/feature_importance.png")
 
-importance_df = importance_df.sort_values(
-    by="importance",
-    ascending=False
-)
 
-print("\nTop 15 Features")
-print(importance_df.head(15))
+def build_linear_feature_importance(model, features) -> pd.DataFrame:
+    estimator = model.named_steps.get("model") if hasattr(model, "named_steps") else model
+    if not hasattr(estimator, "coef_"):
+        raise TypeError(
+            "Frozen final model does not expose linear coefficients for importance."
+        )
+    coefficients = estimator.coef_
+    if len(coefficients) != len(features):
+        raise ValueError("Model coefficient count does not match frozen feature count.")
 
-# Save CSV
-importance_df.to_csv(
-    "data/reports/feature_importance.csv",
-    index=False
-)
+    importance = pd.DataFrame(
+        {
+            "feature": features,
+            "importance": abs(coefficients),
+            "signed_coefficient": coefficients,
+        }
+    )
+    return importance.sort_values("importance", ascending=False)
 
-# Plot
-plt.figure(figsize=(10, 6))
 
-top_features = importance_df.head(15)
+def main():
+    model, features = load_final_model_release()
+    importance = build_linear_feature_importance(model, features)
+    CSV_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    importance.to_csv(CSV_OUTPUT_PATH, index=False)
 
-plt.barh(
-    top_features["feature"],
-    top_features["importance"]
-)
+    top_features = importance.head(15).sort_values("importance")
+    plt.figure(figsize=(10, 6))
+    plt.barh(top_features["feature"], top_features["importance"])
+    plt.xlabel("Absolute standardized coefficient")
+    plt.ylabel("Feature")
+    plt.title("Final Linear Model Feature Influence")
+    plt.tight_layout()
+    plt.savefig(PLOT_OUTPUT_PATH)
+    plt.close()
 
-plt.xlabel("Importance")
-plt.ylabel("Feature")
-plt.title("Top 15 Feature Importance")
+    print(f"Saved coefficient importance to {CSV_OUTPUT_PATH}")
+    print(f"Saved plot to {PLOT_OUTPUT_PATH}")
 
-plt.tight_layout()
 
-plt.savefig(
-    "data/reports/feature_importance.png"
-)
-
-plt.show()
+if __name__ == "__main__":
+    main()

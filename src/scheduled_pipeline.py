@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 from prefect import flow, task
 
+from models.final_model_runtime import load_final_model_release
 from notifications.email_alert import send_failure_alert
 from store_data import initialize_database, log_pipeline_run
 from utils.logger import get_logger
@@ -100,9 +101,18 @@ def validate_gold_task() -> int:
     return len(data)
 
 
-@task(name="Train and select forecasting model")
-def train_model_task():
-    _run_script("Four-model training", "src/models/train_gold_model.py")
+@task(name="Verify frozen final model release")
+def verify_final_model_release_task() -> int:
+    logger.info("Starting stage: Frozen final model verification")
+    _, features = load_final_model_release(
+        PROJECT_ROOT / "artifacts/models/final_gold_model.joblib",
+        PROJECT_ROOT / "artifacts/models/final_gold_model_features.joblib",
+    )
+    logger.info(
+        "Completed stage: Frozen final model verification (%s features)",
+        len(features),
+    )
+    return len(features)
 
 
 @task(name="Generate actual-vs-predicted report")
@@ -151,8 +161,8 @@ def powerflow_entsoe_pipeline():
         stage_name = "Gold dataset validation"
         records_processed = validate_gold_task()
 
-        stage_name = "Four-model training"
-        train_model_task()
+        stage_name = "Frozen final model verification"
+        verify_final_model_release_task()
 
         stage_name = "Actual-vs-predicted report generation"
         prediction_report_task()

@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -8,6 +9,8 @@ if __package__:
     from .final_model_runtime import load_final_model_release, predict_with_final_model
 else:
     from final_model_runtime import load_final_model_release, predict_with_final_model
+
+from ingestion.incremental_utils import append_csv_safely, latest_stored_timestamp
 
 
 DATA_PATH = Path("data/features/gold_model_features.csv")
@@ -59,21 +62,8 @@ def create_prediction_output(
     )
 
 
-def main():
-    data = pd.read_csv(DATA_PATH)
-    model, features = load_final_model_release()
-    holdout_start, holdout_end = load_release_holdout_period()
-    results = create_prediction_output(
-        data,
-        model,
-        features,
-        holdout_start,
-        holdout_end,
-    )
-
-    CSV_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    results.to_csv(CSV_OUTPUT_PATH, index=False)
-
+def _save_prediction_plot(results: pd.DataFrame, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     plot_data = results.tail(500)
     plt.figure(figsize=(14, 6))
     plt.plot(plot_data["timestamp"], plot_data["actual_price"], label="Actual Price")
@@ -87,11 +77,84 @@ def main():
     plt.title("Final Model: Actual vs Predicted Electricity Prices")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(PLOT_OUTPUT_PATH)
+    plt.savefig(output_path)
     plt.close()
 
-    print(f"Saved prediction results to {CSV_OUTPUT_PATH}")
-    print(f"Saved plot to {PLOT_OUTPUT_PATH}")
+
+def run_prediction_report(
+    mode: str = "historical",
+    *,
+    data_path: Path = DATA_PATH,
+    csv_output_path: Path = CSV_OUTPUT_PATH,
+    plot_output_path: Path = PLOT_OUTPUT_PATH,
+) -> int:
+    if mode not in {"historical", "incremental"}:
+        raise ValueError("mode must be 'historical' or 'incremental'.")
+
+    data = pd.read_csv(data_path)
+    model, features = load_final_model_release()
+    holdout_start, holdout_end = load_release_holdout_period()
+
+    if mode == "incremental":
+        latest_prediction = latest_stored_timestamp(csv_output_path)
+        prediction_start = (
+            holdout_start
+            if latest_prediction is None
+            else latest_prediction + pd.Timedelta(nanoseconds=1)
+        )
+        target_timestamps = pd.to_datetime(data["timestamp"], utc=True) + pd.Timedelta(
+            hours=1
+        )
+        if target_timestamps.empty or target_timestamps.max() < prediction_start:
+            print("No newly eligible Gold rows are available for prediction.")
+            return 0
+        prediction_end = target_timestamps.max()
+    else:
+        prediction_start = holdout_start
+        prediction_end = holdout_end
+
+    results = create_prediction_output(
+        data,
+        model,
+        features,
+        prediction_start,
+        prediction_end,
+    )
+
+    csv_output_path = Path(csv_output_path)
+    if mode == "incremental":
+        append_result = append_csv_safely(csv_output_path, results)
+        prediction_count = append_result.new_rows
+        combined_results = pd.read_csv(csv_output_path)
+    else:
+        csv_output_path.parent.mkdir(parents=True, exist_ok=True)
+        results.to_csv(csv_output_path, index=False)
+        prediction_count = len(results)
+        combined_results = results
+
+    _save_prediction_plot(combined_results, Path(plot_output_path))
+
+    print(
+        f"Saved prediction results to {csv_output_path} "
+        f"({prediction_count} rows generated in {mode} mode)."
+    )
+    print(f"Saved plot to {plot_output_path}")
+    return prediction_count
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate frozen-model predictions.")
+    parser.add_argument(
+        "--mode",
+        choices=["historical", "incremental"],
+        default="historical",
+    )
+    return parser.parse_args()
+
+
+def main():
+    arguments = parse_args()
+    run_prediction_report(arguments.mode)
 
 
 if __name__ == "__main__":

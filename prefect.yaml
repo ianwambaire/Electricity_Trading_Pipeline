@@ -28,12 +28,19 @@ deployments:
 - name: powerflow-entsoe-pipeline
   version: null
   tags: []
-  concurrency_limit: null
-  description: PowerFlow ENTSO-E silver/gold forecasting pipeline
+  concurrency_limit: 1
+  description: PowerFlow incremental ENTSO-E silver/gold forecasting pipeline
   entrypoint: src/scheduled_pipeline.py:powerflow_entsoe_pipeline
-  parameters: {}
+  parameters:
+    mode: incremental
+    start_date: null
+    end_date: null
   work_pool:
     name: electricity-pool
     work_queue_name: null
     job_variables: {}
-  schedules: []
+  schedules:
+  - cron: "0 * * * *"
+    timezone: UTC
+    day_or: true
+    active: true

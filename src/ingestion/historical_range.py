@@ -74,3 +74,25 @@ def iter_time_chunks(
         )
         yield chunk_start, chunk_end
         chunk_start = chunk_end
+
+
+def iter_utc_chunks(
+    start_utc: pd.Timestamp,
+    end_utc_exclusive: pd.Timestamp,
+    chunk_months: int = API_CHUNK_MONTHS,
+):
+    """Yield UTC timestamp windows for incremental, potentially intraday requests."""
+    start = pd.Timestamp(start_utc)
+    end = pd.Timestamp(end_utc_exclusive)
+    start = start.tz_localize(CANONICAL_TIMEZONE) if start.tzinfo is None else start.tz_convert(CANONICAL_TIMEZONE)
+    end = end.tz_localize(CANONICAL_TIMEZONE) if end.tzinfo is None else end.tz_convert(CANONICAL_TIMEZONE)
+    if chunk_months <= 0:
+        raise ValueError("chunk_months must be positive.")
+    if start > end:
+        raise ValueError("start_utc must be on or before end_utc_exclusive.")
+
+    chunk_start = start
+    while chunk_start < end:
+        chunk_end = min(chunk_start + pd.DateOffset(months=chunk_months), end)
+        yield chunk_start, chunk_end
+        chunk_start = chunk_end

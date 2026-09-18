@@ -1,4 +1,9 @@
+from pathlib import Path
+
 import pandas as pd
+
+
+QUARTER_HOURLY_PRICE_START_UTC = pd.Timestamp("2025-09-30T22:00:00Z")
 
 
 def set_utc_timestamp_index(data: pd.DataFrame) -> pd.DataFrame:
@@ -13,15 +18,33 @@ def set_utc_timestamp_index(data: pd.DataFrame) -> pd.DataFrame:
     return data.loc[~data.index.duplicated(keep="last")]
 
 
-def aggregate_quarter_hourly(data: pd.DataFrame) -> pd.DataFrame:
+def aggregate_quarter_hourly(
+    data: pd.DataFrame,
+    *,
+    require_complete_hours: bool = False,
+) -> pd.DataFrame:
     data = data.copy()
     data.index = pd.to_datetime(data.index, utc=True)
-    return data.sort_index().resample("h").mean()
+    data = data.sort_index()
+    hourly = data.resample("h").mean()
+    if require_complete_hours:
+        counts = data.resample("h").size()
+        hourly = hourly.loc[counts == 4]
+    return hourly
 
 
 def clean_prices():
     prices = pd.read_csv("data/raw/entsoe/prices.csv")
-    return set_utc_timestamp_index(prices)
+    prices = set_utc_timestamp_index(prices)
+    prices["price_eur_mwh"] = pd.to_numeric(
+        prices["price_eur_mwh"], errors="coerce"
+    )
+    hourly = prices.resample("h").mean()
+    counts = prices.resample("h").size()
+    incomplete_quarter_hours = (hourly.index >= QUARTER_HOURLY_PRICE_START_UTC) & (
+        counts != 4
+    )
+    return hourly.loc[~incomplete_quarter_hours]
 
 
 def clean_load():
@@ -30,7 +53,7 @@ def clean_load():
 
     load["load_mw"] = pd.to_numeric(load["load_mw"], errors="coerce")
 
-    hourly_load = aggregate_quarter_hourly(load)
+    hourly_load = aggregate_quarter_hourly(load, require_complete_hours=True)
     return hourly_load
 
 
@@ -42,7 +65,10 @@ def clean_generation():
     for col in generation.columns:
         generation[col] = pd.to_numeric(generation[col], errors="coerce")
 
-    hourly_generation = aggregate_quarter_hourly(generation)
+    hourly_generation = aggregate_quarter_hourly(
+        generation,
+        require_complete_hours=True,
+    )
 
     useful_columns = [
         "Biomass",
@@ -117,7 +143,9 @@ def build_silver_dataset():
 
     df = df.sort_index().reset_index()
 
-    df.to_csv("data/processed/silver_electricity_market_data.csv", index=False)
+    output_path = "data/processed/silver_electricity_market_data.csv"
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
 
     print("Silver dataset created.")
     print(df.head())

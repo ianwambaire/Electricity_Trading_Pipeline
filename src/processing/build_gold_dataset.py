@@ -1,8 +1,12 @@
 import pandas as pd
+from pathlib import Path
 
 
-def build_gold_dataset():
-    df = pd.read_csv("data/processed/silver_electricity_market_data.csv")
+def build_gold_dataset(
+    silver_path: Path = Path("data/processed/silver_electricity_market_data.csv"),
+    output_path: Path = Path("data/features/gold_model_features.csv"),
+):
+    df = pd.read_csv(silver_path)
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     df = df.sort_values("timestamp")
@@ -49,12 +53,15 @@ def build_gold_dataset():
     # Remove rows created by lag/rolling/target shifts
     df = df.dropna()
 
-    df.to_csv("data/features/gold_model_features.csv", index=False)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
 
     print("Gold dataset created.")
     print(df.head())
     print(df.shape)
     print(df.columns)
+    return df
 
 
 if __name__ == "__main__":

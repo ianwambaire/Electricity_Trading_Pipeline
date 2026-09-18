@@ -144,4 +144,4 @@ def test_primary_prefect_flow_never_invokes_final_holdout_evaluation():
     assert "run_final_holdout_evaluation" not in source
     assert "train_gold_model.py" not in source
     assert "verify_final_model_release_task()" in source
-    assert "prediction_report_task()" in source
+    assert "prediction_report_task(mode)" in source

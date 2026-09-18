@@ -1,3 +1,5 @@
+import argparse
+import json
 import os
 import subprocess
 import sys
@@ -6,7 +8,11 @@ from pathlib import Path
 import pandas as pd
 from prefect import flow, task
 
+from ingestion.fetch_entsoe_data import fetch_entsoe_data, latest_generation_timestamp
+from ingestion.fetch_weather_data import fetch_open_meteo_weather
+from ingestion.incremental_utils import latest_stored_timestamp
 from models.final_model_runtime import load_final_model_release
+from models.prediction_visualization import run_prediction_report
 from notifications.email_alert import send_failure_alert
 from store_data import initialize_database, log_pipeline_run
 from utils.logger import get_logger
@@ -58,13 +64,19 @@ def _run_script(stage_name: str, script_path: str):
 
 
 @task(name="Fetch ENTSO-E electricity data", retries=2, retry_delay_seconds=10)
-def entsoe_ingestion_task():
-    _run_script("ENTSO-E ingestion", "src/ingestion/fetch_entsoe_data.py")
+def entsoe_ingestion_task(mode: str, start_date=None, end_date=None):
+    logger.info("Starting stage: ENTSO-E %s ingestion", mode)
+    metadata = fetch_entsoe_data(start_date, end_date, mode=mode)
+    logger.info("Completed stage: ENTSO-E %s ingestion", mode)
+    return metadata
 
 
 @task(name="Fetch Open-Meteo weather data", retries=2, retry_delay_seconds=10)
-def weather_ingestion_task():
-    _run_script("Open-Meteo weather ingestion", "src/ingestion/fetch_weather_data.py")
+def weather_ingestion_task(mode: str, start_date=None, end_date=None):
+    logger.info("Starting stage: Open-Meteo %s ingestion", mode)
+    metadata = fetch_open_meteo_weather(start_date, end_date, mode=mode)
+    logger.info("Completed stage: Open-Meteo %s ingestion", mode)
+    return metadata
 
 
 @task(name="Build silver dataset")
@@ -116,11 +128,14 @@ def verify_final_model_release_task() -> int:
 
 
 @task(name="Generate actual-vs-predicted report")
-def prediction_report_task():
-    _run_script(
-        "Actual-vs-predicted report generation",
-        "src/models/prediction_visualization.py",
+def prediction_report_task(mode: str) -> int:
+    logger.info("Starting stage: Actual-vs-predicted report generation")
+    count = run_prediction_report(mode)
+    logger.info(
+        "Completed stage: Actual-vs-predicted report generation (%s new rows)",
+        count,
     )
+    return count
 
 
 @task(name="Detect market anomalies")
@@ -133,21 +148,115 @@ def feature_importance_task():
     _run_script("Feature importance generation", "src/models/feature_importance.py")
 
 
+def _latest_timestamp(relative_path: str):
+    path = PROJECT_ROOT / relative_path
+    if relative_path.endswith("data/raw/entsoe/generation.csv"):
+        return latest_generation_timestamp(path)
+    return latest_stored_timestamp(path)
+
+
+def _raw_row_counts():
+    paths = {
+        "prices": PROJECT_ROOT / "data/raw/entsoe/prices.csv",
+        "load": PROJECT_ROOT / "data/raw/entsoe/load.csv",
+        "generation": PROJECT_ROOT / "data/raw/entsoe/generation.csv",
+        "weather": PROJECT_ROOT / "data/raw/weather/open_meteo_weather.csv",
+    }
+    counts = {}
+    for source, path in paths.items():
+        if not path.exists():
+            counts[source] = 0
+            continue
+        timestamps = pd.read_csv(path, usecols=["timestamp"])["timestamp"]
+        counts[source] = int(
+            pd.to_datetime(timestamps, errors="coerce", utc=True).notna().sum()
+        )
+    return counts
+
+
+def _operational_metadata(mode, new_rows, predictions, status):
+    raw_timestamps = {
+        "prices": _latest_timestamp("data/raw/entsoe/prices.csv"),
+        "load": _latest_timestamp("data/raw/entsoe/load.csv"),
+        "generation": _latest_timestamp("data/raw/entsoe/generation.csv"),
+        "weather": _latest_timestamp("data/raw/weather/open_meteo_weather.csv"),
+    }
+    available_raw = [value for value in raw_timestamps.values() if value is not None]
+    raw_watermark = min(available_raw) if available_raw else None
+
+    def formatted(value):
+        return value.isoformat() if value is not None else None
+
+    return {
+        "mode": mode,
+        "run_timestamp": pd.Timestamp.now(tz="UTC").isoformat(),
+        "latest_raw_timestamp": formatted(raw_watermark),
+        "latest_raw_by_source": {
+            key: formatted(value) for key, value in raw_timestamps.items()
+        },
+        "latest_silver_timestamp": formatted(
+            _latest_timestamp("data/processed/silver_electricity_market_data.csv")
+        ),
+        "latest_gold_timestamp": formatted(
+            _latest_timestamp("data/features/gold_model_features.csv")
+        ),
+        "new_rows_ingested": int(new_rows),
+        "predictions_generated": int(predictions),
+        "status": status,
+    }
+
+
 @flow(name="PowerFlow ENTSO-E Pipeline", log_prints=True)
-def powerflow_entsoe_pipeline():
+def powerflow_entsoe_pipeline(
+    mode: str = "incremental",
+    start_date: str | None = None,
+    end_date: str | None = None,
+):
+    if mode not in {"historical", "incremental"}:
+        raise ValueError("mode must be 'historical' or 'incremental'.")
+    if mode == "incremental" and (start_date is not None or end_date is not None):
+        raise ValueError("start_date/end_date are supported only in historical mode.")
+
     stage_name = "Runtime directory initialization"
     records_processed = 0
+    new_rows_ingested = 0
+    predictions_generated = 0
+    raw_rows_before = {}
 
-    logger.info("PowerFlow ENTSO-E pipeline started.")
+    logger.info("PowerFlow ENTSO-E pipeline started in %s mode.", mode)
 
     try:
         _ensure_runtime_directories()
+        raw_rows_before = _raw_row_counts()
 
         stage_name = "ENTSO-E ingestion"
-        entsoe_ingestion_task()
+        entsoe_metadata = entsoe_ingestion_task(mode, start_date, end_date)
 
         stage_name = "Open-Meteo weather ingestion"
-        weather_ingestion_task()
+        weather_metadata = weather_ingestion_task(mode, start_date, end_date)
+        raw_rows_after = _raw_row_counts()
+        if mode == "incremental":
+            new_rows_ingested = sum(
+                max(0, raw_rows_after[source] - raw_rows_before[source])
+                for source in raw_rows_after
+            )
+        else:
+            new_rows_ingested = int(entsoe_metadata["new_rows"]) + int(
+                weather_metadata["new_rows"]
+            )
+
+        if mode == "incremental" and new_rows_ingested == 0:
+            stage_name = "Pipeline run-history logging"
+            initialize_database()
+            metadata = _operational_metadata(mode, 0, 0, "SUCCESS")
+            metadata["message"] = "No new source records were available."
+            log_pipeline_run(
+                status="SUCCESS",
+                records_processed=0,
+                message=json.dumps(metadata, sort_keys=True),
+            )
+            logger.info("No new data available; derived datasets were left unchanged.")
+            return metadata
 
         stage_name = "Silver dataset creation"
         build_silver_task()
@@ -165,7 +274,7 @@ def powerflow_entsoe_pipeline():
         verify_final_model_release_task()
 
         stage_name = "Actual-vs-predicted report generation"
-        prediction_report_task()
+        predictions_generated = prediction_report_task(mode)
 
         stage_name = "Anomaly detection"
         anomaly_detection_task()
@@ -175,10 +284,17 @@ def powerflow_entsoe_pipeline():
 
         stage_name = "Pipeline run-history logging"
         initialize_database()
+        metadata = _operational_metadata(
+            mode,
+            new_rows_ingested,
+            predictions_generated,
+            "SUCCESS",
+        )
+        metadata["message"] = "PowerFlow ENTSO-E pipeline completed successfully."
         log_pipeline_run(
             status="SUCCESS",
             records_processed=records_processed,
-            message="PowerFlow ENTSO-E pipeline completed successfully.",
+            message=json.dumps(metadata, sort_keys=True),
         )
         logger.info(
             "PowerFlow ENTSO-E pipeline completed successfully (%s gold rows).",
@@ -186,6 +302,17 @@ def powerflow_entsoe_pipeline():
         )
 
     except Exception as error:
+        if mode == "incremental" and raw_rows_before:
+            try:
+                current_raw_rows = _raw_row_counts()
+                new_rows_ingested = sum(
+                    max(0, current_raw_rows[source] - raw_rows_before[source])
+                    for source in current_raw_rows
+                )
+            except Exception:
+                logger.exception(
+                    "Unable to calculate raw-row changes for the failed run."
+                )
         message = (
             f"PowerFlow ENTSO-E pipeline failed during '{stage_name}': {error}"
         )
@@ -193,10 +320,18 @@ def powerflow_entsoe_pipeline():
 
         try:
             initialize_database()
+            metadata = _operational_metadata(
+                mode,
+                new_rows_ingested,
+                predictions_generated,
+                "FAILED",
+            )
+            metadata["failed_stage"] = stage_name
+            metadata["message"] = message
             log_pipeline_run(
                 status="FAILED",
                 records_processed=records_processed,
-                message=message,
+                message=json.dumps(metadata, sort_keys=True),
             )
         except Exception:
             logger.exception("Unable to record the failed pipeline run in SQLite.")
@@ -213,5 +348,22 @@ def powerflow_entsoe_pipeline():
         raise
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run the PowerFlow Prefect flow.")
+    parser.add_argument(
+        "--mode",
+        choices=["historical", "incremental"],
+        default="incremental",
+    )
+    parser.add_argument("--start-date")
+    parser.add_argument("--end-date")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    powerflow_entsoe_pipeline()
+    arguments = parse_args()
+    powerflow_entsoe_pipeline(
+        mode=arguments.mode,
+        start_date=arguments.start_date,
+        end_date=arguments.end_date,
+    )

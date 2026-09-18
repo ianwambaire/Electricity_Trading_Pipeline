@@ -15,7 +15,7 @@ Electricity prices are influenced by demand, conventional and renewable generati
 - identifying unusual price/load observations; and
 - presenting the generated results in an interactive dashboard.
 
-PowerFlow is currently a historical analytics and forecasting project. It is not a live trading system, market-execution engine, or production model-serving service.
+PowerFlow is a historical analytics and forecasting project with incremental source updates. It is not a live trading system, market-execution engine, or low-latency model-serving service.
 
 ## Architecture
 
@@ -57,7 +57,7 @@ The active flow is `PowerFlow ENTSO-E Pipeline` in `src/scheduled_pipeline.py`. 
 9. Detect market anomalies.
 10. Generate feature importance.
 
-The Prefect deployment is intentionally unscheduled because the ingestion performs a configured historical backfill rather than a recurring incremental update. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
+The flow supports `historical` mode for a reproducible full rebuild and `incremental` mode for operational updates. Incremental ingestion advances each raw source from its own latest stored UTC timestamp, atomically appends non-conflicting observations, and treats publication-delay no-ops as successful runs. Silver and Gold are then rebuilt from the complete raw history so lag and rolling features remain correct across the old/new boundary. The deployment runs incremental mode hourly in UTC. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
 
 ## Technologies
 
@@ -178,7 +178,19 @@ export PREFECT_API_URL=http://127.0.0.1:4200/api
 python src/orchestration/run_entsoe_pipeline.py
 ```
 
-The command invokes the same Prefect flow referenced by `prefect.yaml`. It requires API access and can take several minutes. The flow uses the frozen release artifacts and does not rerun model tuning or the one-time final holdout evaluation.
+The default is the operational incremental mode. The equivalent explicit command is:
+
+```bash
+python src/orchestration/run_entsoe_pipeline.py --mode incremental
+```
+
+Run a reproducible full rebuild with the configured historical range using:
+
+```bash
+python src/orchestration/run_entsoe_pipeline.py --mode historical
+```
+
+Historical start/end overrides remain available with `--start-date YYYY-MM-DD --end-date YYYY-MM-DD`. Both modes invoke the same Prefect flow referenced by `prefect.yaml`, use the frozen release artifacts, and never rerun model tuning or the one-time final holdout evaluation.
 
 Individual dataset validation can be run without writing quality results:
 
@@ -241,7 +253,7 @@ Docker Compose starts the dashboard on port `8501`, MLflow on host port `5001`, 
 
 ### ENTSO-E Transparency Platform
 
-The primary ingestion script requests the Germany-Luxembourg bidding zone (`DE_LU`). The shared default historical range is `2019-01-01` through `2025-09-30`, inclusive, using UTC boundaries, and can be overridden with command-line arguments or the `POWERFLOW_HISTORY_START_DATE` and `POWERFLOW_HISTORY_END_DATE` environment variables. ENTSO-E requests use continuous, non-overlapping six-month windows to remain below the client's annual query boundary. The default ends before the Single Day-Ahead Coupling switched from hourly to 15-minute market time units on `2025-10-01`; extending beyond that date requires an explicit hourly price-aggregation decision that is outside the current processing logic.
+The primary ingestion script requests the Germany-Luxembourg bidding zone (`DE_LU`). Historical mode defaults to `2019-01-01` through `2025-09-30`, inclusive, using UTC boundaries, and can be overridden with command-line arguments or the `POWERFLOW_HISTORY_START_DATE` and `POWERFLOW_HISTORY_END_DATE` environment variables. Incremental mode starts each raw request immediately after that source's latest timestamp and stops at the latest completed UTC hour. ENTSO-E requests use continuous, non-overlapping six-month windows. Since day-ahead prices moved to 15-minute market time units on `2025-10-01`, Silver uses the arithmetic mean of all four available quarter-hour prices for each UTC hour and excludes incomplete post-transition hours.
 
 - day-ahead electricity prices;
 - actual electricity load; and
@@ -251,7 +263,7 @@ Germany's nuclear series has no populated ENTSO-E observations after `2023-04-15
 
 ### Open-Meteo
 
-The primary weather ingestion uses the same configurable UTC range and six-month chunks for hourly historical observations at the Berlin coordinates. Open-Meteo is requested in UTC so the repeated autumn local hour remains two distinct real hours and DST cannot create gaps in the joined timeline:
+The primary weather ingestion uses the same configurable UTC range and six-month chunks for hourly historical observations at the Berlin coordinates. Incremental requests use a conservative five-day archive publication delay; an hourly pipeline run with no newly published weather data succeeds without rewriting stored files. Open-Meteo is requested in UTC so the repeated autumn local hour remains two distinct real hours and DST cannot create gaps in the joined timeline:
 
 - temperature;
 - relative humidity;
@@ -461,13 +473,13 @@ personal Drive paths are stored in the repository.
 
 ## Current status
 
-- ENTSO-E and Open-Meteo ingestion share a configurable historical range, defaulting to `2019-01-01` through `2025-09-30`.
+- ENTSO-E and Open-Meteo support both the configurable historical rebuild and source-watermarked incremental ingestion.
 - Silver and gold construction and validation are implemented.
 - Model-development comparisons and MLflow tracking are retained as separate research workflows; the primary pipeline now uses the frozen final Ordinary Linear Regression release for prediction and coefficient-based feature influence reporting.
 - Training produces deterministic dataset identity and selected-model manifest metadata.
 - Optional Colab training reuses the active trainer and can write reviewed release artifacts to a configurable Drive folder.
 - The current Streamlit dashboard reads the generated ENTSO-E CSV products.
-- The Prefect flow and unscheduled deployment configuration are defined; a Prefect API server is required to execute the flow.
+- The Prefect deployment runs the incremental flow hourly in UTC; a Prefect API server and worker are required to execute deployments.
 - SQLite stores pipeline-run and data-quality history.
 - Legacy EIA/SQLite pipeline files remain in the repository but are not deleted or used by the primary Prefect orchestration.
 - Generated datasets and artifacts remain local and are intentionally excluded from Git.

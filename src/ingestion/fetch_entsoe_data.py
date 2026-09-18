@@ -17,6 +17,7 @@ if __package__:
     from .incremental_utils import (
         append_csv_safely,
         completed_utc_hour,
+        contiguous_prefix,
         infer_stored_interval,
         latest_stored_timestamp,
         merge_incremental_rows,
@@ -27,6 +28,7 @@ else:
     from incremental_utils import (
         append_csv_safely,
         completed_utc_hour,
+        contiguous_prefix,
         infer_stored_interval,
         latest_stored_timestamp,
         merge_incremental_rows,
@@ -198,34 +200,6 @@ def _to_value_frame(values, value_name: str | None = None) -> pd.DataFrame:
     return data.reset_index()
 
 
-def _validate_incremental_index(
-    values,
-    start_utc: pd.Timestamp,
-    default_interval: pd.Timedelta,
-    *,
-    quarter_hourly_price_transition: bool = False,
-) -> None:
-    index = pd.DatetimeIndex(values.index)
-    index = index.tz_localize("UTC") if index.tz is None else index.tz_convert("UTC")
-    index = index.sort_values().drop_duplicates()
-    if index.empty:
-        return
-
-    expected = [pd.Timestamp(start_utc)]
-    while expected[-1] < index[-1]:
-        interval = default_interval
-        if quarter_hourly_price_transition and expected[-1] >= QUARTER_HOURLY_PRICE_START_UTC:
-            interval = pd.Timedelta(minutes=15)
-        expected.append(expected[-1] + interval)
-    expected_index = pd.DatetimeIndex(expected)
-    if not index.equals(expected_index):
-        missing = expected_index.difference(index)
-        raise ValueError(
-            "ENTSO-E incremental response is not continuous from the requested "
-            f"start; missing={list(missing[:5])}."
-        )
-
-
 def _flatten_generation_frame(generation: pd.DataFrame) -> pd.DataFrame:
     generation = generation.copy()
     if isinstance(generation.columns, pd.MultiIndex):
@@ -295,6 +269,7 @@ def _incremental_dataset(
     value_name: str | None = None,
     allow_column_union: bool = False,
 ) -> dict:
+    is_price = value_name == "price_eur_mwh"
     if allow_column_union and value_name is None and output_path.exists():
         stored_generation = normalize_utc_timestamps(
             _read_stored_generation(output_path)
@@ -316,10 +291,16 @@ def _incremental_dataset(
 
     if start_utc >= end_utc_exclusive:
         print(f"No new ENTSO-E {dataset_name} interval is currently due.")
-        return {
+        metadata = {
             "new_rows": 0,
             "latest_timestamp": latest,
+            "unresolved_gap": None,
         }
+        if is_price:
+            metadata["latest_complete_hour"] = (
+                latest.floor("h").isoformat() if latest is not None else None
+            )
+        return metadata
 
     values = fetch_timestamp_range(
         client,
@@ -330,21 +311,68 @@ def _incremental_dataset(
         allow_empty=True,
     )
     if values is None:
-        return {"new_rows": 0, "latest_timestamp": latest}
+        metadata = {
+            "new_rows": 0,
+            "latest_timestamp": latest,
+            "unresolved_gap": None,
+        }
+        if is_price:
+            metadata["latest_complete_hour"] = (
+                latest.floor("h").isoformat() if latest is not None else None
+            )
+        return metadata
 
-    _validate_incremental_index(
+    continuity = contiguous_prefix(
         values,
         start_utc,
         interval,
-        quarter_hourly_price_transition=value_name == "price_eur_mwh",
+        quarter_hourly_transition=(
+            QUARTER_HOURLY_PRICE_START_UTC if is_price else None
+        ),
+        require_complete_quarter_hourly_hours=is_price,
     )
+    safe_values = continuity.data
 
-    if allow_column_union and value_name is None:
-        new_rows, latest_timestamp = _append_generation_safely(output_path, values)
+    unresolved_gap = None
+    if continuity.missing_timestamps:
+        unresolved_gap = {
+            "requested_start": pd.Timestamp(start_utc).isoformat(),
+            "first_unresolved_timestamp": (
+                continuity.first_unresolved_timestamp.isoformat()
+            ),
+            "missing_timestamps": [
+                timestamp.isoformat()
+                for timestamp in continuity.missing_timestamps
+            ],
+            "missing_count": len(continuity.missing_timestamps),
+            "last_contiguous_timestamp": (
+                continuity.last_contiguous_timestamp.isoformat()
+                if continuity.last_contiguous_timestamp is not None
+                else (latest.isoformat() if latest is not None else None)
+            ),
+            "returned_last_timestamp": (
+                continuity.returned_last_timestamp.isoformat()
+                if continuity.returned_last_timestamp is not None
+                else None
+            ),
+        }
+        print(
+            f"ENTSO-E {dataset_name} has an unresolved source gap at "
+            f"{unresolved_gap['first_unresolved_timestamp']}; appending only "
+            "the preceding contiguous prefix."
+        )
+
+    if safe_values.empty:
+        new_rows = 0
+        latest_timestamp = latest
+    elif allow_column_union and value_name is None:
+        new_rows, latest_timestamp = _append_generation_safely(
+            output_path, safe_values
+        )
     else:
         result = append_csv_safely(
             output_path,
-            _to_value_frame(values, value_name),
+            _to_value_frame(safe_values, value_name),
             allow_column_union=allow_column_union,
         )
         new_rows = result.new_rows
@@ -353,10 +381,22 @@ def _incremental_dataset(
         f"Incremental {dataset_name}: appended {new_rows} rows; "
         f"latest timestamp={latest_timestamp}."
     )
-    return {
+    metadata = {
         "new_rows": new_rows,
         "latest_timestamp": latest_timestamp,
+        "unresolved_gap": unresolved_gap,
     }
+    if is_price:
+        metadata["latest_complete_hour"] = (
+            latest_timestamp.floor("h").isoformat()
+            if latest_timestamp is not None
+            else None
+        )
+        if unresolved_gap is not None:
+            unresolved_gap["last_complete_hour"] = metadata[
+                "latest_complete_hour"
+            ]
+    return metadata
 
 
 def fetch_entsoe_data(

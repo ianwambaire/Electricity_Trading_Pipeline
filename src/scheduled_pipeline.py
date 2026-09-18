@@ -14,7 +14,11 @@ from ingestion.incremental_utils import latest_stored_timestamp
 from models.final_model_runtime import load_final_model_release
 from models.prediction_visualization import run_prediction_report
 from notifications.email_alert import send_failure_alert
-from store_data import initialize_database, log_pipeline_run
+from store_data import (
+    initialize_database,
+    log_data_quality_result,
+    log_pipeline_run,
+)
 from utils.logger import get_logger
 from validate_data import (
     GOLD_DATA_PATH,
@@ -174,7 +178,46 @@ def _raw_row_counts():
     return counts
 
 
-def _operational_metadata(mode, new_rows, predictions, status):
+def _raw_watermark():
+    timestamps = [
+        _latest_timestamp("data/raw/entsoe/prices.csv"),
+        _latest_timestamp("data/raw/entsoe/load.csv"),
+        _latest_timestamp("data/raw/entsoe/generation.csv"),
+        _latest_timestamp("data/raw/weather/open_meteo_weather.csv"),
+    ]
+    available = [timestamp for timestamp in timestamps if timestamp is not None]
+    return min(available) if available else None
+
+
+def _entsoe_unresolved_gaps(entsoe_metadata):
+    return {
+        dataset_name: dataset_metadata["unresolved_gap"]
+        for dataset_name, dataset_metadata in entsoe_metadata.get(
+            "datasets", {}
+        ).items()
+        if dataset_metadata.get("unresolved_gap") is not None
+    }
+
+
+def _record_gap_warnings(unresolved_gaps):
+    if not unresolved_gaps:
+        return
+    initialize_database()
+    for dataset_name, gap in unresolved_gaps.items():
+        log_data_quality_result(
+            check_name=f"entsoe_incremental_continuity:{dataset_name}",
+            status="WARNING",
+            message=json.dumps(gap, sort_keys=True),
+        )
+
+
+def _operational_metadata(
+    mode,
+    new_rows,
+    predictions,
+    status,
+    unresolved_gaps=None,
+):
     raw_timestamps = {
         "prices": _latest_timestamp("data/raw/entsoe/prices.csv"),
         "load": _latest_timestamp("data/raw/entsoe/load.csv"),
@@ -194,6 +237,11 @@ def _operational_metadata(mode, new_rows, predictions, status):
         "latest_raw_by_source": {
             key: formatted(value) for key, value in raw_timestamps.items()
         },
+        "latest_complete_price_hour": (
+            raw_timestamps["prices"].floor("h").isoformat()
+            if raw_timestamps["prices"] is not None
+            else None
+        ),
         "latest_silver_timestamp": formatted(
             _latest_timestamp("data/processed/silver_electricity_market_data.csv")
         ),
@@ -202,6 +250,7 @@ def _operational_metadata(mode, new_rows, predictions, status):
         ),
         "new_rows_ingested": int(new_rows),
         "predictions_generated": int(predictions),
+        "unresolved_source_gaps": unresolved_gaps or {},
         "status": status,
     }
 
@@ -222,15 +271,20 @@ def powerflow_entsoe_pipeline(
     new_rows_ingested = 0
     predictions_generated = 0
     raw_rows_before = {}
+    unresolved_gaps = {}
+    raw_watermark_before = None
 
     logger.info("PowerFlow ENTSO-E pipeline started in %s mode.", mode)
 
     try:
         _ensure_runtime_directories()
         raw_rows_before = _raw_row_counts()
+        raw_watermark_before = _raw_watermark()
 
         stage_name = "ENTSO-E ingestion"
         entsoe_metadata = entsoe_ingestion_task(mode, start_date, end_date)
+        unresolved_gaps = _entsoe_unresolved_gaps(entsoe_metadata)
+        _record_gap_warnings(unresolved_gaps)
 
         stage_name = "Open-Meteo weather ingestion"
         weather_metadata = weather_ingestion_task(mode, start_date, end_date)
@@ -245,17 +299,34 @@ def powerflow_entsoe_pipeline(
                 weather_metadata["new_rows"]
             )
 
-        if mode == "incremental" and new_rows_ingested == 0:
+        raw_watermark_after = _raw_watermark()
+        complete_watermark_advanced = (
+            raw_watermark_after is not None
+            and (
+                raw_watermark_before is None
+                or raw_watermark_after > raw_watermark_before
+            )
+        )
+        if mode == "incremental" and not complete_watermark_advanced:
             stage_name = "Pipeline run-history logging"
             initialize_database()
-            metadata = _operational_metadata(mode, 0, 0, "SUCCESS")
-            metadata["message"] = "No new source records were available."
+            metadata = _operational_metadata(
+                mode,
+                new_rows_ingested,
+                0,
+                "SUCCESS",
+                unresolved_gaps,
+            )
+            metadata["message"] = (
+                "No complete aligned raw hour advanced; derived datasets "
+                "were left unchanged."
+            )
             log_pipeline_run(
                 status="SUCCESS",
-                records_processed=0,
+                records_processed=new_rows_ingested,
                 message=json.dumps(metadata, sort_keys=True),
             )
-            logger.info("No new data available; derived datasets were left unchanged.")
+            logger.info(metadata["message"])
             return metadata
 
         stage_name = "Silver dataset creation"
@@ -289,6 +360,7 @@ def powerflow_entsoe_pipeline(
             new_rows_ingested,
             predictions_generated,
             "SUCCESS",
+            unresolved_gaps,
         )
         metadata["message"] = "PowerFlow ENTSO-E pipeline completed successfully."
         log_pipeline_run(
@@ -325,6 +397,7 @@ def powerflow_entsoe_pipeline(
                 new_rows_ingested,
                 predictions_generated,
                 "FAILED",
+                unresolved_gaps,
             )
             metadata["failed_stage"] = stage_name
             metadata["message"] = message

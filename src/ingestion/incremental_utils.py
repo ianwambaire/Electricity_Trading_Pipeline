@@ -17,6 +17,106 @@ class AppendResult:
     changed: bool
 
 
+@dataclass(frozen=True)
+class ContiguousPrefixResult:
+    data: pd.Series | pd.DataFrame
+    missing_timestamps: tuple[pd.Timestamp, ...]
+    first_unresolved_timestamp: pd.Timestamp | None
+    last_contiguous_timestamp: pd.Timestamp | None
+    returned_last_timestamp: pd.Timestamp | None
+
+
+def _utc_index(values: pd.Series | pd.DataFrame) -> pd.DatetimeIndex:
+    index = pd.DatetimeIndex(values.index)
+    return index.tz_localize("UTC") if index.tz is None else index.tz_convert("UTC")
+
+
+def _expected_market_index(
+    start_utc: pd.Timestamp,
+    end_utc: pd.Timestamp,
+    interval: pd.Timedelta,
+    *,
+    quarter_hourly_transition: pd.Timestamp | None,
+) -> pd.DatetimeIndex:
+    current = pd.Timestamp(start_utc)
+    end = pd.Timestamp(end_utc)
+    expected = []
+    while current <= end:
+        expected.append(current)
+        step = interval
+        if quarter_hourly_transition is not None and current >= quarter_hourly_transition:
+            step = pd.Timedelta(minutes=15)
+        current += step
+    return pd.DatetimeIndex(expected)
+
+
+def contiguous_prefix(
+    values: pd.Series | pd.DataFrame,
+    start_utc: pd.Timestamp,
+    interval: str | pd.Timedelta,
+    *,
+    quarter_hourly_transition: pd.Timestamp | None = None,
+    require_complete_quarter_hourly_hours: bool = False,
+) -> ContiguousPrefixResult:
+    """Return only the source prefix safe to append without crossing a gap."""
+    if values is None or values.empty:
+        return ContiguousPrefixResult(values, (), None, None, None)
+
+    ordered = values.sort_index()
+    actual_index = _utc_index(ordered)
+    if actual_index.duplicated().any():
+        raise ValueError("Incremental source response contains duplicate timestamps.")
+
+    expected_index = _expected_market_index(
+        pd.Timestamp(start_utc),
+        actual_index[-1],
+        pd.Timedelta(interval),
+        quarter_hourly_transition=quarter_hourly_transition,
+    )
+    missing = list(expected_index.difference(actual_index))
+    first_unresolved = min(missing) if missing else None
+    prefix_end = first_unresolved
+
+    if require_complete_quarter_hourly_hours:
+        transition = pd.Timestamp(quarter_hourly_transition)
+        candidate_index = actual_index[
+            actual_index < first_unresolved
+        ] if first_unresolved is not None else actual_index
+        post_transition = candidate_index[candidate_index >= transition]
+        if len(post_transition):
+            final_hour = post_transition[-1].floor("h")
+            final_hour_expected = pd.date_range(
+                final_hour,
+                final_hour + pd.Timedelta(minutes=45),
+                freq="15min",
+            )
+            absent_from_final_hour = final_hour_expected.difference(actual_index)
+            if len(absent_from_final_hour):
+                missing.extend(absent_from_final_hour.tolist())
+                prefix_end = (
+                    final_hour
+                    if prefix_end is None
+                    else min(prefix_end, final_hour)
+                )
+
+    missing_index = pd.DatetimeIndex(sorted(set(missing)))
+    first_unresolved = missing_index[0] if len(missing_index) else None
+    if prefix_end is None:
+        prefix = ordered
+    else:
+        prefix = ordered.loc[actual_index < prefix_end]
+
+    prefix_index = _utc_index(prefix) if not prefix.empty else pd.DatetimeIndex([])
+    last_contiguous = prefix_index[-1] if len(prefix_index) else None
+    return ContiguousPrefixResult(
+        data=prefix,
+        missing_timestamps=tuple(missing_index),
+        first_unresolved_timestamp=first_unresolved,
+        last_contiguous_timestamp=last_contiguous,
+        returned_last_timestamp=actual_index[-1],
+    )
+
+
 def normalize_utc_timestamps(
     data: pd.DataFrame,
     timestamp_column: str = TIMESTAMP_COLUMN,

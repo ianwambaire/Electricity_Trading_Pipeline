@@ -8,6 +8,7 @@ from ingestion.fetch_weather_data import fetch_open_meteo_weather
 from ingestion.fetch_entsoe_data import _incremental_dataset
 from ingestion.incremental_utils import (
     append_csv_safely,
+    contiguous_prefix,
     infer_stored_interval,
     merge_incremental_rows,
     normalize_utc_timestamps,
@@ -15,6 +16,7 @@ from ingestion.incremental_utils import (
 from models.final_evaluation import FINAL_FEATURES
 from models import prediction_visualization
 from processing.build_gold_dataset import build_gold_dataset
+from processing.build_silver_dataset import aggregate_hourly_prices
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -136,6 +138,147 @@ def test_entsoe_incremental_request_starts_immediately_after_latest_row(tmp_path
     assert requested["start"] == pd.Timestamp("2025-01-01T01:00:00Z")
     assert requested["end"] == pd.Timestamp("2025-01-01T03:00:00Z")
     assert result["new_rows"] == 2
+
+
+def test_real_quarter_hour_gap_returns_only_complete_contiguous_hours():
+    index = pd.date_range(
+        "2026-09-12T20:00:00Z",
+        "2026-09-12T23:00:00Z",
+        freq="15min",
+    ).difference(
+        pd.DatetimeIndex(
+            [
+                "2026-09-12T22:15:00Z",
+                "2026-09-12T22:30:00Z",
+                "2026-09-12T22:45:00Z",
+            ]
+        )
+    )
+    returned = pd.Series(np.arange(len(index), dtype="float64"), index=index)
+
+    result = contiguous_prefix(
+        returned,
+        pd.Timestamp("2026-09-12T20:00:00Z"),
+        "15min",
+        quarter_hourly_transition=pd.Timestamp("2025-09-30T22:00:00Z"),
+        require_complete_quarter_hourly_hours=True,
+    )
+
+    assert result.data.index[-1] == pd.Timestamp("2026-09-12T21:45:00Z")
+    assert result.first_unresolved_timestamp == pd.Timestamp(
+        "2026-09-12T22:15:00Z"
+    )
+    assert set(result.missing_timestamps) == {
+        pd.Timestamp("2026-09-12T22:15:00Z"),
+        pd.Timestamp("2026-09-12T22:30:00Z"),
+        pd.Timestamp("2026-09-12T22:45:00Z"),
+    }
+    assert set(result.data.index).issubset(set(returned.index))
+
+
+def test_gap_watermark_stops_before_incomplete_hour_and_retry_starts_there(
+    tmp_path,
+):
+    path = tmp_path / "prices.csv"
+    initial_index = pd.date_range(
+        "2026-09-12T19:00:00Z", periods=4, freq="15min"
+    )
+    pd.DataFrame(
+        {"timestamp": initial_index, "price_eur_mwh": [1.0, 2.0, 3.0, 4.0]}
+    ).to_csv(path, index=False)
+    starts = []
+
+    def query(country_code, start, end):
+        starts.append(start)
+        index = pd.date_range(start, "2026-09-12T23:00:00Z", freq="15min")
+        index = index.difference(
+            pd.DatetimeIndex(
+                [
+                    "2026-09-12T22:15:00Z",
+                    "2026-09-12T22:30:00Z",
+                    "2026-09-12T22:45:00Z",
+                ]
+            )
+        )
+        return pd.Series(np.arange(len(index), dtype="float64"), index=index)
+
+    first = _incremental_dataset(
+        None,
+        query,
+        dataset_name="day-ahead prices",
+        output_path=path,
+        default_interval="15min",
+        end_utc_exclusive=pd.Timestamp("2026-09-12T23:15:00Z"),
+        value_name="price_eur_mwh",
+    )
+    first_bytes = path.read_bytes()
+    second = _incremental_dataset(
+        None,
+        query,
+        dataset_name="day-ahead prices",
+        output_path=path,
+        default_interval="15min",
+        end_utc_exclusive=pd.Timestamp("2026-09-12T23:15:00Z"),
+        value_name="price_eur_mwh",
+    )
+    stored = pd.read_csv(path)
+    stored_timestamps = pd.to_datetime(stored["timestamp"], utc=True)
+
+    assert first["latest_timestamp"] == pd.Timestamp("2026-09-12T21:45:00Z")
+    assert first["latest_complete_hour"] == "2026-09-12T21:00:00+00:00"
+    assert first["unresolved_gap"]["first_unresolved_timestamp"] == (
+        "2026-09-12T22:15:00+00:00"
+    )
+    assert second["new_rows"] == 0
+    assert starts == [
+        pd.Timestamp("2026-09-12T20:00:00Z"),
+        pd.Timestamp("2026-09-12T22:00:00Z"),
+    ]
+    assert path.read_bytes() == first_bytes
+    assert stored_timestamps.is_unique
+    assert pd.Timestamp("2026-09-12T22:00:00Z") not in set(stored_timestamps)
+
+
+def test_incomplete_quarter_hour_price_is_not_aggregated():
+    index = pd.to_datetime(
+        [
+            "2026-09-12T20:00:00Z",
+            "2026-09-12T20:15:00Z",
+            "2026-09-12T20:30:00Z",
+            "2026-09-12T20:45:00Z",
+            "2026-09-12T21:00:00Z",
+        ]
+    )
+    prices = pd.DataFrame({"price_eur_mwh": [10, 20, 30, 40, 999]}, index=index)
+
+    hourly = aggregate_hourly_prices(prices)
+
+    assert hourly.index.tolist() == [pd.Timestamp("2026-09-12T20:00:00Z")]
+    assert hourly.iloc[0]["price_eur_mwh"] == 25
+
+
+def test_entsoe_no_new_data_after_clean_catchup_does_not_query(tmp_path):
+    path = tmp_path / "prices.csv"
+    index = pd.date_range("2026-09-12T00:00:00Z", periods=4, freq="15min")
+    pd.DataFrame(
+        {"timestamp": index, "price_eur_mwh": [1.0, 2.0, 3.0, 4.0]}
+    ).to_csv(path, index=False)
+
+    def forbidden_query(*args, **kwargs):
+        raise AssertionError("No API query should be made.")
+
+    result = _incremental_dataset(
+        None,
+        forbidden_query,
+        dataset_name="day-ahead prices",
+        output_path=path,
+        default_interval="15min",
+        end_utc_exclusive=pd.Timestamp("2026-09-12T01:00:00Z"),
+        value_name="price_eur_mwh",
+    )
+
+    assert result["new_rows"] == 0
+    assert result["unresolved_gap"] is None
 
 
 def _silver_frame(periods=201):

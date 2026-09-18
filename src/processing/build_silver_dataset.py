@@ -36,6 +36,13 @@ def aggregate_quarter_hourly(
 def clean_prices():
     prices = pd.read_csv("data/raw/entsoe/prices.csv")
     prices = set_utc_timestamp_index(prices)
+    return aggregate_hourly_prices(prices)
+
+
+def aggregate_hourly_prices(prices: pd.DataFrame) -> pd.DataFrame:
+    prices = prices.copy()
+    prices.index = pd.to_datetime(prices.index, utc=True)
+    prices = prices.sort_index()
     prices["price_eur_mwh"] = pd.to_numeric(
         prices["price_eur_mwh"], errors="coerce"
     )

@@ -175,6 +175,7 @@ Then replace the placeholders locally. Never commit `.env`.
 | `POWERFLOW_STORAGE_BACKEND` | `local` (default) or `s3` |
 | `POWERFLOW_S3_BUCKET` | Required in S3 mode; durable PowerFlow bucket name |
 | `AWS_REGION` | AWS region; defaults to `us-east-1` |
+| `PREFECT_SERVER_DATABASE_CONNECTION_URL` | Prefect's PostgreSQL URL; use `postgresql+asyncpg://` and a URL-encoded password |
 | `POWERFLOW_LOCAL_STORAGE_ROOT` | Optional root used by the standalone local storage adapter; defaults to `.` |
 | `EIA_API_KEY` | Used only by retained legacy EIA ingestion scripts |
 | `ALERT_EMAIL_SENDER` | Optional Gmail sender for failure notifications |
@@ -321,6 +322,57 @@ files persist in that checkout and are excluded from Git. Its process-worker job
 sets this same directory explicitly, runs incremental mode with the S3 backend,
 has a concurrency limit of one, and is scheduled hourly at minute zero in UTC.
 
+The application operational database remains
+`database/electricity_trading.db` (SQLite). PostgreSQL 15 stores only Prefect's
+internal orchestration state. Install and initialize it on Amazon Linux 2023
+before installing the PowerFlow services:
+
+```bash
+sudo dnf install -y postgresql15 postgresql15-server postgresql15-contrib
+sudo postgresql-setup --initdb --unit postgresql
+sudo systemctl enable --now postgresql.service
+sudo systemctl status postgresql.service
+```
+
+Run `postgresql-setup` only for a new, uninitialized PostgreSQL data directory.
+Keep PostgreSQL local to the instance: set `listen_addresses = 'localhost'` in
+`/var/lib/pgsql/data/postgresql.conf`, and ensure the matching entries in
+`/var/lib/pgsql/data/pg_hba.conf` use password authentication only on loopback
+(place specific rules before broader host rules):
+
+```text
+host    prefect    prefect    127.0.0.1/32    scram-sha-256
+host    prefect    prefect    ::1/128         scram-sha-256
+```
+
+Create the dedicated role, database, and required `pg_trgm` extension without
+placing a password in shell history:
+
+```bash
+sudo -u postgres psql
+```
+
+Then enter the following in `psql`; `\password` prompts securely:
+
+```text
+CREATE ROLE prefect LOGIN;
+\password prefect
+CREATE DATABASE prefect OWNER prefect;
+\connect prefect
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+\quit
+```
+
+After any PostgreSQL configuration edit, restart and confirm that port 5432 is
+listening only on loopback:
+
+```bash
+sudo systemctl restart postgresql.service
+sudo ss -ltnp | grep ':5432'
+```
+
+Do not add an EC2 security-group or host-firewall inbound rule for port 5432.
+
 After pulling reviewed code, install the production dependencies and protect the
 environment file:
 
@@ -333,6 +385,19 @@ python -m pip install --only-binary=:all: -r requirements-prod.txt
 chmod 600 .env
 python scripts/check_production_imports.py
 ```
+
+Add the Prefect database setting to `.env` using the password entered above.
+Special characters in the password must be URL-encoded; never paste the real
+value into a tracked file:
+
+```dotenv
+PREFECT_SERVER_DATABASE_CONNECTION_URL=postgresql+asyncpg://prefect:URL_ENCODED_PASSWORD@127.0.0.1:5432/prefect
+PREFECT_API_URL=http://127.0.0.1:4200/api
+```
+
+PowerFlow S3 settings belong in the same protected `.env`. AWS credentials do
+not: boto3 and the AWS CLI obtain short-lived credentials from the EC2 instance
+role.
 
 Bootstrap missing working datasets and frozen release files from S3. This is
 idempotent and preserves every existing file by default:
@@ -348,12 +413,14 @@ renamed only after the AWS CLI succeeds. Authentication comes from the EC2 IAM
 role; no AWS key is stored by the script.
 
 Install the supplied services, start the loopback-only Prefect server, and apply
-the Prefect work pool/deployment before starting the worker:
+the Prefect work pool/deployment before starting the worker. The Prefect server
+unit explicitly requires `postgresql.service` and also waits for PostgreSQL to
+accept loopback connections before it starts:
 
 ```bash
 sudo install -o root -g root -m 0644 deploy/systemd/*.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable powerflow-prefect-server.service \
+sudo systemctl enable postgresql.service powerflow-prefect-server.service \
   powerflow-prefect-worker.service powerflow-streamlit.service
 sudo systemctl start powerflow-prefect-server.service
 ./scripts/setup_prefect_ec2.sh
@@ -374,6 +441,26 @@ sudo journalctl -u powerflow-prefect-worker.service -f
 sudo journalctl -u powerflow-streamlit.service -f
 ```
 
+Verify the local databases, API, work pool, and deployment without exposing the
+database password:
+
+```bash
+sudo systemctl is-active postgresql.service powerflow-prefect-server.service \
+  powerflow-prefect-worker.service powerflow-streamlit.service
+sudo -u postgres psql -d prefect -tAc \
+  "SELECT current_database(), current_setting('listen_addresses');"
+sudo -u postgres psql -d prefect -tAc \
+  "SELECT extname FROM pg_extension WHERE extname = 'pg_trgm';"
+curl --fail --silent http://127.0.0.1:4200/api/health
+.venv-prod/bin/prefect config view | grep DATABASE_CONNECTION_URL
+.venv-prod/bin/prefect work-pool inspect electricity-pool
+.venv-prod/bin/prefect deployment inspect \
+  'PowerFlow ENTSO-E Pipeline/powerflow-entsoe-pipeline'
+```
+
+The Prefect configuration command masks secret settings. Its database connection
+must resolve to PostgreSQL; the API health response should be `true`.
+
 Prefect is bound only to `127.0.0.1:4200`. Streamlit listens on port `8501` on
 all interfaces; allow inbound TCP 8501 in the EC2 security group only from the
 intended operator/network, then open `http://EC2_PUBLIC_IP:8501`.
@@ -392,6 +479,26 @@ instance through AWS. After a reboot, the enabled services start automatically.
 Verify them with `systemctl status`; rerun `bootstrap_ec2_data.sh` only when local
 working files are missing, and rerun `setup_prefect_ec2.sh` only when the pool or
 deployment needs to be restored or updated.
+
+Before the final reboot-persistence test, audit resource usage and IAM-backed S3
+access. These reads do not modify production objects:
+
+```bash
+df -h
+free -h
+swapon --show
+aws sts get-caller-identity
+for prefix in raw silver gold reports models/releases; do
+  aws s3 ls "s3://powerflow-data-ian-2026-870755688674-us-east-1-an/${prefix}/" \
+    --recursive --human-readable --summarize
+done
+```
+
+Once configuration is final, reboot with `sudo reboot`, reconnect, and rerun the
+service, API, Prefect, disk, memory, swap, and S3 read-only checks above. Review
+recent errors with `journalctl -p warning --since boot` and the three PowerFlow
+service logs. Source-continuity warnings are expected operational warnings; do
+not fill missing upstream intervals or force a run by changing the data.
 
 ### Docker services
 

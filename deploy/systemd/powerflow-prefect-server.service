@@ -1,7 +1,8 @@
 [Unit]
 Description=PowerFlow Prefect API server
 Wants=network-online.target
-After=network-online.target
+Requires=postgresql.service
+After=network-online.target postgresql.service
 
 [Service]
 Type=simple
@@ -11,6 +12,7 @@ WorkingDirectory=/home/ec2-user/Electricity_Trading_Pipeline
 EnvironmentFile=/home/ec2-user/Electricity_Trading_Pipeline/.env
 Environment=HOME=/home/ec2-user
 Environment=PREFECT_HOME=/home/ec2-user/.prefect
+ExecStartPre=/bin/bash -c 'for attempt in {1..30}; do /usr/bin/pg_isready --quiet --host 127.0.0.1 --port 5432 --dbname prefect && exit 0; sleep 2; done; exit 1'
 ExecStart=/home/ec2-user/Electricity_Trading_Pipeline/.venv-prod/bin/prefect server start --host 127.0.0.1 --port 4200
 Restart=on-failure
 RestartSec=5

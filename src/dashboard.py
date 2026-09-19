@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="PowerFlow — Electricity Trading Intelligence",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
@@ -269,7 +269,13 @@ def fmt_date(value):
 def fmt_timestamp(value):
     if value is None or pd.isna(value):
         return "N/A"
-    return pd.Timestamp(value).strftime("%Y-%m-%d %H:%M UTC")
+    try:
+        timestamp = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if timestamp.tzinfo is None:
+        return timestamp.strftime("%Y-%m-%d %H:%M")
+    return timestamp.tz_convert("UTC").strftime("%Y-%m-%d %H:%M UTC")
 
 
 def has_columns(data: pd.DataFrame, columns) -> bool:
@@ -734,18 +740,28 @@ elif page == "Pipeline Summary":
     if latest_pipeline_run is None:
         st.warning(pipeline_run_error)
     else:
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Pipeline Status", str(latest_pipeline_run["status"]))
-        col2.metric("Latest Run Time", str(latest_pipeline_run["run_time"]))
-        col3.metric(
-            "Records Processed", fmt_int(latest_pipeline_run["records_processed"])
-        )
-
         stored_message = latest_pipeline_run["message"]
         try:
             operational_metadata = json.loads(stored_message)
         except (json.JSONDecodeError, TypeError):
             operational_metadata = None
+
+        records_label = "Recorded Row Count"
+        records_value = latest_pipeline_run["records_processed"]
+        if isinstance(operational_metadata, dict):
+            run_message = str(operational_metadata.get("message") or "")
+            if "No complete aligned raw hour advanced" in run_message:
+                records_label = "New Rows Ingested"
+                records_value = operational_metadata.get(
+                    "new_rows_ingested", records_value
+                )
+            elif latest_pipeline_run["status"] == "SUCCESS":
+                records_label = "Gold Rows Validated"
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Pipeline Status", str(latest_pipeline_run["status"]))
+        col2.metric("Latest Run Time", fmt_timestamp(latest_pipeline_run["run_time"]))
+        col3.metric(records_label, fmt_int(records_value))
 
         if not isinstance(operational_metadata, dict):
             st.info(str(stored_message or "No pipeline message recorded."))
@@ -756,7 +772,10 @@ elif page == "Pipeline Summary":
                 ("s3_sync_status", "S3 Sync Status"),
                 ("new_rows_ingested", "New Rows Ingested"),
                 ("predictions_generated", "Predictions Generated"),
-                ("latest_complete_price_hour", "Latest Complete Price Hour"),
+                (
+                    "latest_complete_price_hour",
+                    "Latest Complete Price Hour (UTC)",
+                ),
             ]
             available_fields = [
                 (key, label, operational_metadata[key])
@@ -777,6 +796,8 @@ elif page == "Pipeline Summary":
                                 value = fmt_int(value)
                             except (TypeError, ValueError):
                                 value = str(value)
+                        elif key == "latest_complete_price_hour":
+                            value = fmt_timestamp(value).removesuffix(" UTC")
                         column.metric(label, str(value))
 
             st.info(
@@ -801,13 +822,20 @@ elif page == "Pipeline Summary":
                             {
                                 "Source": source_name,
                                 "Last Contiguous Timestamp": details.get(
-                                    "last_contiguous_timestamp", "N/A"
+                                    "last_contiguous_timestamp"
                                 ),
                                 "First Unresolved Timestamp": details.get(
-                                    "first_unresolved_timestamp", "N/A"
+                                    "first_unresolved_timestamp"
                                 ),
                                 "Missing Count": details.get("missing_count", "N/A"),
                             }
+                        )
+                    for summary in gap_summaries:
+                        summary["Last Contiguous Timestamp"] = fmt_timestamp(
+                            summary["Last Contiguous Timestamp"]
+                        )
+                        summary["First Unresolved Timestamp"] = fmt_timestamp(
+                            summary["First Unresolved Timestamp"]
                         )
                     st.dataframe(
                         pd.DataFrame(gap_summaries),

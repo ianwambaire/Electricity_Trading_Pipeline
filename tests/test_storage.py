@@ -115,6 +115,24 @@ def test_expected_prefix_mappings_are_exact():
     assert object_key("data/raw/weather/open_meteo_weather.csv") == "raw/weather/open_meteo_weather.csv"
     assert ARTIFACT_MAPPINGS["data/processed/silver_electricity_market_data.csv"].startswith("silver/")
     assert ARTIFACT_MAPPINGS["data/features/gold_model_features.csv"].startswith("gold/")
+    assert object_key("data/reports/actual_vs_predicted.csv") == (
+        "reports/predictions/actual_vs_predicted.csv"
+    )
+    assert object_key("data/reports/actual_vs_predicted.png") == (
+        "reports/predictions/actual_vs_predicted.png"
+    )
+    assert object_key("data/reports/detected_anomalies.csv") == (
+        "reports/anomalies/detected_anomalies.csv"
+    )
+    assert object_key("data/reports/anomaly_detection.png") == (
+        "reports/anomalies/anomaly_detection.png"
+    )
+    assert object_key("data/reports/feature_importance.csv") == (
+        "reports/monitoring/feature_importance.csv"
+    )
+    assert object_key("data/reports/feature_importance.png") == (
+        "reports/monitoring/feature_importance.png"
+    )
 
 
 def test_local_mode_sync_is_a_noop(tmp_path):

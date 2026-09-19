@@ -1,0 +1,22 @@
+[Unit]
+Description=PowerFlow Prefect process worker
+Requires=powerflow-prefect-server.service
+After=network-online.target powerflow-prefect-server.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/Electricity_Trading_Pipeline
+EnvironmentFile=/home/ec2-user/Electricity_Trading_Pipeline/.env
+Environment=HOME=/home/ec2-user
+Environment=PREFECT_HOME=/home/ec2-user/.prefect
+Environment=PREFECT_API_URL=http://127.0.0.1:4200/api
+ExecStart=/home/ec2-user/Electricity_Trading_Pipeline/.venv-prod/bin/prefect worker start --pool electricity-pool --type process --name powerflow-ec2 --limit 1 --install-policy never
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

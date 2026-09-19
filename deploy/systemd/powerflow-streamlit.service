@@ -1,0 +1,20 @@
+[Unit]
+Description=PowerFlow Streamlit dashboard
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/Electricity_Trading_Pipeline
+EnvironmentFile=/home/ec2-user/Electricity_Trading_Pipeline/.env
+Environment=HOME=/home/ec2-user
+ExecStart=/home/ec2-user/Electricity_Trading_Pipeline/.venv-prod/bin/streamlit run src/dashboard.py --server.address 0.0.0.0 --server.port 8501 --server.headless true --browser.gatherUsageStats false
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

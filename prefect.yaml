@@ -6,7 +6,7 @@
 
 # Generic metadata about this project
 name: electricity-trading-pipeline
-prefect-version: 3.7.2
+prefect-version: 3.7.5
 
 # build section allows you to manage and build docker images
 build: null
@@ -15,12 +15,9 @@ build: null
 # is uploaded to remote locations
 push: null
 
-# pull section allows you to provide instructions for cloning
-# this project in remote locations
-pull:
-- prefect.deployments.steps.git_clone:
-    repository: https://github.com/ianwambaire/Electricity_Trading_Pipeline.git
-    branch: main
+# Runs execute from the persistent EC2 checkout configured below. A git-clone
+# pull step would lose ignored local datasets, frozen artifacts, and .env.
+pull: null
 
 # the deployments section allows you to provide configuration
 # for deploying flows
@@ -35,10 +32,12 @@ deployments:
     mode: incremental
     start_date: null
     end_date: null
+    storage_backend: s3
   work_pool:
     name: electricity-pool
     work_queue_name: null
-    job_variables: {}
+    job_variables:
+      working_dir: /home/ec2-user/Electricity_Trading_Pipeline
   schedules:
   - cron: "0 * * * *"
     timezone: UTC

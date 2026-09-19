@@ -1,0 +1,21 @@
+[Unit]
+Description=PowerFlow Prefect API server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/Electricity_Trading_Pipeline
+EnvironmentFile=/home/ec2-user/Electricity_Trading_Pipeline/.env
+Environment=HOME=/home/ec2-user
+Environment=PREFECT_HOME=/home/ec2-user/.prefect
+ExecStart=/home/ec2-user/Electricity_Trading_Pipeline/.venv-prod/bin/prefect server start --host 127.0.0.1 --port 4200
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

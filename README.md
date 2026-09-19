@@ -140,11 +140,11 @@ venv\Scripts\Activate.ps1
 
 Production hosts do not need the research, model-selection, MLflow, notebook, or
 XGBoost stack. On the Amazon Linux 2023 EC2 host, install the minimal Python 3.14
-runtime instead:
+runtime instead. The production dependency set pins Prefect 3.7.5:
 
 ```bash
-python3.14 -m venv venv
-source venv/bin/activate
+python3.14 -m venv .venv-prod
+source .venv-prod/bin/activate
 python -m pip install --upgrade pip
 python -m pip install --only-binary=:all: -r requirements-prod.txt
 python scripts/check_production_imports.py
@@ -312,17 +312,86 @@ mlflow server \
 
 Open `http://localhost:5000`. The primary trainer writes to the `electricity-price-forecasting-entsoe` experiment.
 
-### 5. Create a Prefect deployment
+### 5. Persistent EC2 production deployment
 
-The deployment uses the existing `electricity-pool` work pool and has no schedule. Because its pull step clones GitHub `main`, deployment runs only see committed and pushed code.
+Production runs execute directly from
+`/home/ec2-user/Electricity_Trading_Pipeline`. The Prefect deployment deliberately
+has no git-clone pull step: raw, Silver, Gold, `.env`, SQLite, and frozen model
+files persist in that checkout and are excluded from Git. Its process-worker job
+sets this same directory explicitly, runs incremental mode with the S3 backend,
+has a concurrency limit of one, and is scheduled hourly at minute zero in UTC.
+
+After pulling reviewed code, install the production dependencies and protect the
+environment file:
 
 ```bash
-prefect work-pool create --type process electricity-pool
-prefect deploy --name powerflow-entsoe-pipeline
-prefect worker start --pool electricity-pool
+cd /home/ec2-user/Electricity_Trading_Pipeline
+python3.14 -m venv .venv-prod
+source .venv-prod/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --only-binary=:all: -r requirements-prod.txt
+chmod 600 .env
+python scripts/check_production_imports.py
 ```
 
-The work-pool creation command is needed only when the pool does not already exist. API keys must be available in the worker environment.
+Bootstrap missing working datasets and frozen release files from S3. This is
+idempotent and preserves every existing file by default:
+
+```bash
+chmod +x scripts/bootstrap_ec2_data.sh scripts/setup_prefect_ec2.sh
+./scripts/bootstrap_ec2_data.sh
+```
+
+Use `./scripts/bootstrap_ec2_data.sh --force` only for an intentional restore
+from the current durable S3 copies. Downloads are written to temporary files and
+renamed only after the AWS CLI succeeds. Authentication comes from the EC2 IAM
+role; no AWS key is stored by the script.
+
+Install the supplied services, start the loopback-only Prefect server, and apply
+the Prefect work pool/deployment before starting the worker:
+
+```bash
+sudo install -o root -g root -m 0644 deploy/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable powerflow-prefect-server.service \
+  powerflow-prefect-worker.service powerflow-streamlit.service
+sudo systemctl start powerflow-prefect-server.service
+./scripts/setup_prefect_ec2.sh
+sudo systemctl start powerflow-prefect-worker.service powerflow-streamlit.service
+```
+
+The setup script waits for `http://127.0.0.1:4200/api/health`, creates the
+`electricity-pool` process pool only when absent, and reapplies
+`powerflow-entsoe-pipeline` safely. Run it again after changing `prefect.yaml`.
+
+Inspect service state and live logs with:
+
+```bash
+sudo systemctl status powerflow-prefect-server.service \
+  powerflow-prefect-worker.service powerflow-streamlit.service
+sudo journalctl -u powerflow-prefect-server.service -f
+sudo journalctl -u powerflow-prefect-worker.service -f
+sudo journalctl -u powerflow-streamlit.service -f
+```
+
+Prefect is bound only to `127.0.0.1:4200`. Streamlit listens on port `8501` on
+all interfaces; allow inbound TCP 8501 in the EC2 security group only from the
+intended operator/network, then open `http://EC2_PUBLIC_IP:8501`.
+
+For routine service operations:
+
+```bash
+sudo systemctl restart powerflow-prefect-server.service \
+  powerflow-prefect-worker.service powerflow-streamlit.service
+sudo systemctl stop powerflow-prefect-worker.service powerflow-streamlit.service
+sudo systemctl start powerflow-prefect-worker.service powerflow-streamlit.service
+```
+
+To stop the EC2 host cleanly, use `sudo shutdown -h now` and then stop/start the
+instance through AWS. After a reboot, the enabled services start automatically.
+Verify them with `systemctl status`; rerun `bootstrap_ec2_data.sh` only when local
+working files are missing, and rerun `setup_prefect_ec2.sh` only when the pool or
+deployment needs to be restored or updated.
 
 ### Docker services
 

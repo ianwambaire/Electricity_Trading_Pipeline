@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from dotenv import load_dotenv
 from prefect import flow, task
 
 from ingestion.fetch_entsoe_data import fetch_entsoe_data, latest_generation_timestamp
@@ -19,6 +20,7 @@ from store_data import (
     log_data_quality_result,
     log_pipeline_run,
 )
+from storage import StorageConfig, StorageSync
 from utils.logger import get_logger
 from validate_data import (
     GOLD_DATA_PATH,
@@ -211,12 +213,38 @@ def _record_gap_warnings(unresolved_gaps):
         )
 
 
+def _sync_storage_group(synchronizer, storage_state, group, stage_name):
+    try:
+        result = synchronizer.sync_group(group)
+    except Exception as error:
+        storage_state["s3_sync_status"] = "FAILED"
+        storage_state["failed_upload_stage"] = stage_name
+        warning = f"{stage_name}: {error}"
+        storage_state["warnings"].append(warning)
+        try:
+            initialize_database()
+            log_data_quality_result(
+                check_name=f"s3_sync:{group}",
+                status="FAILED",
+                message=warning,
+            )
+        except Exception:
+            logger.exception("Unable to record S3 synchronization failure.")
+        raise
+    storage_state["objects_uploaded"].extend(result.uploaded)
+    storage_state["objects_unchanged"].extend(result.unchanged)
+    if synchronizer.config.backend == "s3":
+        storage_state["s3_sync_status"] = "SUCCESS"
+    return result
+
+
 def _operational_metadata(
     mode,
     new_rows,
     predictions,
     status,
     unresolved_gaps=None,
+    storage_state=None,
 ):
     raw_timestamps = {
         "prices": _latest_timestamp("data/raw/entsoe/prices.csv"),
@@ -230,6 +258,15 @@ def _operational_metadata(
     def formatted(value):
         return value.isoformat() if value is not None else None
 
+    storage_state = storage_state or {
+        "storage_backend": "local",
+        "s3_bucket": None,
+        "s3_sync_status": "NOT_REQUIRED",
+        "objects_uploaded": [],
+        "objects_unchanged": [],
+        "failed_upload_stage": None,
+        "warnings": [],
+    }
     return {
         "mode": mode,
         "run_timestamp": pd.Timestamp.now(tz="UTC").isoformat(),
@@ -251,6 +288,7 @@ def _operational_metadata(
         "new_rows_ingested": int(new_rows),
         "predictions_generated": int(predictions),
         "unresolved_source_gaps": unresolved_gaps or {},
+        **storage_state,
         "status": status,
     }
 
@@ -260,6 +298,7 @@ def powerflow_entsoe_pipeline(
     mode: str = "incremental",
     start_date: str | None = None,
     end_date: str | None = None,
+    storage_backend: str | None = None,
 ):
     if mode not in {"historical", "incremental"}:
         raise ValueError("mode must be 'historical' or 'incremental'.")
@@ -274,6 +313,19 @@ def powerflow_entsoe_pipeline(
     unresolved_gaps = {}
     raw_watermark_before = None
 
+    load_dotenv(PROJECT_ROOT / ".env")
+    storage_config = StorageConfig.from_env(storage_backend)
+    storage_sync = StorageSync(storage_config, PROJECT_ROOT)
+    storage_state = {
+        "storage_backend": storage_config.backend,
+        "s3_bucket": storage_config.s3_bucket,
+        "s3_sync_status": "PENDING" if storage_config.backend == "s3" else "NOT_REQUIRED",
+        "objects_uploaded": [],
+        "objects_unchanged": [],
+        "failed_upload_stage": None,
+        "warnings": [],
+    }
+
     logger.info("PowerFlow ENTSO-E pipeline started in %s mode.", mode)
 
     try:
@@ -285,9 +337,19 @@ def powerflow_entsoe_pipeline(
         entsoe_metadata = entsoe_ingestion_task(mode, start_date, end_date)
         unresolved_gaps = _entsoe_unresolved_gaps(entsoe_metadata)
         _record_gap_warnings(unresolved_gaps)
+        storage_state["warnings"].extend(
+            f"Unresolved ENTSO-E source gap: {dataset_name}"
+            for dataset_name in unresolved_gaps
+        )
+
+        stage_name = "ENTSO-E raw S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "raw_entsoe", stage_name)
 
         stage_name = "Open-Meteo weather ingestion"
         weather_metadata = weather_ingestion_task(mode, start_date, end_date)
+
+        stage_name = "Open-Meteo raw S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "raw_weather", stage_name)
         raw_rows_after = _raw_row_counts()
         if mode == "incremental":
             new_rows_ingested = sum(
@@ -316,6 +378,7 @@ def powerflow_entsoe_pipeline(
                 0,
                 "SUCCESS",
                 unresolved_gaps,
+                storage_state,
             )
             metadata["message"] = (
                 "No complete aligned raw hour advanced; derived datasets "
@@ -335,23 +398,41 @@ def powerflow_entsoe_pipeline(
         stage_name = "Silver dataset validation"
         records_processed = validate_silver_task()
 
+        stage_name = "Silver S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "silver", stage_name)
+
         stage_name = "Gold dataset creation"
         build_gold_task()
 
         stage_name = "Gold dataset validation"
         records_processed = validate_gold_task()
 
+        stage_name = "Gold S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "gold", stage_name)
+
         stage_name = "Frozen final model verification"
         verify_final_model_release_task()
+
+        stage_name = "Frozen model release S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "model_release", stage_name)
 
         stage_name = "Actual-vs-predicted report generation"
         predictions_generated = prediction_report_task(mode)
 
+        stage_name = "Prediction report S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "predictions", stage_name)
+
         stage_name = "Anomaly detection"
         anomaly_detection_task()
 
+        stage_name = "Anomaly report S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "anomalies", stage_name)
+
         stage_name = "Feature importance generation"
         feature_importance_task()
+
+        stage_name = "Monitoring report S3 synchronization"
+        _sync_storage_group(storage_sync, storage_state, "monitoring", stage_name)
 
         stage_name = "Pipeline run-history logging"
         initialize_database()
@@ -361,6 +442,7 @@ def powerflow_entsoe_pipeline(
             predictions_generated,
             "SUCCESS",
             unresolved_gaps,
+            storage_state,
         )
         metadata["message"] = "PowerFlow ENTSO-E pipeline completed successfully."
         log_pipeline_run(
@@ -372,6 +454,7 @@ def powerflow_entsoe_pipeline(
             "PowerFlow ENTSO-E pipeline completed successfully (%s gold rows).",
             records_processed,
         )
+        return metadata
 
     except Exception as error:
         if mode == "incremental" and raw_rows_before:
@@ -398,6 +481,7 @@ def powerflow_entsoe_pipeline(
                 predictions_generated,
                 "FAILED",
                 unresolved_gaps,
+                storage_state,
             )
             metadata["failed_stage"] = stage_name
             metadata["message"] = message
@@ -430,6 +514,7 @@ def parse_args():
     )
     parser.add_argument("--start-date")
     parser.add_argument("--end-date")
+    parser.add_argument("--storage-backend", choices=["local", "s3"])
     return parser.parse_args()
 
 
@@ -439,4 +524,5 @@ if __name__ == "__main__":
         mode=arguments.mode,
         start_date=arguments.start_date,
         end_date=arguments.end_date,
+        storage_backend=arguments.storage_backend,
     )

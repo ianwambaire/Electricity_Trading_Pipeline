@@ -20,6 +20,7 @@ def parse_args():
     )
     parser.add_argument("--start-date", help="Historical mode start (YYYY-MM-DD).")
     parser.add_argument("--end-date", help="Historical mode end (YYYY-MM-DD).")
+    parser.add_argument("--storage-backend", choices=["local", "s3"])
     return parser.parse_args()
 
 
@@ -29,6 +30,7 @@ def main():
         mode=arguments.mode,
         start_date=arguments.start_date,
         end_date=arguments.end_date,
+        storage_backend=arguments.storage_backend,
     )
 
 

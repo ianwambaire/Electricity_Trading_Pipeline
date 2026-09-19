@@ -1,6 +1,6 @@
 # PowerFlow data directory
 
-This directory contains PowerFlow's source extracts, transformed datasets, model inputs, reports, and backups. Most contents are generated or downloaded and are intentionally excluded from Git.
+This directory contains PowerFlow's local working source extracts, transformed datasets, model inputs, reports, and backups. Most contents are generated or downloaded and are intentionally excluded from Git. With `POWERFLOW_STORAGE_BACKEND=s3`, validated local artifacts are also synchronized to durable S3 storage; local files remain the working copies.
 
 ## Directory layout
 
@@ -61,6 +61,28 @@ Generated analysis and model outputs, including:
 
 These reports can be regenerated and are excluded from Git.
 
+## S3 durable layout
+
+The storage mapping is intentionally stable and independent of the local directory
+layout:
+
+- ENTSO-E prices: `raw/entsoe/prices/prices.csv`
+- ENTSO-E load: `raw/entsoe/load/load.csv`
+- ENTSO-E generation: `raw/entsoe/generation/generation.csv`
+- Open-Meteo: `raw/weather/open_meteo_weather.csv`
+- Silver: `silver/silver_electricity_market_data.csv`
+- Gold: `gold/gold_model_features.csv`
+- predictions: `reports/predictions/`
+- anomalies: `reports/anomalies/`
+- monitoring/feature importance: `reports/monitoring/`
+- frozen release artifacts and relevant final evaluation reports: `models/releases/`
+
+S3 synchronization happens only after a successful local raw write or successful
+Silver/Gold validation. Reports are synchronized after their generator succeeds.
+Content hashes prevent unnecessary reuploads. Local mode is the default and makes
+no AWS calls. S3 mode uses the standard AWS credential chain; access keys must not
+be written into tracked files.
+
 ### `backups/`
 
 Timestamped snapshots created by legacy API-ingestion scripts. They are local backup data, not source-controlled assets.
@@ -93,9 +115,10 @@ Active raw, silver, gold, final, report, external, and backup outputs are exclud
 
 - **GitHub:** documentation and small representative sample data only.
 - **Local storage:** active pipeline inputs and outputs used during development.
-- **Google Drive:** archived large source datasets, dated dataset snapshots, and final dataset backups that need to be retained or shared.
+- **Amazon S3:** durable active raw, Silver, Gold, report, and release artifacts.
+- **Google Drive:** manually shared or legacy archive snapshots when needed.
 
-No automated Google Drive upload is implemented. Archiving is currently a manual project-management decision.
+No automated Google Drive upload is implemented. S3 is the automated durable backend.
 
 Recommended Drive locations are `PowerFlow/datasets/snapshots/` for reviewed
 gold snapshots and `PowerFlow/datasets/archives/` for older large exports. See

@@ -23,7 +23,7 @@ PowerFlow is a historical analytics and forecasting project with incremental sou
 ENTSO-E API                    Open-Meteo Archive API
 (DE_LU price/load/generation)  (Berlin weather)
              \                 /
-              data/raw/
+              local data/raw/ ── optional durable sync ── S3 raw/
                   |
        Silver cleaning and alignment
                   |
@@ -38,6 +38,8 @@ ENTSO-E API                    Open-Meteo Archive API
        Prediction and analytics reports
                   |
            Streamlit dashboard
+                  |
+       S3 silver/, gold/, reports/, models/releases/
 ```
 
 Prefect defines the stage order, retries ingestion tasks, runs silver and gold validation, records pipeline success or failure in SQLite, writes operational logs, and invokes the existing email failure notification when configured.
@@ -69,6 +71,7 @@ The flow supports `historical` mode for a reproducible full rebuild and `increme
 - Prefect 3 for orchestration
 - Streamlit and Plotly for the dashboard
 - SQLite for pipeline and data-quality history
+- Amazon S3 via boto3 for optional durable artifact storage
 - Matplotlib for generated report images
 - Docker and Docker Compose for local services
 
@@ -146,12 +149,20 @@ Then replace the placeholders locally. Never commit `.env`.
 | `ENTSOE_API_KEY` | Required by the primary ENTSO-E ingestion stage |
 | `POWERFLOW_HISTORY_START_DATE` | Optional inclusive history start; defaults to `2019-01-01` |
 | `POWERFLOW_HISTORY_END_DATE` | Optional inclusive history end; defaults to `2025-09-30` |
+| `POWERFLOW_STORAGE_BACKEND` | `local` (default) or `s3` |
+| `POWERFLOW_S3_BUCKET` | Required in S3 mode; durable PowerFlow bucket name |
+| `AWS_REGION` | AWS region; defaults to `us-east-1` |
+| `POWERFLOW_LOCAL_STORAGE_ROOT` | Optional root used by the standalone local storage adapter; defaults to `.` |
 | `EIA_API_KEY` | Used only by retained legacy EIA ingestion scripts |
 | `ALERT_EMAIL_SENDER` | Optional Gmail sender for failure notifications |
 | `ALERT_EMAIL_PASSWORD` | Optional Gmail app password |
 | `ALERT_EMAIL_RECEIVER` | Optional failure-notification recipient |
 
 If the email variables are absent, the existing notification function skips sending email.
+
+AWS credentials are never stored in PowerFlow configuration. S3 mode uses boto3's
+standard credential provider chain, so local runs can use an AWS profile or environment,
+and a future EC2 host can use an instance role. Never add access keys to `.env` or Git.
 
 ## Running PowerFlow
 
@@ -183,6 +194,55 @@ The default is the operational incremental mode. The equivalent explicit command
 ```bash
 python src/orchestration/run_entsoe_pipeline.py --mode incremental
 ```
+
+Local mode remains the default and performs no cloud calls:
+
+```bash
+POWERFLOW_STORAGE_BACKEND=local python src/orchestration/run_entsoe_pipeline.py --mode incremental
+```
+
+S3 mode keeps the same local working files and business logic, then uploads only
+successfully written/validated artifacts at each stage:
+
+```bash
+POWERFLOW_STORAGE_BACKEND=s3 \
+POWERFLOW_S3_BUCKET=powerflow-data-ian-2026-870755688674-us-east-1-an \
+AWS_REGION=us-east-1 \
+python src/orchestration/run_entsoe_pipeline.py --mode incremental
+```
+
+`--storage-backend local|s3` is available as a one-run override. Uploads use a
+temporary object followed by a server-side copy, carry a SHA-256 content marker,
+and skip unchanged objects. An upload failure fails the affected pipeline stage,
+is recorded in run/data-quality metadata, and does not alter the valid local file.
+
+Verify bucket read/write/delete access with a disposable monitoring object:
+
+```bash
+POWERFLOW_STORAGE_BACKEND=s3 python src/storage/check_s3.py
+```
+
+Idempotently migrate existing artifacts (missing optional artifacts are skipped):
+
+```bash
+POWERFLOW_STORAGE_BACKEND=s3 python src/storage/sync_existing.py
+# Or selected groups:
+POWERFLOW_STORAGE_BACKEND=s3 python src/storage/sync_existing.py raw silver gold
+```
+
+The durable object layout is:
+
+| Local artifact | S3 object |
+|---|---|
+| `data/raw/entsoe/prices.csv` | `raw/entsoe/prices/prices.csv` |
+| `data/raw/entsoe/load.csv` | `raw/entsoe/load/load.csv` |
+| `data/raw/entsoe/generation.csv` | `raw/entsoe/generation/generation.csv` |
+| `data/raw/weather/open_meteo_weather.csv` | `raw/weather/open_meteo_weather.csv` |
+| Silver / Gold CSVs | `silver/silver_electricity_market_data.csv`, `gold/gold_model_features.csv` |
+| Prediction reports | `reports/predictions/` |
+| Anomaly reports | `reports/anomalies/` |
+| Feature-importance monitoring reports | `reports/monitoring/` |
+| Frozen model, feature list, manifest, optional final reports | `models/releases/` |
 
 Run a reproducible full rebuild with the configured historical range using:
 

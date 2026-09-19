@@ -815,30 +815,6 @@ elif page == "Pipeline Summary":
                         hide_index=True,
                     )
 
-    section_header("Pipeline Architecture")
-    st.code(
-        """
-ENTSO-E API
-    ↓
-Open-Meteo API
-    ↓
-Raw Data Layer
-    ↓
-Silver Cleaned Dataset
-    ↓
-Gold Feature Dataset
-    ↓
-Frozen Final Model Verification
-    ↓
-Final Model Predictions
-    ↓
-Anomaly Detection
-    ↓
-Feature Importance
-        """,
-        language="text",
-    )
-
     section_header("Dataset Status")
     col1, col2, col3 = st.columns(3)
     col1.metric(

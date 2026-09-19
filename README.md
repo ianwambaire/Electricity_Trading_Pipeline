@@ -102,6 +102,7 @@ The flow supports `historical` mode for a reproducible full rebuild and `increme
 ├── prefect.yaml
 ├── pytest.ini
 ├── requirements-dev.txt
+├── requirements-prod.txt    Minimal Python 3.14 EC2 runtime dependencies
 ├── tests/                   Lightweight offline tests for current behavior
 └── requirements.txt
 ```
@@ -110,13 +111,14 @@ See [`data/README.md`](data/README.md) and [`artifacts/README.md`](artifacts/REA
 
 ## Development setup
 
-The Docker image uses Python 3.12. A local virtual environment with Python 3.12 is recommended.
+Local development and the EC2 runtime use Python 3.14. The existing Docker image
+currently remains on Python 3.12.
 
 ```bash
 git clone https://github.com/ianwambaire/Electricity_Trading_Pipeline.git
 cd Electricity_Trading_Pipeline
 
-python3.12 -m venv venv
+python3.14 -m venv venv
 source venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -133,6 +135,27 @@ On Windows PowerShell, activate the environment with:
 ```powershell
 venv\Scripts\Activate.ps1
 ```
+
+### EC2 production installation
+
+Production hosts do not need the research, model-selection, MLflow, notebook, or
+XGBoost stack. On the Amazon Linux 2023 EC2 host, install the minimal Python 3.14
+runtime instead:
+
+```bash
+python3.14 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --only-binary=:all: -r requirements-prod.txt
+python scripts/check_production_imports.py
+```
+
+The production set supports Prefect orchestration, both ingestion sources,
+Silver/Gold processing, frozen scikit-learn inference, S3 synchronization,
+reports, anomaly detection, feature importance, Streamlit, SQLite metadata, and
+optional SMTP alerts. It intentionally excludes XGBoost and therefore does not
+pull CUDA or NCCL packages. `pyarrow` is not a direct PowerFlow dependency; pip
+may install it transitively for Streamlit.
 
 ## Environment variables
 

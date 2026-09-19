@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import sqlite3
 
@@ -739,7 +740,80 @@ elif page == "Pipeline Summary":
         col3.metric(
             "Records Processed", fmt_int(latest_pipeline_run["records_processed"])
         )
-        st.info(str(latest_pipeline_run["message"] or "No pipeline message recorded."))
+
+        stored_message = latest_pipeline_run["message"]
+        try:
+            operational_metadata = json.loads(stored_message)
+        except (json.JSONDecodeError, TypeError):
+            operational_metadata = None
+
+        if not isinstance(operational_metadata, dict):
+            st.info(str(stored_message or "No pipeline message recorded."))
+        else:
+            summary_fields = [
+                ("mode", "Mode"),
+                ("storage_backend", "Storage Backend"),
+                ("s3_sync_status", "S3 Sync Status"),
+                ("new_rows_ingested", "New Rows Ingested"),
+                ("predictions_generated", "Predictions Generated"),
+                ("latest_complete_price_hour", "Latest Complete Price Hour"),
+            ]
+            available_fields = [
+                (key, label, operational_metadata[key])
+                for key, label in summary_fields
+                if operational_metadata.get(key) is not None
+            ]
+
+            if available_fields:
+                section_header("Operational Summary")
+                for field_start in range(0, len(available_fields), 3):
+                    columns = st.columns(3)
+                    for column, (key, label, value) in zip(
+                        columns,
+                        available_fields[field_start : field_start + 3],
+                    ):
+                        if key in {"new_rows_ingested", "predictions_generated"}:
+                            try:
+                                value = fmt_int(value)
+                            except (TypeError, ValueError):
+                                value = str(value)
+                        column.metric(label, str(value))
+
+            st.info(
+                str(
+                    operational_metadata.get("message")
+                    or "No pipeline message recorded."
+                )
+            )
+
+            unresolved_gaps = operational_metadata.get("unresolved_source_gaps")
+            if isinstance(unresolved_gaps, dict) and unresolved_gaps:
+                warning_count = len(unresolved_gaps)
+                warning_label = "warning" if warning_count == 1 else "warnings"
+                st.warning(
+                    f"{warning_count} source continuity {warning_label} detected"
+                )
+                with st.expander("View source continuity details"):
+                    gap_summaries = []
+                    for source_name, gap_details in unresolved_gaps.items():
+                        details = gap_details if isinstance(gap_details, dict) else {}
+                        gap_summaries.append(
+                            {
+                                "Source": source_name,
+                                "Last Contiguous Timestamp": details.get(
+                                    "last_contiguous_timestamp", "N/A"
+                                ),
+                                "First Unresolved Timestamp": details.get(
+                                    "first_unresolved_timestamp", "N/A"
+                                ),
+                                "Missing Count": details.get("missing_count", "N/A"),
+                            }
+                        )
+                    st.dataframe(
+                        pd.DataFrame(gap_summaries),
+                        width="stretch",
+                        hide_index=True,
+                    )
 
     section_header("Pipeline Architecture")
     st.code(

@@ -7,7 +7,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from dashboard_data import load_final_release_metadata
+from dashboard_data import (
+    csv_has_rows,
+    downsample_time_series,
+    load_csv_summary,
+    load_dashboard_csv,
+    load_final_release_metadata,
+)
 
 
 SILVER_DATA = Path("data/processed/silver_electricity_market_data.csv")
@@ -18,6 +24,7 @@ FEATURE_IMPORTANCE_DATA = Path("data/reports/feature_importance.csv")
 FINAL_RELEASE_MANIFEST = Path("artifacts/models/final_model_release_manifest.json")
 FINAL_HOLDOUT_METRICS = Path("data/reports/final_holdout_metrics.csv")
 PIPELINE_DATABASE = Path("database/electricity_trading.db")
+CHART_MAX_POINTS = 4_000
 
 
 st.set_page_config(
@@ -324,18 +331,7 @@ PLOTLY_LAYOUT = dict(
 CHART_COLORS = ["#0B6FFB", "#16A3A3", "#F59E0B", "#2E9D68", "#7A5AF8", "#D92D20"]
 
 
-@st.cache_data(ttl=30)
-def load_csv(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        return pd.DataFrame()
-
-    try:
-        return pd.read_csv(path)
-    except (OSError, ValueError, pd.errors.ParserError):
-        return pd.DataFrame()
-
-
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=30, show_spinner=False)
 def load_latest_pipeline_run(path: Path):
     if not path.exists():
         return None, f"Pipeline database not found at {path}."
@@ -444,63 +440,10 @@ def page_title(eyebrow, title, subtitle=None):
     )
 
 
-silver_data = load_csv(SILVER_DATA)
-gold_data = load_csv(GOLD_DATA)
-predictions = load_csv(PREDICTIONS_DATA)
-anomalies = load_csv(ANOMALIES_DATA)
-feature_importance = load_csv(FEATURE_IMPORTANCE_DATA)
-final_release, final_release_error = load_final_release_metadata(
-    FINAL_RELEASE_MANIFEST,
-    FINAL_HOLDOUT_METRICS,
-)
+silver_summary = load_csv_summary(SILVER_DATA)
 latest_pipeline_run, pipeline_run_error = load_latest_pipeline_run(PIPELINE_DATABASE)
-
-if "timestamp" in silver_data.columns:
-    silver_data["timestamp"] = pd.to_datetime(
-        silver_data["timestamp"], errors="coerce", utc=True
-    )
-
-if not gold_data.empty and "timestamp" in gold_data.columns:
-    gold_data["timestamp"] = pd.to_datetime(
-        gold_data["timestamp"], errors="coerce", utc=True
-    )
-
-if not predictions.empty and "timestamp" in predictions.columns:
-    predictions["timestamp"] = pd.to_datetime(
-        predictions["timestamp"], errors="coerce", utc=True
-    )
-
-if not anomalies.empty and "timestamp" in anomalies.columns:
-    anomalies["timestamp"] = pd.to_datetime(
-        anomalies["timestamp"], errors="coerce", utc=True
-    )
-
-silver_ready = has_columns(
-    silver_data,
-    ["timestamp", "price_eur_mwh", "load_mw", "wind_total_mw", "solar_mw"],
-)
-latest_timestamp = silver_data["timestamp"].max() if silver_ready else None
-earliest_timestamp = silver_data["timestamp"].min() if silver_ready else None
-latest_price = (
-    silver_data.dropna(subset=["timestamp"])
-    .sort_values("timestamp")
-    .tail(1)["price_eur_mwh"]
-    .iloc[0]
-    if silver_ready and silver_data["timestamp"].notna().any()
-    else None
-)
-
-gold_feature_count = (
-    len(
-        [
-            column
-            for column in gold_data.columns
-            if column not in {"timestamp", "target_price_next_hour"}
-        ]
-    )
-    if not gold_data.empty
-    else None
-)
+latest_timestamp = silver_summary["latest_timestamp"]
+earliest_timestamp = silver_summary["earliest_timestamp"]
 
 
 with st.sidebar:
@@ -543,7 +486,7 @@ with st.sidebar:
             </div>
             <div class="sidebar-status-row">
                 <span>Hourly records</span>
-                <strong>{fmt_int(len(silver_data)) if not silver_data.empty else 'N/A'}</strong>
+                <strong>{fmt_int(silver_summary['row_count']) if silver_summary['available'] else 'N/A'}</strong>
             </div>
             <div class="sidebar-status-row">
                 <span>Data through</span>
@@ -556,6 +499,27 @@ with st.sidebar:
 
 
 if page == "Executive Overview":
+    silver_data = load_dashboard_csv(
+        SILVER_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
+    anomaly_summary = load_csv_summary(ANOMALIES_DATA)
+    silver_ready = has_columns(
+        silver_data,
+        ["timestamp", "price_eur_mwh", "load_mw", "wind_total_mw", "solar_mw"],
+    )
+    timestamped_silver = (
+        silver_data.dropna(subset=["timestamp"])
+        if silver_ready
+        else pd.DataFrame()
+    )
+    latest_price = (
+        timestamped_silver["price_eur_mwh"].iloc[-1]
+        if not timestamped_silver.empty
+        else None
+    )
+
     page_title(
         "Executive Overview",
         "Market Dashboard",
@@ -576,18 +540,25 @@ if page == "Executive Overview":
         col2.metric("Latest Price", f"{fmt(latest_price)} EUR/MWh")
         col3.metric("Avg Load", f"{fmt(silver_data['load_mw'].mean())} MW")
         col4.metric(
-            "Anomalies", fmt_int(len(anomalies)) if not anomalies.empty else "N/A"
+            "Anomalies",
+            fmt_int(anomaly_summary["row_count"])
+            if anomaly_summary["available"]
+            else "N/A",
         )
 
         section_header("Market Overview")
         col5, col6 = st.columns(2)
+        overview_plot_data = downsample_time_series(
+            timestamped_silver,
+            CHART_MAX_POINTS,
+        )
 
         with col5:
             st.markdown('<div class="chart-title">Electricity price trend</div>', unsafe_allow_html=True)
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=silver_data["timestamp"],
-                y=silver_data["price_eur_mwh"],
+                x=overview_plot_data["timestamp"],
+                y=overview_plot_data["price_eur_mwh"],
                 mode="lines",
                 line=dict(color="#0B6FFB", width=1.5),
                 name="Price EUR/MWh",
@@ -599,15 +570,18 @@ if page == "Executive Overview":
             st.markdown('<div class="chart-title">Load and renewable generation</div>', unsafe_allow_html=True)
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=silver_data["timestamp"],
-                y=silver_data["load_mw"],
+                x=overview_plot_data["timestamp"],
+                y=overview_plot_data["load_mw"],
                 mode="lines",
                 line=dict(color="#16A3A3", width=1.4),
                 name="Load MW",
             ))
             fig.add_trace(go.Scatter(
-                x=silver_data["timestamp"],
-                y=silver_data["wind_total_mw"] + silver_data["solar_mw"],
+                x=overview_plot_data["timestamp"],
+                y=(
+                    overview_plot_data["wind_total_mw"]
+                    + overview_plot_data["solar_mw"]
+                ),
                 mode="lines",
                 line=dict(color="#2E9D68", width=1.4),
                 name="Wind + Solar MW",
@@ -617,13 +591,18 @@ if page == "Executive Overview":
 
         section_header("Latest Historical Records")
         st.dataframe(
-            silver_data.sort_values("timestamp", ascending=False).head(10),
+            timestamped_silver.tail(10).iloc[::-1],
             width="stretch",
             hide_index=True,
         )
 
 
 elif page == "Market Intelligence":
+    silver_data = load_dashboard_csv(
+        SILVER_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
     page_title("Market Intelligence", "Price and Generation Analysis")
 
     generation_cols = [
@@ -646,6 +625,10 @@ elif page == "Market Intelligence":
     if not has_columns(silver_data, market_columns):
         show_data_warning("Silver market dataset", SILVER_DATA)
     else:
+        market_plot_data = downsample_time_series(
+            silver_data.dropna(subset=["timestamp"]),
+            CHART_MAX_POINTS,
+        )
         st.caption(
             f"Historical dataset coverage: {fmt_timestamp(earliest_timestamp)} to "
             f"{fmt_timestamp(latest_timestamp)}."
@@ -661,8 +644,8 @@ elif page == "Market Intelligence":
         section_header("Market Price Movement")
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=silver_data["timestamp"],
-            y=silver_data["price_eur_mwh"],
+            x=market_plot_data["timestamp"],
+            y=market_plot_data["price_eur_mwh"],
             mode="lines",
             line=dict(color="#0B6FFB", width=1.5),
             name="Electricity Price",
@@ -697,8 +680,8 @@ elif page == "Market Intelligence":
         with col1:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=silver_data["timestamp"],
-                y=silver_data["temperature_2m"],
+                x=market_plot_data["timestamp"],
+                y=market_plot_data["temperature_2m"],
                 mode="lines",
                 line=dict(color="#F59E0B", width=1.2),
                 name="Temperature",
@@ -709,8 +692,8 @@ elif page == "Market Intelligence":
         with col2:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=silver_data["timestamp"],
-                y=silver_data["wind_speed_10m"],
+                x=market_plot_data["timestamp"],
+                y=market_plot_data["wind_speed_10m"],
                 mode="lines",
                 line=dict(color="#16A3A3", width=1.4),
                 name="Wind Speed",
@@ -720,6 +703,15 @@ elif page == "Market Intelligence":
 
 
 elif page == "Forecasting":
+    final_release, final_release_error = load_final_release_metadata(
+        FINAL_RELEASE_MANIFEST,
+        FINAL_HOLDOUT_METRICS,
+    )
+    predictions = load_dashboard_csv(
+        PREDICTIONS_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
     page_title("Forecasting", "Actual vs Predicted Price Forecast")
 
     if final_release is None:
@@ -769,13 +761,27 @@ elif page == "Forecasting":
 
         section_header("Forecast Records")
         st.dataframe(
-            predictions.sort_values("timestamp", ascending=False).head(20),
+            predictions.tail(20).iloc[::-1],
             width="stretch",
             hide_index=True,
         )
 
 
 elif page == "Anomaly Detection":
+    anomalies = load_dashboard_csv(
+        ANOMALIES_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
+    silver_data = load_dashboard_csv(
+        SILVER_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
+    silver_ready = has_columns(
+        silver_data,
+        ["timestamp", "price_eur_mwh", "load_mw", "wind_total_mw", "solar_mw"],
+    )
     page_title("Anomaly Detection", "Unusual Historical Market Events")
 
     anomaly_columns = ["timestamp", "price_eur_mwh", "load_mw"]
@@ -790,11 +796,15 @@ elif page == "Anomaly Detection":
         col4.metric("Avg Anomaly Load", f"{fmt(anomalies['load_mw'].mean())} MW")
 
         if silver_ready:
+            anomaly_background = downsample_time_series(
+                silver_data.dropna(subset=["timestamp"]),
+                CHART_MAX_POINTS,
+            )
             section_header("Price Anomalies")
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=silver_data["timestamp"],
-                y=silver_data["price_eur_mwh"],
+                x=anomaly_background["timestamp"],
+                y=anomaly_background["price_eur_mwh"],
                 mode="lines",
                 line=dict(color="#0B6FFB", width=1.2),
                 name="Price",
@@ -820,6 +830,7 @@ elif page == "Anomaly Detection":
 
 
 elif page == "Model Insights":
+    feature_importance = load_dashboard_csv(FEATURE_IMPORTANCE_DATA)
     page_title("Model Insights", "Final Model Feature Influence")
 
     if not has_columns(feature_importance, ["feature", "importance"]):
@@ -858,6 +869,27 @@ elif page == "Model Insights":
 
 
 elif page == "Pipeline Summary":
+    gold_summary = load_csv_summary(GOLD_DATA)
+    gold_feature_count = (
+        len(
+            [
+                column
+                for column in gold_summary["columns"]
+                if column not in {"timestamp", "target_price_next_hour"}
+            ]
+        )
+        if gold_summary["available"]
+        else None
+    )
+    final_release, final_release_error = load_final_release_metadata(
+        FINAL_RELEASE_MANIFEST,
+        FINAL_HOLDOUT_METRICS,
+    )
+    report_availability = {
+        PREDICTIONS_DATA: csv_has_rows(PREDICTIONS_DATA),
+        ANOMALIES_DATA: csv_has_rows(ANOMALIES_DATA),
+        FEATURE_IMPORTANCE_DATA: csv_has_rows(FEATURE_IMPORTANCE_DATA),
+    }
     page_title("Pipeline Summary", "Automated DataOps Workflow")
 
     section_header("Latest Pipeline Run")
@@ -970,14 +1002,20 @@ elif page == "Pipeline Summary":
     section_header("Dataset Status")
     col1, col2, col3 = st.columns(3)
     col1.metric(
-        "Silver Rows", fmt_int(len(silver_data)) if not silver_data.empty else "N/A"
+        "Silver Rows",
+        fmt_int(silver_summary["row_count"])
+        if silver_summary["available"]
+        else "N/A",
     )
     col2.metric(
-        "Gold Rows", fmt_int(len(gold_data)) if not gold_data.empty else "N/A"
+        "Gold Rows",
+        fmt_int(gold_summary["row_count"])
+        if gold_summary["available"]
+        else "N/A",
     )
     col3.metric("Model Features", fmt_int(gold_feature_count))
 
-    if silver_ready:
+    if silver_summary["available"] and "timestamp" in silver_summary["columns"]:
         st.caption(
             f"Silver historical coverage: {fmt_timestamp(earliest_timestamp)} to "
             f"{fmt_timestamp(latest_timestamp)}."
@@ -985,10 +1023,11 @@ elif page == "Pipeline Summary":
     else:
         show_data_warning("Silver dataset", SILVER_DATA)
 
-    if has_columns(gold_data, ["timestamp"]):
+    if gold_summary["available"] and "timestamp" in gold_summary["columns"]:
         st.caption(
-            f"Gold historical coverage: {fmt_timestamp(gold_data['timestamp'].min())} to "
-            f"{fmt_timestamp(gold_data['timestamp'].max())}."
+            f"Gold historical coverage: "
+            f"{fmt_timestamp(gold_summary['earliest_timestamp'])} to "
+            f"{fmt_timestamp(gold_summary['latest_timestamp'])}."
         )
     else:
         show_data_warning("Gold feature dataset", GOLD_DATA)
@@ -997,13 +1036,13 @@ elif page == "Pipeline Summary":
     st.dataframe(
         pd.DataFrame(
             [
-                {"Layer": "Silver", "Path": str(SILVER_DATA), "Status": "Available" if not silver_data.empty else "Missing"},
-                {"Layer": "Gold", "Path": str(GOLD_DATA), "Status": "Available" if not gold_data.empty else "Missing"},
+                {"Layer": "Silver", "Path": str(SILVER_DATA), "Status": "Available" if silver_summary["available"] else "Missing"},
+                {"Layer": "Gold", "Path": str(GOLD_DATA), "Status": "Available" if gold_summary["available"] else "Missing"},
                 {"Layer": "Final Model Release", "Path": str(FINAL_RELEASE_MANIFEST), "Status": "Available" if final_release is not None else "Missing"},
                 {"Layer": "Final Holdout Metrics", "Path": str(FINAL_HOLDOUT_METRICS), "Status": "Available" if FINAL_HOLDOUT_METRICS.exists() else "Missing"},
-                {"Layer": "Predictions", "Path": str(PREDICTIONS_DATA), "Status": "Available" if not predictions.empty else "Missing"},
-                {"Layer": "Anomalies", "Path": str(ANOMALIES_DATA), "Status": "Available" if not anomalies.empty else "Missing"},
-                {"Layer": "Feature Importance", "Path": str(FEATURE_IMPORTANCE_DATA), "Status": "Available" if not feature_importance.empty else "Missing"},
+                {"Layer": "Predictions", "Path": str(PREDICTIONS_DATA), "Status": "Available" if report_availability[PREDICTIONS_DATA] else "Missing"},
+                {"Layer": "Anomalies", "Path": str(ANOMALIES_DATA), "Status": "Available" if report_availability[ANOMALIES_DATA] else "Missing"},
+                {"Layer": "Feature Importance", "Path": str(FEATURE_IMPORTANCE_DATA), "Status": "Available" if report_availability[FEATURE_IMPORTANCE_DATA] else "Missing"},
             ]
         ),
         width="stretch",

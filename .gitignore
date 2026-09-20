@@ -113,7 +113,8 @@ data/backups/
 
 # Reports
 
-data/reports/
+data/reports/*
+!data/reports/final_holdout_metrics.csv
 
 # Predictions
 

@@ -1,0 +1,2 @@
+model_name,feature_group,feature_count,training_rows,holdout_rows,training_start,training_end,holdout_start,holdout_end,mae,rmse,r2,rmse_improvement_vs_persistence_pct,best_seasonal_baseline,best_seasonal_rmse,rmse_improvement_vs_best_seasonal_pct
+Ordinary Linear Regression,Full PowerFlow,31,52439,6552,2019-01-08T01:00:00+00:00,2024-12-31T23:00:00+00:00,2025-01-01T00:00:00+00:00,2025-09-30T23:00:00+00:00,10.786919023250146,18.88568551202895,0.8794442554637898,19.758420777333146,Daily Seasonal Naive,40.51529002027939,53.38627589096371

@@ -17,6 +17,29 @@ from models.prediction_visualization import create_prediction_output
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+FINAL_RELEASE_MANIFEST = (
+    PROJECT_ROOT / "artifacts" / "models" / "final_model_release_manifest.json"
+)
+FINAL_HOLDOUT_METRICS = PROJECT_ROOT / "data" / "reports" / "final_holdout_metrics.csv"
+
+FINAL_HOLDOUT_METRICS_COLUMNS = [
+    "model_name",
+    "feature_group",
+    "feature_count",
+    "training_rows",
+    "holdout_rows",
+    "training_start",
+    "training_end",
+    "holdout_start",
+    "holdout_end",
+    "mae",
+    "rmse",
+    "r2",
+    "rmse_improvement_vs_persistence_pct",
+    "best_seasonal_baseline",
+    "best_seasonal_rmse",
+    "rmse_improvement_vs_best_seasonal_pct",
+]
 
 
 def feature_frame(row_count=3):
@@ -134,6 +157,46 @@ def test_dashboard_metadata_loads_final_release_values(tmp_path):
     assert metadata["feature_count"] == 31
     assert metadata["rmse"] == pytest.approx(18.885686)
     assert metadata["improvement_vs_persistence_pct"] == pytest.approx(19.758421)
+
+
+def test_canonical_final_holdout_metrics_match_frozen_release_manifest():
+    manifest = json.loads(FINAL_RELEASE_MANIFEST.read_text(encoding="utf-8"))
+    report = pd.read_csv(FINAL_HOLDOUT_METRICS)
+
+    assert report.columns.tolist() == FINAL_HOLDOUT_METRICS_COLUMNS
+    assert len(report) == 1
+
+    row = report.iloc[0]
+    model = manifest["model"]
+    training = manifest["training"]
+    holdout = manifest["final_holdout"]
+    improvements = manifest["rmse_improvements"]
+    seasonal_baseline = next(
+        baseline
+        for baseline in manifest["baseline_comparisons"]
+        if baseline["baseline_name"] == improvements["best_seasonal_baseline"]
+    )
+
+    assert row["model_name"] == model["selected_model"]
+    assert row["feature_group"] == model["selected_feature_group"]
+    assert row["feature_count"] == model["feature_count"]
+    assert row["training_rows"] == training["rows"]
+    assert row["holdout_rows"] == holdout["rows"]
+    assert row["training_start"] == training["target_date_range"]["start"]
+    assert row["training_end"] == training["target_date_range"]["end"]
+    assert row["holdout_start"] == holdout["target_date_range"]["start"]
+    assert row["holdout_end"] == holdout["target_date_range"]["end"]
+    assert row["mae"] == pytest.approx(holdout["metrics"]["mae"])
+    assert row["rmse"] == pytest.approx(holdout["metrics"]["rmse"])
+    assert row["r2"] == pytest.approx(holdout["metrics"]["r2"])
+    assert row["rmse_improvement_vs_persistence_pct"] == pytest.approx(
+        improvements["vs_persistence_pct"]
+    )
+    assert row["best_seasonal_baseline"] == improvements["best_seasonal_baseline"]
+    assert row["best_seasonal_rmse"] == pytest.approx(seasonal_baseline["rmse"])
+    assert row["rmse_improvement_vs_best_seasonal_pct"] == pytest.approx(
+        improvements["vs_best_seasonal_pct"]
+    )
 
 
 def test_primary_prefect_flow_never_invokes_final_holdout_evaluation():

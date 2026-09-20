@@ -31,151 +31,260 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
-
     html, body, [class*="css"] {
-        font-family: 'IBM Plex Sans', sans-serif;
+        font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+        color: #172033;
     }
 
     .stApp {
-        background-color: #060B14;
-        background-image:
-            linear-gradient(rgba(37,99,235,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(37,99,235,0.03) 1px, transparent 1px);
-        background-size: 40px 40px;
+        background: #F5F7FA;
     }
 
     .block-container {
-        padding: 1.5rem 2.5rem 3rem 2.5rem;
-        max-width: 1600px;
+        padding: 2.25rem 3rem 4rem;
+        max-width: 1500px;
     }
 
     section[data-testid="stSidebar"] {
-        background-color: #060B14;
-        border-right: 1px solid #1a2744;
+        background: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
         padding-top: 0;
     }
 
     .sidebar-brand {
-        background: linear-gradient(135deg, #0f1f3d 0%, #0a1628 100%);
-        border-bottom: 1px solid #1a2744;
-        padding: 20px 16px 18px 16px;
-        margin-bottom: 16px;
+        border-bottom: 1px solid #E8EDF3;
+        padding: 1.4rem 0.5rem 1.25rem;
+        margin-bottom: 1.1rem;
     }
 
     .brand-logo {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 1.4rem;
-        font-weight: 600;
-        color: #F9FAFB;
-        letter-spacing: 0.08em;
+        font-size: 1.35rem;
+        font-weight: 750;
+        color: #0F2744;
+        letter-spacing: -0.02em;
     }
 
     .bolt {
-        color: #2563EB;
-        font-size: 1.5rem;
+        color: #0B6FFB;
+        font-size: 1.35rem;
+        margin-right: 0.15rem;
     }
 
     .brand-tagline {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.65rem;
-        color: #4B6A9B;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        margin-top: 4px;
+        font-size: 0.72rem;
+        color: #667085;
+        line-height: 1.4;
+        margin-top: 0.25rem;
     }
 
     .nav-section-label {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.6rem;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: #2563EB;
-        padding: 0 16px;
-        margin: 12px 0 8px 0;
+        font-size: 0.72rem;
+        font-weight: 650;
+        color: #667085;
+        padding: 0 0.55rem;
+        margin: 0 0 0.45rem;
     }
 
     div[data-testid="stRadio"] label {
-        font-family: 'IBM Plex Sans', sans-serif;
-        font-size: 0.85rem;
-        color: #7A90B8;
-        padding: 6px 12px;
-        border-radius: 4px;
+        font-size: 0.88rem;
+        font-weight: 520;
+        color: #475467;
+        padding: 0.48rem 0.65rem;
+        border-radius: 7px;
+        transition: background-color 120ms ease, color 120ms ease;
     }
 
     div[data-testid="stRadio"] label:hover {
-        color: #F9FAFB;
-        background-color: #0f1f3d;
+        color: #0F2744;
+        background: #F2F6FA;
     }
 
-    div[data-testid="metric-container"] {
-        background: linear-gradient(160deg, #0d1b30 0%, #0a1220 100%);
-        border: 1px solid #1a2744;
-        border-top: 2px solid #2563EB;
-        padding: 16px 18px;
-        border-radius: 6px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    div[data-testid="stRadio"] label:has(input:checked) {
+        color: #075DC7;
+        background: #EAF3FF;
+        font-weight: 650;
     }
 
-    div[data-testid="metric-container"] label {
-        font-family: 'IBM Plex Mono', monospace !important;
-        font-size: 0.65rem !important;
-        letter-spacing: 0.15em !important;
-        text-transform: uppercase !important;
-        color: #4B6A9B !important;
+    div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
+        line-height: 1.25;
     }
 
-    div[data-testid="metric-container"] [data-testid="metric-value"] {
-        font-family: 'IBM Plex Mono', monospace !important;
-        font-size: 1.6rem !important;
+    .sidebar-status-card {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 0.9rem;
+        margin-top: 1.15rem;
+    }
+
+    .sidebar-status-title {
+        color: #344054;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-bottom: 0.7rem;
+    }
+
+    .sidebar-status-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.28rem 0;
+        color: #667085;
+        font-size: 0.72rem;
+    }
+
+    .sidebar-status-row strong {
+        color: #344054;
+        font-weight: 650;
+        text-align: right;
+    }
+
+    div[data-testid="metric-container"],
+    div[data-testid="stMetric"] {
+        min-height: 118px;
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        padding: 1rem 1.1rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    }
+
+    div[data-testid="metric-container"] label,
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.76rem !important;
         font-weight: 600 !important;
-        color: #F9FAFB !important;
+        color: #667085 !important;
+    }
+
+    div[data-testid="metric-container"] [data-testid="metric-value"],
+    div[data-testid="stMetricValue"] {
+        font-variant-numeric: tabular-nums;
+        font-size: 1.4rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.025em !important;
+        line-height: 1.15 !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        color: #0F2744 !important;
+    }
+
+    div[data-testid="stMetricValue"] * {
+        overflow: visible !important;
+        text-overflow: clip !important;
+        white-space: normal !important;
     }
 
     .section-divider {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin: 1.5rem 0 1rem 0;
+        gap: 0.9rem;
+        margin: 1.9rem 0 0.9rem;
     }
 
     .section-label {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.65rem;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: #2563EB;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #243B53;
         white-space: nowrap;
     }
 
     .section-line {
         flex: 1;
         height: 1px;
-        background: linear-gradient(90deg, #1a2744 0%, transparent 100%);
+        background: #DCE3EA;
     }
 
     .chart-title {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.7rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #7A90B8;
-        margin-bottom: 0.5rem;
+        font-size: 0.82rem;
+        font-weight: 650;
+        color: #475467;
+        margin: 0.15rem 0 0.4rem;
+    }
+
+    .page-heading {
+        margin-bottom: 1.25rem;
+    }
+
+    .page-eyebrow {
+        color: #0B6FFB;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+
+    .page-subtitle {
+        color: #667085;
+        font-size: 0.88rem;
+        margin: 0.35rem 0 0;
     }
 
     h1 {
-        font-family: 'IBM Plex Sans', sans-serif !important;
-        font-size: 1.65rem !important;
-        font-weight: 700 !important;
-        color: #F9FAFB !important;
+        font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif !important;
+        font-size: 2rem !important;
+        font-weight: 720 !important;
+        letter-spacing: -0.035em !important;
+        color: #0F2744 !important;
+        margin: 0 !important;
     }
 
     h2, h3 {
-        font-family: 'IBM Plex Mono', monospace !important;
-        color: #4B6A9B !important;
+        font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif !important;
+        color: #243B53 !important;
     }
 
-    #MainMenu, footer, header { visibility: hidden; }
+    div[data-testid="stPlotlyChart"],
+    div[data-testid="stDataFrame"] {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+        overflow: hidden;
+    }
+
+    div[data-testid="stAlert"] {
+        border-radius: 9px;
+        border-width: 1px;
+        box-shadow: none;
+    }
+
+    div[data-testid="stCaptionContainer"] {
+        color: #667085;
+    }
+
+    hr {
+        border-color: #E8EDF3 !important;
+    }
+
+    header[data-testid="stHeader"] {
+        background: transparent;
+    }
+
+    #MainMenu, footer {
+        visibility: hidden;
+    }
+
+    @media (max-width: 900px) {
+        .block-container {
+            padding: 1.25rem 1rem 3rem;
+        }
+
+        h1 {
+            font-size: 1.65rem !important;
+        }
+
+        div[data-testid="metric-container"],
+        div[data-testid="stMetric"] {
+            min-height: 104px;
+            padding: 0.85rem;
+        }
+
+        div[data-testid="metric-container"] [data-testid="metric-value"],
+        div[data-testid="stMetricValue"] {
+            font-size: 1.3rem !important;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -184,14 +293,26 @@ st.markdown(
 
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="IBM Plex Mono", color="#7A90B8", size=10),
-    xaxis=dict(gridcolor="#111827", linecolor="#1a2744"),
-    yaxis=dict(gridcolor="#111827", linecolor="#1a2744"),
-    margin=dict(l=10, r=10, t=10, b=30),
+    plot_bgcolor="#FFFFFF",
+    font=dict(family="Avenir Next, Segoe UI, sans-serif", color="#475467", size=11),
+    xaxis=dict(
+        gridcolor="#E9EEF5",
+        linecolor="#CDD5DF",
+        zerolinecolor="#DCE3EA",
+        tickfont=dict(color="#667085"),
+        title_font=dict(color="#344054"),
+    ),
+    yaxis=dict(
+        gridcolor="#E9EEF5",
+        linecolor="#CDD5DF",
+        zerolinecolor="#DCE3EA",
+        tickfont=dict(color="#667085"),
+        title_font=dict(color="#344054"),
+    ),
+    margin=dict(l=28, r=20, t=24, b=38),
     legend=dict(
         bgcolor="rgba(0,0,0,0)",
-        font=dict(size=9, color="#7A90B8"),
+        font=dict(size=10, color="#475467"),
         orientation="h",
         yanchor="bottom",
         y=1.02,
@@ -200,7 +321,7 @@ PLOTLY_LAYOUT = dict(
     ),
 )
 
-CHART_COLORS = ["#2563EB", "#06B6D4", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"]
+CHART_COLORS = ["#0B6FFB", "#16A3A3", "#F59E0B", "#2E9D68", "#7A5AF8", "#D92D20"]
 
 
 @st.cache_data(ttl=30)
@@ -309,18 +430,15 @@ def apply_chart_theme(fig):
 def page_title(eyebrow, title, subtitle=None):
     subtitle_html = ""
     if subtitle:
-        subtitle_html = f"""
-        <p style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:#2D4A7A;
-        margin-bottom:1.5rem;letter-spacing:0.04em;">{subtitle}</p>
-        """
+        subtitle_html = f'<p class="page-subtitle">{subtitle}</p>'
 
     st.markdown(
         f"""
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
-        letter-spacing:0.2em;text-transform:uppercase;color:#2563EB;margin-bottom:6px;">
-        {eyebrow}</div>
-        <h1 style="margin-bottom:0.25rem;">{title}</h1>
-        {subtitle_html}
+        <div class="page-heading">
+            <div class="page-eyebrow">{eyebrow}</div>
+            <h1>{title}</h1>
+            {subtitle_html}
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -411,25 +529,25 @@ with st.sidebar:
         label_visibility="collapsed",
     )
 
-    st.markdown("---")
     st.markdown(
         f"""
-        <div style="font-family:'IBM Plex Mono',monospace; font-size:0.62rem; color:#2D4A7A; line-height:1.8;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                <span>RECORDS</span>
-                <span style="color:#4B6A9B">{fmt_int(len(silver_data)) if not silver_data.empty else 'N/A'}</span>
+        <div class="sidebar-status-card">
+            <div class="sidebar-status-title">System status</div>
+            <div class="sidebar-status-row">
+                <span>Pipeline</span>
+                <strong>{latest_pipeline_run['status'].title() if latest_pipeline_run else 'Unknown'}</strong>
             </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                <span>MARKET</span>
-                <span style="color:#4B6A9B">DE_LU</span>
+            <div class="sidebar-status-row">
+                <span>Market</span>
+                <strong>DE-LU</strong>
             </div>
-            <div style="display:flex;justify-content:space-between;">
-                <span>DATASET</span>
-                <span style="color:#4B6A9B">HISTORICAL</span>
+            <div class="sidebar-status-row">
+                <span>Hourly records</span>
+                <strong>{fmt_int(len(silver_data)) if not silver_data.empty else 'N/A'}</strong>
             </div>
-            <div style="display:flex;justify-content:space-between;margin-top:3px;">
-                <span>PIPELINE</span>
-                <span style="color:#4B6A9B">{latest_pipeline_run['status'] if latest_pipeline_run else 'UNKNOWN'}</span>
+            <div class="sidebar-status-row">
+                <span>Data through</span>
+                <strong>{fmt_date(latest_timestamp)}</strong>
             </div>
         </div>
         """,
@@ -441,7 +559,7 @@ if page == "Executive Overview":
     page_title(
         "Executive Overview",
         "Market Dashboard",
-        "HISTORICAL GERMANY-LUXEMBOURG ELECTRICITY MARKET ANALYSIS",
+        "Historical Germany-Luxembourg electricity market analysis",
     )
 
     if not silver_ready:
@@ -465,33 +583,33 @@ if page == "Executive Overview":
         col5, col6 = st.columns(2)
 
         with col5:
-            st.markdown('<div class="chart-title">ELECTRICITY PRICE TREND</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-title">Electricity price trend</div>', unsafe_allow_html=True)
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=silver_data["timestamp"],
                 y=silver_data["price_eur_mwh"],
                 mode="lines",
-                line=dict(color="#2563EB", width=1.3),
+                line=dict(color="#0B6FFB", width=1.5),
                 name="Price EUR/MWh",
             ))
             apply_chart_theme(fig)
             st.plotly_chart(fig, width="stretch")
 
         with col6:
-            st.markdown('<div class="chart-title">LOAD AND RENEWABLE GENERATION</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-title">Load and renewable generation</div>', unsafe_allow_html=True)
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=silver_data["timestamp"],
                 y=silver_data["load_mw"],
                 mode="lines",
-                line=dict(color="#06B6D4", width=1.2),
+                line=dict(color="#16A3A3", width=1.4),
                 name="Load MW",
             ))
             fig.add_trace(go.Scatter(
                 x=silver_data["timestamp"],
                 y=silver_data["wind_total_mw"] + silver_data["solar_mw"],
                 mode="lines",
-                line=dict(color="#10B981", width=1.2),
+                line=dict(color="#2E9D68", width=1.4),
                 name="Wind + Solar MW",
             ))
             apply_chart_theme(fig)
@@ -546,7 +664,7 @@ elif page == "Market Intelligence":
             x=silver_data["timestamp"],
             y=silver_data["price_eur_mwh"],
             mode="lines",
-            line=dict(color="#2563EB", width=1.3),
+            line=dict(color="#0B6FFB", width=1.5),
             name="Electricity Price",
         ))
         apply_chart_theme(fig)
@@ -555,6 +673,12 @@ elif page == "Market Intelligence":
         section_header("Generation Mix")
         gen_avg = silver_data[generation_cols].mean().reset_index()
         gen_avg.columns = ["source", "average_mw"]
+        gen_avg["source"] = (
+            gen_avg["source"]
+            .str.removesuffix("_mw")
+            .str.replace("_", " ")
+            .str.title()
+        )
 
         fig = px.bar(
             gen_avg.sort_values("average_mw", ascending=False),
@@ -588,7 +712,7 @@ elif page == "Market Intelligence":
                 x=silver_data["timestamp"],
                 y=silver_data["wind_speed_10m"],
                 mode="lines",
-                line=dict(color="#06B6D4", width=1.2),
+                line=dict(color="#16A3A3", width=1.4),
                 name="Wind Speed",
             ))
             apply_chart_theme(fig)
@@ -630,14 +754,14 @@ elif page == "Forecasting":
             x=plot_data["timestamp"],
             y=plot_data["actual_price"],
             mode="lines",
-            line=dict(color="#2563EB", width=1.5),
+            line=dict(color="#0B6FFB", width=1.5),
             name="Actual Price",
         ))
         fig.add_trace(go.Scatter(
             x=plot_data["timestamp"],
             y=plot_data["predicted_price"],
             mode="lines",
-            line=dict(color="#10B981", width=1.5),
+            line=dict(color="#2E9D68", width=1.5),
             name="Predicted Price",
         ))
         apply_chart_theme(fig)
@@ -672,14 +796,14 @@ elif page == "Anomaly Detection":
                 x=silver_data["timestamp"],
                 y=silver_data["price_eur_mwh"],
                 mode="lines",
-                line=dict(color="#2563EB", width=1),
+                line=dict(color="#0B6FFB", width=1.2),
                 name="Price",
             ))
             fig.add_trace(go.Scatter(
                 x=anomalies["timestamp"],
                 y=anomalies["price_eur_mwh"],
                 mode="markers",
-                marker=dict(color="#EF4444", size=6),
+                marker=dict(color="#D92D20", size=6),
                 name="Anomaly",
             ))
             apply_chart_theme(fig)

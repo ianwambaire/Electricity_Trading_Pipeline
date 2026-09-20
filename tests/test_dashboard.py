@@ -100,6 +100,17 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
         )
         connection.execute(
             """
+            CREATE TABLE data_quality_results (
+                id INTEGER PRIMARY KEY,
+                check_time TEXT,
+                check_name TEXT,
+                status TEXT,
+                message TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
             INSERT INTO pipeline_runs
                 (run_time, status, records_processed, message)
             VALUES (?, ?, ?, ?)
@@ -112,6 +123,9 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
             ),
         )
 
+    monkeypatch.setenv("ALERT_EMAIL_SENDER", "configured-sender")
+    monkeypatch.setenv("ALERT_EMAIL_PASSWORD", "configured-password")
+    monkeypatch.setenv("ALERT_EMAIL_RECEIVER", "configured-receiver")
     monkeypatch.chdir(tmp_path)
     st.cache_data.clear()
     app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
@@ -120,10 +134,19 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
 
     metrics = {metric.label: metric.value for metric in app.metric}
     assert not app.exception
+    assert metrics["Latest Pipeline Status"] == "SUCCESS"
+    assert metrics["Latest Successful Run"] == "2026-09-19 12:32"
+    assert metrics["Latest Complete Market Hour"] == "2026-09-12 21:00"
+    assert metrics["S3 Sync Status"] == "SUCCESS"
+    assert metrics["Quality Checks Passed"] == "0"
+    assert metrics["Quality Checks Failed"] == "0"
+    assert metrics["Continuity Warnings"] == "1"
+    assert metrics["Failure Email Alerts"] == "Configured"
     assert metrics["Latest Run Time"] == "2026-09-19 12:32"
     assert metrics["New Rows Ingested"] == "3"
     assert metrics["Latest Complete Price Hour (UTC)"] == "2026-09-12 21:00"
     assert any("No complete aligned raw hour advanced" in item.value for item in app.info)
+    assert any("Operational with warnings" in item.value for item in app.warning)
     assert any("1 source continuity warning detected" in item.value for item in app.warning)
     rendered_tables = "\n".join(frame.value.to_string() for frame in app.dataframe)
     assert "day-ahead prices" in rendered_tables

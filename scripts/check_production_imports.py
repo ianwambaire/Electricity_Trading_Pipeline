@@ -40,6 +40,7 @@ REQUIRED_DISTRIBUTIONS = (
 )
 PRODUCTION_MODULES = (
     "dashboard_data",
+    "dashboard_health",
     "ingestion.fetch_entsoe_data",
     "ingestion.fetch_weather_data",
     "ingestion.incremental_utils",

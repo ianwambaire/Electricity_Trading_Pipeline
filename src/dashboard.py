@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 import sqlite3
 
@@ -13,6 +12,17 @@ from dashboard_data import (
     load_csv_summary,
     load_dashboard_csv,
     load_final_release_metadata,
+)
+from dashboard_health import (
+    alert_configuration_status,
+    count_quality_statuses,
+    derive_system_health,
+    load_latest_successful_run_time,
+    load_recent_data_quality_history,
+    load_recent_pipeline_history,
+    parse_operational_metadata,
+    prepare_data_quality_history,
+    prepare_pipeline_history,
 )
 
 
@@ -890,18 +900,83 @@ elif page == "Pipeline Summary":
         ANOMALIES_DATA: csv_has_rows(ANOMALIES_DATA),
         FEATURE_IMPORTANCE_DATA: csv_has_rows(FEATURE_IMPORTANCE_DATA),
     }
+    pipeline_history = load_recent_pipeline_history(PIPELINE_DATABASE, limit=10)
+    quality_history = load_recent_data_quality_history(PIPELINE_DATABASE, limit=20)
+    latest_successful_run_time = load_latest_successful_run_time(PIPELINE_DATABASE)
+    quality_counts = count_quality_statuses(quality_history)
+    stored_message = latest_pipeline_run["message"] if latest_pipeline_run else None
+    operational_metadata = parse_operational_metadata(stored_message)
+    unresolved_gaps = (
+        operational_metadata.get("unresolved_source_gaps", {})
+        if isinstance(operational_metadata, dict)
+        else {}
+    )
+    if not isinstance(unresolved_gaps, dict):
+        unresolved_gaps = {}
+    continuity_warning_count = len(unresolved_gaps)
+    health = derive_system_health(
+        latest_pipeline_run["status"] if latest_pipeline_run else None,
+        quality_counts["failed"],
+        quality_counts["warnings"],
+        continuity_warning_count,
+    )
+    email_alert_status = alert_configuration_status()
     page_title("Pipeline Summary", "Automated DataOps Workflow")
+
+    section_header("System Health / Data Quality")
+    health_message = f"{health['label']}. {health['reason']}"
+    getattr(st, health["level"])(health_message)
+    st.caption(
+        "Status is derived from the latest pipeline result, the 20 most recent "
+        "data-quality checks, and unresolved source-continuity warnings."
+    )
+
+    health_metrics = [
+        (
+            "Latest Pipeline Status",
+            str(latest_pipeline_run["status"])
+            if latest_pipeline_run
+            else "Unavailable",
+        ),
+        (
+            "Latest Successful Run",
+            fmt_timestamp(latest_successful_run_time),
+        ),
+        (
+            "Latest Complete Market Hour",
+            fmt_timestamp(
+                operational_metadata.get("latest_complete_price_hour")
+            ).removesuffix(" UTC")
+            if isinstance(operational_metadata, dict)
+            and operational_metadata.get("latest_complete_price_hour")
+            else "Unavailable",
+        ),
+        (
+            "S3 Sync Status",
+            str(operational_metadata.get("s3_sync_status"))
+            if isinstance(operational_metadata, dict)
+            and operational_metadata.get("s3_sync_status") is not None
+            else "Unavailable",
+        ),
+        ("Quality Checks Passed", fmt_int(quality_counts["passed"])),
+        ("Quality Checks Failed", fmt_int(quality_counts["failed"])),
+        ("Continuity Warnings", fmt_int(continuity_warning_count)),
+    ]
+    if email_alert_status is not None:
+        health_metrics.append(("Failure Email Alerts", email_alert_status))
+
+    for metric_start in range(0, len(health_metrics), 4):
+        metric_columns = st.columns(4)
+        for column, (label, value) in zip(
+            metric_columns,
+            health_metrics[metric_start : metric_start + 4],
+        ):
+            column.metric(label, value)
 
     section_header("Latest Pipeline Run")
     if latest_pipeline_run is None:
         st.warning(pipeline_run_error)
     else:
-        stored_message = latest_pipeline_run["message"]
-        try:
-            operational_metadata = json.loads(stored_message)
-        except (json.JSONDecodeError, TypeError):
-            operational_metadata = None
-
         records_label = "Recorded Row Count"
         records_value = latest_pipeline_run["records_processed"]
         if isinstance(operational_metadata, dict):
@@ -963,8 +1038,7 @@ elif page == "Pipeline Summary":
                 )
             )
 
-            unresolved_gaps = operational_metadata.get("unresolved_source_gaps")
-            if isinstance(unresolved_gaps, dict) and unresolved_gaps:
+            if unresolved_gaps:
                 warning_count = len(unresolved_gaps)
                 warning_label = "warning" if warning_count == 1 else "warnings"
                 st.warning(
@@ -998,6 +1072,26 @@ elif page == "Pipeline Summary":
                         width="stretch",
                         hide_index=True,
                     )
+
+    section_header("Recent Pipeline Execution History")
+    if pipeline_history.empty:
+        st.info("No pipeline execution history is available.")
+    else:
+        st.dataframe(
+            prepare_pipeline_history(pipeline_history),
+            width="stretch",
+            hide_index=True,
+        )
+
+    section_header("Recent Data-Quality Check History")
+    if quality_history.empty:
+        st.info("No data-quality check history is available.")
+    else:
+        st.dataframe(
+            prepare_data_quality_history(quality_history),
+            width="stretch",
+            hide_index=True,
+        )
 
     section_header("Dataset Status")
     col1, col2, col3 = st.columns(3)

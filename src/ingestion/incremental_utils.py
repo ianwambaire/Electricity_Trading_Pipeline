@@ -22,10 +22,15 @@ class GenerationMergeResult:
     data: pd.DataFrame
     new_rows: int
     repaired_by_column: dict[str, int]
+    revised_by_column: dict[str, int]
 
     @property
     def repaired_cells(self) -> int:
         return sum(self.repaired_by_column.values())
+
+    @property
+    def revised_cells(self) -> int:
+        return sum(self.revised_by_column.values())
 
 
 @dataclass(frozen=True)
@@ -345,12 +350,18 @@ def merge_incremental_rows(
 def merge_generation_rows(
     existing: pd.DataFrame,
     incoming: pd.DataFrame,
+    *,
+    revision_window: tuple[pd.Timestamp, pd.Timestamp] | None = None,
 ) -> GenerationMergeResult:
-    """Enrich only null generation cells at overlapping UTC timestamps.
-
-    Existing non-null values are immutable here. Corrections to those values
-    require a separate, explicit review rather than silently winning a row.
-    """
+    """Enrich null cells; accept source revisions only inside an explicit UTC window."""
+    if revision_window is not None:
+        revision_start, revision_end = map(pd.Timestamp, revision_window)
+        if revision_start.tzinfo is None or revision_end.tzinfo is None:
+            raise ValueError("Generation revision window must have explicit UTC timezones.")
+        revision_start = revision_start.tz_convert("UTC")
+        revision_end = revision_end.tz_convert("UTC")
+        if revision_start >= revision_end:
+            raise ValueError("Generation revision window must be positive.")
     existing = normalize_utc_timestamps(existing)
     incoming = normalize_utc_timestamps(incoming)
     columns = list(existing.columns) + [
@@ -360,6 +371,7 @@ def merge_generation_rows(
     fetched = incoming.reindex(columns=columns).set_index(TIMESTAMP_COLUMN)
     overlap = stored.index.intersection(fetched.index)
     repaired_by_column = {}
+    revised_by_column = {}
     for column in columns:
         if column == TIMESTAMP_COLUMN or overlap.empty:
             continue
@@ -376,18 +388,29 @@ def merge_generation_rows(
         )
         conflicts = both_present & ~equal
         if conflicts.any():
-            timestamp = conflicts[conflicts].index[0]
-            raise ValueError(
-                "Conflicting non-null generation value at "
-                f"{timestamp.isoformat()} in {column}; no values were replaced."
-            )
+            conflict_timestamps = conflicts[conflicts].index
+            unapproved = conflict_timestamps
+            if revision_window is not None:
+                unapproved = conflict_timestamps[
+                    (conflict_timestamps < revision_start)
+                    | (conflict_timestamps >= revision_end)
+                ]
+            if len(unapproved):
+                raise ValueError(
+                    "Conflicting non-null generation value at "
+                    f"{unapproved[0].isoformat()} in {column}; no values were replaced."
+                )
+            stored.loc[conflict_timestamps, column] = new.loc[conflicts].to_numpy()
+            revised_by_column[column] = len(conflict_timestamps)
         fill = old.isna() & new.notna()
         if fill.any():
             stored.loc[fill[fill].index, column] = new.loc[fill].to_numpy()
             repaired_by_column[column] = int(fill.sum())
     added = fetched.loc[~fetched.index.isin(stored.index)]
     combined = pd.concat([stored, added]).sort_index().reset_index()
-    return GenerationMergeResult(combined, len(added), repaired_by_column)
+    return GenerationMergeResult(
+        combined, len(added), repaired_by_column, revised_by_column
+    )
 
 
 def append_csv_safely(

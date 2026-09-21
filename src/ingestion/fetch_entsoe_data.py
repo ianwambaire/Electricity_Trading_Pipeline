@@ -319,19 +319,28 @@ def latest_generation_timestamp(path: Path) -> pd.Timestamp | None:
     return generation["timestamp"].iloc[-1] if not generation.empty else None
 
 
-def _append_generation_safely(path: Path, generation: pd.DataFrame):
+def _append_generation_safely(
+    path: Path,
+    generation: pd.DataFrame,
+    *,
+    revision_window: tuple[pd.Timestamp, pd.Timestamp] | None = None,
+):
     incoming = normalize_utc_timestamps(_flatten_generation_frame(generation))
     if path.exists():
         existing = _read_stored_generation(path)
-        merged = merge_generation_rows(existing, incoming)
+        merged = merge_generation_rows(
+            existing, incoming, revision_window=revision_window
+        )
         combined, new_rows = merged.data, merged.new_rows
         repaired_by_column = merged.repaired_by_column
+        revised_by_column = merged.revised_by_column
     else:
         combined = incoming
         new_rows = len(incoming)
         repaired_by_column = {}
+        revised_by_column = {}
     latest = combined["timestamp"].iloc[-1] if not combined.empty else None
-    if new_rows or repaired_by_column:
+    if new_rows or repaired_by_column or revised_by_column:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = path.with_suffix(path.suffix + ".tmp")
         try:
@@ -339,7 +348,7 @@ def _append_generation_safely(path: Path, generation: pd.DataFrame):
             temporary_path.replace(path)
         finally:
             temporary_path.unlink(missing_ok=True)
-    return new_rows, latest, repaired_by_column
+    return new_rows, latest, repaired_by_column, revised_by_column
 
 
 def repair_generation_interval(
@@ -548,9 +557,18 @@ def _incremental_dataset(
         new_rows = 0
         latest_timestamp = latest
         repaired_by_column = {}
+        revised_by_column = {}
     elif allow_column_union and value_name is None:
-        new_rows, latest_timestamp, repaired_by_column = _append_generation_safely(
-            output_path, observed_values
+        # The retry may cover old backlog. Only the last 48 operational hours
+        # may revise existing non-null values; older conflicts remain protected.
+        revision_window = (
+            max(start_utc, end_utc_exclusive - GENERATION_REQUERY_OVERLAP),
+            end_utc_exclusive,
+        )
+        new_rows, latest_timestamp, repaired_by_column, revised_by_column = (
+            _append_generation_safely(
+                output_path, observed_values, revision_window=revision_window
+            )
         )
     else:
         result = append_csv_safely(
@@ -561,9 +579,12 @@ def _incremental_dataset(
         new_rows = result.new_rows
         latest_timestamp = result.latest_timestamp
         repaired_by_column = {}
+        revised_by_column = {}
     print(
         f"Incremental {dataset_name}: appended {new_rows} rows; "
         f"repaired {sum(repaired_by_column.values())} missing cells; "
+        f"accepted {sum(revised_by_column.values())} recent source revisions "
+        f"{revised_by_column}; "
         f"latest timestamp={latest_timestamp}."
     )
     metadata = {
@@ -572,6 +593,8 @@ def _incremental_dataset(
         "unresolved_gap": unresolved_gap,
         "repaired_by_column": repaired_by_column,
         "repaired_cells": sum(repaired_by_column.values()),
+        "revised_by_column": revised_by_column,
+        "revised_cells": sum(revised_by_column.values()),
     }
     if is_price:
         metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
@@ -649,6 +672,7 @@ def fetch_entsoe_data(
             "mode": mode,
             "new_rows": sum(item["new_rows"] for item in datasets.values()),
             "repaired_cells": sum(item.get("repaired_cells", 0) for item in datasets.values()),
+            "revised_cells": sum(item.get("revised_cells", 0) for item in datasets.values()),
             "datasets": datasets,
         }
         if metadata["new_rows"] == 0:

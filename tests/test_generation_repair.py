@@ -72,6 +72,46 @@ def test_cell_merge_rejects_non_null_conflict_and_duplicate_timestamps():
         merge_generation_rows(existing, duplicate)
 
 
+def test_recent_revision_is_opt_in_and_counted_separately_from_repair():
+    existing = generation_hours()
+    existing.loc[0, "Biomass"] = float("nan")
+    incoming = generation_hours().iloc[:2].copy()
+    incoming.loc[0, "Fossil Gas"] = 31.0
+    incoming.loc[1, "Solar"] = 61.0
+    result = merge_generation_rows(
+        existing, incoming, revision_window=(START, END)
+    )
+    assert result.repaired_by_column == {"Biomass": 1}
+    assert result.revised_by_column == {"Fossil Gas": 1, "Solar": 1}
+    assert result.repaired_cells == 1
+    assert result.revised_cells == 2
+    assert result.new_rows == 0
+    assert result.data.loc[0, "Fossil Gas"] == 31.0
+    assert result.data.loc[1, "Solar"] == 61.0
+    assert result.data["timestamp"].is_unique
+    assert result.data.loc[2:, :].equals(existing.loc[2:, :])
+
+
+def test_equal_overlap_is_noop_and_revision_outside_window_is_rejected():
+    existing = generation_hours()
+    equal = merge_generation_rows(
+        existing, existing.iloc[:1], revision_window=(START, END)
+    )
+    assert not equal.revised_cells and not equal.repaired_cells and not equal.new_rows
+    incoming = existing.iloc[:1].copy()
+    incoming.loc[0, "Fossil Gas"] = 31.0
+    with pytest.raises(ValueError, match="Conflicting non-null generation"):
+        merge_generation_rows(
+            existing, incoming,
+            revision_window=(START + pd.Timedelta(minutes=15), END),
+        )
+    with pytest.raises(ValueError, match="explicit UTC timezones"):
+        merge_generation_rows(
+            existing, incoming,
+            revision_window=(pd.Timestamp("2026-09-20"), END),
+        )
+
+
 def test_controlled_repair_dry_run_then_atomic_apply_and_clean_hour(tmp_path):
     path = tmp_path / "generation.csv"
     existing = generation_hours()
@@ -167,10 +207,86 @@ def test_incremental_overlap_retries_and_enriches_existing_nulls(tmp_path):
     assert client.requests[0][0] < START
     assert result["new_rows"] == 0
     assert result["repaired_by_column"] == {"Biomass": 4}
+    assert result["revised_cells"] == 0
     assert pd.read_csv(path)["Biomass"].notna().all()
     assert pd.read_csv(path)["timestamp"].is_unique
+
+
+def test_incremental_recent_revision_writes_atomically_and_reports_counts(tmp_path):
+    path = tmp_path / "generation.csv"
+    existing = generation_hours()
+    existing.loc[0, "Biomass"] = float("nan")
+    existing.to_csv(path, index=False)
+    incoming = generation_hours()
+    incoming.loc[0, "Fossil Gas"] = 31.0
+    incoming.loc[1, "Fossil Gas"] = 32.0
+    incoming.loc[1, "Solar"] = 61.0
+    client = GenerationClient(incoming)
+    result = _incremental_dataset(
+        client, client.query_generation,
+        dataset_name="generation by type", output_path=path,
+        default_interval="15min", end_utc_exclusive=END,
+        allow_column_union=True,
+    )
+    assert result["new_rows"] == 0
+    assert result["repaired_by_column"] == {"Biomass": 1}
+    assert result["revised_by_column"] == {"Fossil Gas": 2, "Solar": 1}
+    assert result["revised_cells"] == 3
+    stored = pd.read_csv(path)
+    assert stored["timestamp"].is_unique
+    assert stored.loc[0, "Fossil Gas"] == 31.0
+    assert stored.loc[1, "Fossil Gas"] == 32.0
+    assert stored.loc[2:, "Fossil Gas"].eq(30.0).all()
+    assert not path.with_suffix(".csv.tmp").exists()
+
+
+def test_atomic_revision_failure_preserves_original_file(tmp_path, monkeypatch):
+    path = tmp_path / "generation.csv"
+    generation_hours().to_csv(path, index=False)
+    before = path.read_bytes()
+    incoming = generation_hours()
+    incoming.loc[0, "Fossil Gas"] = 31.0
+    client = GenerationClient(incoming)
+    original_replace = Path.replace
+
+    def fail_replace(self, target):
+        if self.name == "generation.csv.tmp":
+            raise OSError("simulated rename failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    with pytest.raises(OSError, match="simulated rename failure"):
+        _incremental_dataset(
+            client, client.query_generation,
+            dataset_name="generation by type", output_path=path,
+            default_interval="15min", end_utc_exclusive=END,
+            allow_column_union=True,
+        )
+    assert path.read_bytes() == before
+    assert not path.with_suffix(".csv.tmp").exists()
+
+
+def test_incremental_old_overlap_conflict_stays_strict(tmp_path):
+    path = tmp_path / "generation.csv"
+    start = END - pd.Timedelta(hours=50)
+    existing = generation_hours()
+    existing["timestamp"] = pd.date_range(start, periods=len(existing), freq="15min")
+    existing.to_csv(path, index=False)
+    incoming = existing.copy()
+    incoming.loc[0, "Fossil Gas"] = 31.0
+    client = GenerationClient(incoming)
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="Conflicting non-null generation"):
+        _incremental_dataset(
+            client, client.query_generation,
+            dataset_name="generation by type", output_path=path,
+            default_interval="15min", end_utc_exclusive=END,
+            allow_column_union=True,
+        )
+    assert path.read_bytes() == before
 
 
 def test_cell_repair_forces_derived_rebuild_without_new_rows_or_watermark():
     assert _skip_derived_rebuild("incremental", False, 0, 0)
     assert not _skip_derived_rebuild("incremental", False, 0, 4)
+    assert not _skip_derived_rebuild("incremental", False, 0, 0, 1)

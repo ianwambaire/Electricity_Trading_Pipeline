@@ -246,3 +246,5 @@ temp/
 
 # =========================
 Thumbs.db
+# Local dataset snapshots
+data/snapshots/

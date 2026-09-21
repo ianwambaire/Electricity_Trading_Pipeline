@@ -2,7 +2,7 @@
 
 PowerFlow is an end-to-end electricity-market data and machine-learning project for exploring German-Luxembourg day-ahead prices, system load, generation mix, weather conditions, price forecasts, and anomalous market events.
 
-The primary pipeline collects historical ENTSO-E and Open-Meteo data, builds and validates silver and gold datasets, verifies the frozen final model release, and produces prediction and analytics artifacts consumed by a Streamlit dashboard. Model-development experiments remain available as separate commands but are no longer part of the recurring Prefect flow.
+The primary pipeline collects historical ENTSO-E and Open-Meteo data, builds and validates silver and gold datasets, retains the frozen one-hour Linear Regression release, and produces separate next-24-hour Histogram Gradient Boosting forecasts and analytics artifacts consumed by a Streamlit dashboard. Model-development experiments remain separate from the recurring Prefect flow.
 
 ## Problem
 
@@ -56,8 +56,12 @@ The active flow is `PowerFlow ENTSO-E Pipeline` in `src/scheduled_pipeline.py`. 
 6. Validate the gold dataset.
 7. Verify the frozen final model and its ordered 31-feature contract.
 8. Generate the actual-versus-predicted report.
-9. Detect market anomalies.
-10. Generate feature importance.
+9. Verify the separate next-24-hour release, issue a forecast only from eligible fresh Silver history, and monitor realized errors as prices arrive.
+10. Detect market anomalies and generate feature importance.
+
+The one-hour release remains at `artifacts/models/final_gold_model.joblib`, `artifacts/models/final_gold_model_features.joblib`, and `artifacts/models/final_model_release_manifest.json`. The next-24-hour release is separate under `artifacts/models/releases/next24h/`; it does not use future Gold target labels or forecast weather. Its latest report is `data/reports/next24h_forecast.csv`, with immutable issued rows in `data/reports/next24h_forecast_history.csv` and realized metrics in `data/reports/next24h_performance.csv`. Future weather forecasts are not yet inputs; extreme-price accuracy remains a limitation.
+
+To verify the promoted release and produce a forecast **only when Silver is fresh**, run `PYTHONPATH=src python -m models.next24h_production` from the project root. The default maximum issue-hour age is three hours; set `POWERFLOW_NEXT24H_MAX_AGE_HOURS` to another value between 0 and 24 only with an explicit freshness policy. A stale or incomplete Silver issue hour leaves the previous report intact.
 
 The flow supports `historical` mode for a reproducible full rebuild and `incremental` mode for operational updates. Incremental ingestion advances each raw source from its own latest stored UTC timestamp, atomically appends non-conflicting observations, and treats publication-delay no-ops as successful runs. Silver and Gold are then rebuilt from the complete raw history so lag and rolling features remain correct across the old/new boundary. The deployment runs incremental mode hourly in UTC. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
 

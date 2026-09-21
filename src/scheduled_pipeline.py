@@ -13,6 +13,12 @@ from ingestion.fetch_entsoe_data import fetch_entsoe_data, latest_generation_tim
 from ingestion.fetch_weather_data import fetch_open_meteo_weather
 from ingestion.incremental_utils import latest_stored_timestamp
 from models.final_model_runtime import load_final_model_release
+from models.next24h_monitoring import update_next24h_monitoring
+from models.next24h_production import (
+    ForecastUnavailableError,
+    load_next24h_release,
+    run_next24h_forecast,
+)
 from models.prediction_visualization import run_prediction_report
 from notifications.email_alert import send_failure_alert
 from store_data import (
@@ -144,6 +150,23 @@ def prediction_report_task(mode: str) -> int:
     return count
 
 
+@task(name="Verify next24h production release")
+def verify_next24h_release_task() -> str:
+    _, _, manifest = load_next24h_release()
+    return manifest["release_id"]
+
+
+@task(name="Generate next24h production forecast")
+def next24h_forecast_task() -> tuple[str, bool]:
+    forecast, changed = run_next24h_forecast()
+    return forecast["forecast_issue_time"].iloc[0], changed
+
+
+@task(name="Monitor next24h realized forecast errors")
+def next24h_monitoring_task() -> tuple[int, int]:
+    return update_next24h_monitoring()
+
+
 @task(name="Detect market anomalies")
 def anomaly_detection_task():
     _run_script("Anomaly detection", "src/models/anomaly_detection.py")
@@ -236,6 +259,40 @@ def _sync_storage_group(synchronizer, storage_state, group, stage_name):
     if synchronizer.config.backend == "s3":
         storage_state["s3_sync_status"] = "SUCCESS"
     return result
+
+
+def _run_next24h_stages(storage_sync, storage_state):
+    release_id = verify_next24h_release_task()
+    storage_state["next24h_model_release"] = release_id
+    _sync_storage_group(
+        storage_sync, storage_state, "next24h_release", "Next24h model release S3 synchronization"
+    )
+    try:
+        issue_time, changed = next24h_forecast_task()
+    except ForecastUnavailableError as error:
+        warning = f"Next24h forecast unavailable: {error}"
+        storage_state["next24h_forecast_status"] = "UNAVAILABLE"
+        storage_state["warnings"].append(warning)
+        initialize_database()
+        log_data_quality_result("next24h_forecast_freshness", "WARNING", warning)
+    else:
+        storage_state["next24h_forecast_status"] = (
+            "GENERATED" if changed else "UNCHANGED"
+        )
+        storage_state["next24h_forecast_issue_time"] = str(issue_time)
+        _sync_storage_group(
+            storage_sync, storage_state, "next24h_forecasts", "Next24h forecast S3 synchronization"
+        )
+    realized_count, metric_count = next24h_monitoring_task()
+    storage_state["next24h_realized_pairs"] = realized_count
+    storage_state["next24h_performance_rows"] = metric_count
+    if (
+        (PROJECT_ROOT / "data/reports/next24h_forecast_history.csv").exists()
+        and (PROJECT_ROOT / "data/reports/next24h_realized_errors.csv").exists()
+    ):
+        _sync_storage_group(
+            storage_sync, storage_state, "next24h_monitoring", "Next24h monitoring S3 synchronization"
+        )
 
 
 def _operational_metadata(
@@ -374,6 +431,8 @@ def powerflow_entsoe_pipeline(
             and not complete_watermark_advanced
             and new_rows_ingested == 0
         ):
+            stage_name = "Next24h release and forecast processing"
+            _run_next24h_stages(storage_sync, storage_state)
             stage_name = "Pipeline run-history logging"
             initialize_database()
             metadata = _operational_metadata(
@@ -425,6 +484,9 @@ def powerflow_entsoe_pipeline(
 
         stage_name = "Prediction report S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "predictions", stage_name)
+
+        stage_name = "Next24h release and forecast processing"
+        _run_next24h_stages(storage_sync, storage_state)
 
         stage_name = "Anomaly detection"
         anomaly_detection_task()

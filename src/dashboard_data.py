@@ -131,6 +131,37 @@ def csv_has_rows(path: Path) -> bool:
     return _csv_has_rows_versioned(str(path), file_mtime_ns(path))
 
 
+def load_next24h_forecast_report(path: Path) -> tuple[pd.DataFrame, str | None]:
+    """Read the latest forecast without treating an incomplete file as current."""
+    data = load_dashboard_csv(
+        path,
+        timestamp_columns=("forecast_issue_time", "target_timestamp"),
+        sort_by="horizon_hours",
+    )
+    required = (
+        "forecast_issue_time", "target_timestamp", "horizon_hours",
+        "predicted_price_eur_mwh", "model_release",
+    )
+    if data.empty:
+        return data, "No next-24-hour production forecast is available yet."
+    if not set(required).issubset(data.columns) or len(data) != 24:
+        return pd.DataFrame(), "Next-24-hour forecast file has an invalid schema or row count."
+    issues = data["forecast_issue_time"]
+    targets = data["target_timestamp"]
+    horizons = pd.to_numeric(data["horizon_hours"], errors="coerce")
+    prices = pd.to_numeric(data["predicted_price_eur_mwh"], errors="coerce")
+    if (
+        issues.isna().any() or targets.isna().any()
+        or issues.nunique() != 1 or data["model_release"].nunique() != 1
+        or horizons.tolist() != list(range(1, 25))
+        or targets.duplicated().any() or not targets.is_monotonic_increasing
+        or not (targets == issues + pd.to_timedelta(horizons, unit="h")).all()
+        or prices.isna().any()
+    ):
+        return pd.DataFrame(), "Next-24-hour forecast timestamps or values are invalid."
+    return data.loc[:, required], None
+
+
 def downsample_time_series(
     data: pd.DataFrame,
     max_points: int = 4_000,

@@ -63,6 +63,32 @@ def test_dashboard_loads_silver_data_from_expected_path(tmp_path, monkeypatch):
     assert metrics["Avg Load"] == "105.00 MW"
 
 
+def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, monkeypatch):
+    reports = tmp_path / "data/reports"
+    reports.mkdir(parents=True)
+    issue = pd.Timestamp.now(tz="UTC").floor("h") - pd.Timedelta(hours=5)
+    pd.DataFrame({
+        "forecast_issue_time": [issue] * 24,
+        "target_timestamp": [issue + pd.Timedelta(hours=h) for h in range(1, 25)],
+        "horizon_hours": list(range(1, 25)),
+        "predicted_price_eur_mwh": [float(h) for h in range(1, 25)],
+        "model_release": ["next24h-hgb-test"] * 24,
+    }).to_csv(reports / "next24h_forecast.csv", index=False)
+    monkeypatch.chdir(tmp_path)
+    st.cache_data.clear()
+
+    app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
+    app.run(timeout=30)
+    app.radio[0].set_value("Forecasting").run(timeout=30)
+    metrics = {metric.label: metric.value for metric in app.metric}
+
+    assert not app.exception
+    assert metrics["Highest Predicted Price"] == "24.00 EUR/MWh"
+    assert metrics["Lowest Predicted Price"] == "1.00 EUR/MWh"
+    assert any("forecast is stale" in warning.value for warning in app.warning)
+    assert any("Not enough issued forecasts" in item.value for item in app.info)
+
+
 def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatch):
     database_path = tmp_path / "database" / "electricity_trading.db"
     database_path.parent.mkdir(parents=True)

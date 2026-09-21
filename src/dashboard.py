@@ -1,4 +1,6 @@
 from pathlib import Path
+import math
+import os
 import sqlite3
 
 import pandas as pd
@@ -12,6 +14,7 @@ from dashboard_data import (
     load_csv_summary,
     load_dashboard_csv,
     load_final_release_metadata,
+    load_next24h_forecast_report,
 )
 from dashboard_health import (
     alert_configuration_status,
@@ -33,6 +36,8 @@ ANOMALIES_DATA = Path("data/reports/detected_anomalies.csv")
 FEATURE_IMPORTANCE_DATA = Path("data/reports/feature_importance.csv")
 FINAL_RELEASE_MANIFEST = Path("artifacts/models/final_model_release_manifest.json")
 FINAL_HOLDOUT_METRICS = Path("data/reports/final_holdout_metrics.csv")
+NEXT24H_FORECAST_DATA = Path("data/reports/next24h_forecast.csv")
+NEXT24H_PERFORMANCE_DATA = Path("data/reports/next24h_performance.csv")
 PIPELINE_DATABASE = Path("database/electricity_trading.db")
 CHART_MAX_POINTS = 4_000
 
@@ -713,6 +718,10 @@ elif page == "Market Intelligence":
 
 
 elif page == "Forecasting":
+    next24h_forecast, next24h_error = load_next24h_forecast_report(
+        NEXT24H_FORECAST_DATA
+    )
+    next24h_performance = load_dashboard_csv(NEXT24H_PERFORMANCE_DATA)
     final_release, final_release_error = load_final_release_metadata(
         FINAL_RELEASE_MANIFEST,
         FINAL_HOLDOUT_METRICS,
@@ -723,6 +732,85 @@ elif page == "Forecasting":
         sort_by="timestamp",
     )
     page_title("Forecasting", "Actual vs Predicted Price Forecast")
+
+    section_header("Next 24-Hour Electricity Price Forecast")
+    if next24h_error:
+        st.warning(next24h_error)
+    else:
+        issue_time = next24h_forecast["forecast_issue_time"].iloc[0]
+        display_now = pd.Timestamp.now(tz="UTC")
+        freshness_hours = (display_now - issue_time).total_seconds() / 3600
+        try:
+            maximum_age = float(os.getenv("POWERFLOW_NEXT24H_MAX_AGE_HOURS", "3"))
+        except ValueError:
+            maximum_age = 3.0
+        if not math.isfinite(maximum_age) or not 0 < maximum_age <= 24:
+            maximum_age = 3.0
+        if freshness_hours < 0 or freshness_hours > maximum_age:
+            st.warning(
+                f"This forecast is stale: its Silver issue hour is {freshness_hours:.1f} "
+                f"hours old (limit {maximum_age:g} hours). It is retained for reference, "
+                "not presented as a current forecast."
+            )
+        elif next24h_forecast["target_timestamp"].iloc[0] <= display_now:
+            st.warning(
+                "Some forecast target hours have already passed. Review the "
+                "issue time before using this as a forward-looking forecast."
+            )
+        high = next24h_forecast.loc[next24h_forecast["predicted_price_eur_mwh"].idxmax()]
+        low = next24h_forecast.loc[next24h_forecast["predicted_price_eur_mwh"].idxmin()]
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Forecast Issue (UTC)", issue_time.strftime("%Y-%m-%d %H:%M"))
+        col2.metric(
+            "Silver Data Through (UTC)",
+            latest_timestamp.strftime("%Y-%m-%d %H:%M")
+            if latest_timestamp is not None and pd.notna(latest_timestamp) else "N/A",
+        )
+        col3.metric("Highest Predicted Price", f"{high['predicted_price_eur_mwh']:.2f} EUR/MWh")
+        col4.metric("Lowest Predicted Price", f"{low['predicted_price_eur_mwh']:.2f} EUR/MWh")
+        st.caption(
+            f"Release: {next24h_forecast['model_release'].iloc[0]} · "
+            f"Peak: {high['target_timestamp']:%Y-%m-%d %H:%M} UTC · "
+            f"Low: {low['target_timestamp']:%Y-%m-%d %H:%M} UTC"
+        )
+        figure = go.Figure()
+        figure.add_trace(go.Scatter(
+            x=next24h_forecast["target_timestamp"],
+            y=next24h_forecast["predicted_price_eur_mwh"],
+            mode="lines+markers", line=dict(color="#0B6FFB", width=2),
+            name="Predicted Price (EUR/MWh)",
+        ))
+        apply_chart_theme(figure)
+        figure.update_layout(yaxis_title="EUR/MWh")
+        st.plotly_chart(figure, width="stretch")
+        with st.expander("View all 24 forecast hours"):
+            st.dataframe(next24h_forecast, width="stretch", hide_index=True)
+
+    section_header("Realized Next24h Performance")
+    performance_columns = {
+        "scope", "horizon_hours", "rolling_window", "rolling_mae",
+        "rolling_rmse", "rolling_bias",
+    }
+    if next24h_performance.empty or not performance_columns.issubset(next24h_performance):
+        st.info("Not enough issued forecasts have matching observed prices yet.")
+    else:
+        overall = next24h_performance.loc[next24h_performance["scope"] == "overall"]
+        if overall.empty:
+            st.info("Not enough realized forecast pairs for aggregate metrics yet.")
+        else:
+            performance = overall.iloc[0]
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Rolling MAE", f"{performance['rolling_mae']:.2f} EUR/MWh")
+            c2.metric("Rolling RMSE", f"{performance['rolling_rmse']:.2f} EUR/MWh")
+            c3.metric("Rolling Bias", f"{performance['rolling_bias']:.2f} EUR/MWh")
+            st.caption(
+                f"Last {int(performance['rolling_window'])} realized forecast pairs; "
+                "bias = predicted minus observed."
+            )
+        horizons = next24h_performance.loc[next24h_performance["scope"] == "horizon"]
+        if not horizons.empty:
+            with st.expander("View realized performance by horizon"):
+                st.dataframe(horizons, width="stretch", hide_index=True)
 
     if final_release is None:
         st.warning(final_release_error)

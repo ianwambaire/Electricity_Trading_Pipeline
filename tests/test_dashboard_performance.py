@@ -138,7 +138,11 @@ def test_page_switches_only_request_their_full_csvs(tmp_path, monkeypatch):
 
     loaded_files.clear()
     app.radio[0].set_value("Forecasting").run(timeout=30)
-    assert loaded_files == ["actual_vs_predicted.csv"]
+    assert loaded_files == [
+        "next24h_forecast.csv",
+        "next24h_performance.csv",
+        "actual_vs_predicted.csv",
+    ]
 
     loaded_files.clear()
     app.radio[0].set_value("Model Insights").run(timeout=30)

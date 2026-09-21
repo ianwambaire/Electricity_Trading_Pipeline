@@ -140,6 +140,14 @@ mlartifacts/
 
 artifacts/*
 !artifacts/README.md
+!artifacts/models/
+artifacts/models/*
+!artifacts/models/releases/
+artifacts/models/releases/*
+!artifacts/models/releases/next24h/
+!artifacts/models/releases/next24h/next24h_model.joblib
+!artifacts/models/releases/next24h/next24h_feature_contract.joblib
+!artifacts/models/releases/next24h/next24h_release_manifest.json
 
 # =========================
 

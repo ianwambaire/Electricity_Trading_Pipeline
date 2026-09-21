@@ -46,6 +46,8 @@ PRODUCTION_MODULES = (
     "ingestion.incremental_utils",
     "models.feature_importance",
     "models.final_model_runtime",
+    "models.next24h_production",
+    "models.next24h_monitoring",
     "models.prediction_visualization",
     "processing.build_gold_dataset",
     "processing.build_silver_dataset",
@@ -113,6 +115,17 @@ def main() -> None:
         if len(predictions) != 1:
             raise RuntimeError("Frozen model inference probe returned an invalid result.")
 
+        from models.next24h_production import load_next24h_release
+
+        next24h_model, next24h_features, next24h_manifest = load_next24h_release(
+            PROJECT_ROOT / "artifacts/models/releases/next24h"
+        )
+        next24h_probe = pandas.DataFrame(
+            [{feature: 0.0 for feature in next24h_features}]
+        )
+        if next24h_model.predict(next24h_probe).shape != (1, 24):
+            raise RuntimeError("Next24h release inference probe returned an invalid shape.")
+
         orchestration_source = (
             PROJECT_ROOT / "src/scheduled_pipeline.py"
         ).read_text(encoding="utf-8")
@@ -132,6 +145,8 @@ def main() -> None:
                 "frozen_feature_count": len(features),
                 "frozen_model_type": type(model).__qualname__,
                 "inference_probe_rows": len(predictions),
+                "next24h_release_id": next24h_manifest["release_id"],
+                "next24h_feature_count": len(next24h_features),
                 "production_modules_checked": list(PRODUCTION_MODULES),
                 "status": "ok",
             },

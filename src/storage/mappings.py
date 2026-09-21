@@ -12,6 +12,10 @@ ARTIFACT_MAPPINGS = {
     "data/features/gold_model_features.csv": "gold/gold_model_features.csv",
     "data/reports/actual_vs_predicted.csv": "reports/predictions/actual_vs_predicted.csv",
     "data/reports/actual_vs_predicted.png": "reports/predictions/actual_vs_predicted.png",
+    "data/reports/next24h_forecast.csv": "reports/predictions/next24h/next24h_forecast.csv",
+    "data/reports/next24h_forecast_history.csv": "reports/predictions/next24h/next24h_forecast_history.csv",
+    "data/reports/next24h_realized_errors.csv": "reports/predictions/next24h/next24h_realized_errors.csv",
+    "data/reports/next24h_performance.csv": "reports/predictions/next24h/next24h_performance.csv",
     "data/reports/detected_anomalies.csv": "reports/anomalies/detected_anomalies.csv",
     "data/reports/anomaly_detection.png": "reports/anomalies/anomaly_detection.png",
     "data/reports/feature_importance.csv": "reports/monitoring/feature_importance.csv",
@@ -19,6 +23,9 @@ ARTIFACT_MAPPINGS = {
     "artifacts/models/final_gold_model.joblib": "models/releases/final_gold_model.joblib",
     "artifacts/models/final_gold_model_features.joblib": "models/releases/final_gold_model_features.joblib",
     "artifacts/models/final_model_release_manifest.json": "models/releases/final_model_release_manifest.json",
+    "artifacts/models/releases/next24h/next24h_model.joblib": "models/releases/next24h/next24h_model.joblib",
+    "artifacts/models/releases/next24h/next24h_feature_contract.joblib": "models/releases/next24h/next24h_feature_contract.joblib",
+    "artifacts/models/releases/next24h/next24h_release_manifest.json": "models/releases/next24h/next24h_release_manifest.json",
     "data/reports/final_holdout_metrics.csv": "models/releases/final_holdout_metrics.csv",
     "data/reports/final_holdout_baselines.csv": "models/releases/final_holdout_baselines.csv",
     "data/reports/final_holdout_regime_performance.csv": "models/releases/final_holdout_regime_performance.csv",
@@ -31,6 +38,8 @@ GROUPS = {
     "silver": ("data/processed/silver_electricity_market_data.csv",),
     "gold": ("data/features/gold_model_features.csv",),
     "predictions": tuple(key for key in ARTIFACT_MAPPINGS if "reports/actual_vs_predicted" in key),
+    "next24h_forecasts": tuple(key for key in ARTIFACT_MAPPINGS if key.startswith("data/reports/next24h_forecast")),
+    "next24h_monitoring": tuple(key for key in ARTIFACT_MAPPINGS if key.startswith(("data/reports/next24h_realized", "data/reports/next24h_performance"))),
     "anomalies": tuple(key for key in ARTIFACT_MAPPINGS if "reports/detected_anomalies" in key or "reports/anomaly_detection" in key),
     "monitoring": tuple(key for key in ARTIFACT_MAPPINGS if "reports/feature_importance" in key),
     "model_release": (
@@ -38,6 +47,7 @@ GROUPS = {
         "artifacts/models/final_gold_model_features.joblib",
         "artifacts/models/final_model_release_manifest.json",
     ),
+    "next24h_release": tuple(key for key in ARTIFACT_MAPPINGS if key.startswith("artifacts/models/releases/next24h/")),
     "model_evaluations": tuple(key for key in ARTIFACT_MAPPINGS if key.startswith("data/reports/final_holdout_")),
 }
 GROUPS["models"] = GROUPS["model_release"] + GROUPS["model_evaluations"]

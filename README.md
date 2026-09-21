@@ -564,6 +564,63 @@ small parameter space. The holdout is evaluated only after training-only tuning
 is complete. The model family with the lowest cross-validation RMSE is selected
 from the development partition; final holdout metrics are reporting-only.
 
+### Unpromoted next-24-hour candidate
+
+`src/models/evaluate_next24h.py` is a separate, offline development workflow;
+Prefect and the existing one-hour model never invoke it. It derives the same 31
+issue-time features from complete hourly Silver observations and matches each
+of 24 target prices by its exact future UTC timestamp. It does not use actual
+future weather or feed predictions back as observed prices. The latest Silver
+hour can be an issue time even though Gold omits it until its next-hour label
+exists. Forecast timestamps are relative to that **last complete data hour**,
+which may lag the wall clock when a source has a genuine gap.
+
+The fixed evaluation uses training targets before 2026-01-01, validation issue
+times from 2026-01-01 with all targets before 2026-05-01, and test issue times
+from 2026-05-01 onward. No label crosses a split boundary. Linear Regression,
+Random Forest, and Histogram Gradient Boosting are compared without XGBoost.
+Selection uses validation overall RMSE only, preferring the simpler model when
+within 2% of the best; test results are inspected afterward and do not change
+selection. The persistence baseline repeats the price known at issue time.
+Negative prices and prices at or above €200/MWh are evaluated separately.
+The prior one-hour 2025 holdout is part of this new candidate's training
+history; its published one-hour metrics are not reused as the 24-hour test.
+
+To reproduce the development evaluation on a machine with the development
+dependencies and a complete local Silver CSV:
+
+```bash
+MPLBACKEND=Agg PYTHONPATH=src python src/models/evaluate_next24h.py \
+  --silver data/processed/silver_electricity_market_data.csv \
+  --output-dir artifacts/models/candidates/next24h/my-development-run
+```
+
+The output directory must not already exist. It contains an **unpromoted**
+candidate model, manifest, per-horizon metrics, extreme-price metrics, and a
+24-row example forecast. Candidate artifacts are ignored by Git under the
+current artifact policy; they are not the frozen production release. To produce
+a manual candidate forecast without changing the Prefect pipeline:
+
+```bash
+MPLBACKEND=Agg PYTHONPATH=src python src/models/next24h.py \
+  --silver data/processed/silver_electricity_market_data.csv \
+  --model artifacts/models/candidates/next24h/my-development-run/histogram_gradient_boosting.joblib \
+  --manifest artifacts/models/candidates/next24h/my-development-run/candidate_manifest.json \
+  --output data/reports/next24h_candidate_forecast.csv
+```
+
+Use the actual `model_file` named in the generated manifest if another model
+was selected. The manual output refuses to overwrite an existing report. Its
+five columns are `forecast_issue_time`, `target_timestamp`, `horizon_hours`,
+`predicted_price_eur_mwh`, and `model_release`. Future weather forecasts, if
+used later, require a separate issue-time/valid-time interface and must never
+be appended to historical weather or Silver as observed values.
+
+The manual generator refuses a Silver issue hour more than two hours old, so
+the example command above will not claim a current forecast while source gaps
+leave Silver stale. For an explicitly retrospective development example, add
+`--allow-stale`; this does not make the output a live forecast.
+
 ### Evaluation metrics
 
 - **MAE — Mean Absolute Error:** average absolute forecast error.

@@ -22,7 +22,7 @@ if __package__:
         contiguous_price_prefix,
         infer_stored_interval,
         latest_stored_timestamp,
-        merge_incremental_rows,
+        merge_generation_rows,
         normalize_utc_timestamps,
     )
 else:
@@ -34,7 +34,7 @@ else:
         contiguous_price_prefix,
         infer_stored_interval,
         latest_stored_timestamp,
-        merge_incremental_rows,
+        merge_generation_rows,
         normalize_utc_timestamps,
     )
 
@@ -42,6 +42,7 @@ else:
 COUNTRY_CODE = "DE_LU"
 RAW_ENTSOE_DIR = Path("data/raw/entsoe")
 QUARTER_HOURLY_PRICE_START_UTC = pd.Timestamp("2025-09-30T22:00:00Z")
+GENERATION_REQUERY_OVERLAP = pd.Timedelta(hours=48)
 SENSITIVE_QUERY_PARAMETERS = {
     "accesskey",
     "accesstoken",
@@ -322,21 +323,84 @@ def _append_generation_safely(path: Path, generation: pd.DataFrame):
     incoming = normalize_utc_timestamps(_flatten_generation_frame(generation))
     if path.exists():
         existing = _read_stored_generation(path)
-        combined, new_rows = merge_incremental_rows(
-            existing,
-            incoming,
-            allow_column_union=True,
-        )
+        merged = merge_generation_rows(existing, incoming)
+        combined, new_rows = merged.data, merged.new_rows
+        repaired_by_column = merged.repaired_by_column
     else:
         combined = incoming
         new_rows = len(incoming)
+        repaired_by_column = {}
     latest = combined["timestamp"].iloc[-1] if not combined.empty else None
-    if new_rows:
+    if new_rows or repaired_by_column:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = path.with_suffix(path.suffix + ".tmp")
-        combined.to_csv(temporary_path, index=False)
-        temporary_path.replace(path)
-    return new_rows, latest
+        try:
+            combined.to_csv(temporary_path, index=False)
+            temporary_path.replace(path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+    return new_rows, latest, repaired_by_column
+
+
+def repair_generation_interval(
+    client,
+    start_utc: pd.Timestamp,
+    end_utc_exclusive: pd.Timestamp,
+    *,
+    path: Path = RAW_ENTSOE_DIR / "generation.csv",
+    apply: bool = False,
+) -> dict:
+    """Preview or atomically fill genuine late generation values in an existing CSV."""
+    start, end = pd.Timestamp(start_utc), pd.Timestamp(end_utc_exclusive)
+    if start.tzinfo is None or end.tzinfo is None:
+        raise ValueError("Repair bounds must have explicit UTC timezones.")
+    start, end = start.tz_convert("UTC"), end.tz_convert("UTC")
+    if start >= end or end - start > pd.Timedelta(days=7):
+        raise ValueError("Repair interval must be positive and no longer than seven days.")
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Stored generation data not found: {path}")
+    existing = normalize_utc_timestamps(_read_stored_generation(path))
+    response = fetch_timestamp_range(
+        client, client.query_generation, start, end, "generation by type",
+        allow_empty=True, chunk_months=1,
+    )
+    if response is None:
+        incoming = pd.DataFrame(columns=["timestamp"])
+    else:
+        incoming = normalize_utc_timestamps(_flatten_generation_frame(response))
+    fetched_columns = [column for column in incoming if column != "timestamp"]
+    fetched_null_counts = incoming[fetched_columns].isna().sum().astype(int).to_dict()
+    # A controlled repair is cell-only: no new timestamps or schema columns.
+    stored_interval = existing.loc[
+        existing["timestamp"].between(start, end, inclusive="left")
+    ]
+    incoming = incoming.loc[
+        incoming["timestamp"].isin(stored_interval["timestamp"])
+    ].reindex(columns=existing.columns)
+    merged = merge_generation_rows(existing, incoming)
+    if merged.new_rows or list(merged.data.columns) != list(existing.columns):
+        raise ValueError("Controlled repair cannot change generation timestamps or schema.")
+    if apply and merged.repaired_cells:
+        temporary_path = path.with_suffix(path.suffix + ".tmp")
+        try:
+            merged.data.to_csv(temporary_path, index=False)
+            temporary_path.replace(path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+    return {
+        "start_utc": start.isoformat(),
+        "end_utc_exclusive": end.isoformat(),
+        "returned_timestamps": [value.isoformat() for value in incoming["timestamp"]],
+        "returned_columns": fetched_columns,
+        "stored_columns_absent_from_response": sorted(
+            set(existing.columns) - set(fetched_columns) - {"timestamp"}
+        ),
+        "returned_null_counts": fetched_null_counts,
+        "repaired_by_column": merged.repaired_by_column,
+        "repaired_cells": merged.repaired_cells,
+        "applied": bool(apply and merged.repaired_cells),
+    }
 
 
 def _latest_complete_price_hour(path: Path) -> str | None:
@@ -396,6 +460,11 @@ def _incremental_dataset(
         start_utc = get_historical_date_range().start_utc
     else:
         start_utc = latest + interval
+        if allow_column_union and value_name is None:
+            start_utc = max(
+                get_historical_date_range().start_utc,
+                latest - GENERATION_REQUERY_OVERLAP,
+            )
 
     if start_utc >= end_utc_exclusive:
         print(f"No new ENTSO-E {dataset_name} interval is currently due.")
@@ -478,8 +547,9 @@ def _incremental_dataset(
     if observed_values.empty:
         new_rows = 0
         latest_timestamp = latest
+        repaired_by_column = {}
     elif allow_column_union and value_name is None:
-        new_rows, latest_timestamp = _append_generation_safely(
+        new_rows, latest_timestamp, repaired_by_column = _append_generation_safely(
             output_path, observed_values
         )
     else:
@@ -490,14 +560,18 @@ def _incremental_dataset(
         )
         new_rows = result.new_rows
         latest_timestamp = result.latest_timestamp
+        repaired_by_column = {}
     print(
         f"Incremental {dataset_name}: appended {new_rows} rows; "
+        f"repaired {sum(repaired_by_column.values())} missing cells; "
         f"latest timestamp={latest_timestamp}."
     )
     metadata = {
         "new_rows": new_rows,
         "latest_timestamp": latest_timestamp,
         "unresolved_gap": unresolved_gap,
+        "repaired_by_column": repaired_by_column,
+        "repaired_cells": sum(repaired_by_column.values()),
     }
     if is_price:
         metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
@@ -574,6 +648,7 @@ def fetch_entsoe_data(
         metadata = {
             "mode": mode,
             "new_rows": sum(item["new_rows"] for item in datasets.values()),
+            "repaired_cells": sum(item.get("repaired_cells", 0) for item in datasets.values()),
             "datasets": datasets,
         }
         if metadata["new_rows"] == 0:

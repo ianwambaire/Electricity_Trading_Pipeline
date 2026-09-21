@@ -18,6 +18,17 @@ class AppendResult:
 
 
 @dataclass(frozen=True)
+class GenerationMergeResult:
+    data: pd.DataFrame
+    new_rows: int
+    repaired_by_column: dict[str, int]
+
+    @property
+    def repaired_cells(self) -> int:
+        return sum(self.repaired_by_column.values())
+
+
+@dataclass(frozen=True)
 class ContiguousPrefixResult:
     data: pd.Series | pd.DataFrame
     missing_timestamps: tuple[pd.Timestamp, ...]
@@ -329,6 +340,54 @@ def merge_incremental_rows(
     combined = combined.drop_duplicates(subset=[timestamp_column], keep="first")
     combined = combined.sort_values(timestamp_column).reset_index(drop=True)
     return combined, new_rows
+
+
+def merge_generation_rows(
+    existing: pd.DataFrame,
+    incoming: pd.DataFrame,
+) -> GenerationMergeResult:
+    """Enrich only null generation cells at overlapping UTC timestamps.
+
+    Existing non-null values are immutable here. Corrections to those values
+    require a separate, explicit review rather than silently winning a row.
+    """
+    existing = normalize_utc_timestamps(existing)
+    incoming = normalize_utc_timestamps(incoming)
+    columns = list(existing.columns) + [
+        column for column in incoming.columns if column not in existing.columns
+    ]
+    stored = existing.reindex(columns=columns).set_index(TIMESTAMP_COLUMN)
+    fetched = incoming.reindex(columns=columns).set_index(TIMESTAMP_COLUMN)
+    overlap = stored.index.intersection(fetched.index)
+    repaired_by_column = {}
+    for column in columns:
+        if column == TIMESTAMP_COLUMN or overlap.empty:
+            continue
+        old = stored.loc[overlap, column]
+        new = fetched.loc[overlap, column]
+        both_present = old.notna() & new.notna()
+        old_numeric = pd.to_numeric(old, errors="coerce")
+        new_numeric = pd.to_numeric(new, errors="coerce")
+        numeric = both_present & old_numeric.notna() & new_numeric.notna()
+        equal = old.astype(str).eq(new.astype(str))
+        equal.loc[numeric] = np.isclose(
+            old_numeric.loc[numeric], new_numeric.loc[numeric],
+            rtol=1e-9, atol=1e-12,
+        )
+        conflicts = both_present & ~equal
+        if conflicts.any():
+            timestamp = conflicts[conflicts].index[0]
+            raise ValueError(
+                "Conflicting non-null generation value at "
+                f"{timestamp.isoformat()} in {column}; no values were replaced."
+            )
+        fill = old.isna() & new.notna()
+        if fill.any():
+            stored.loc[fill[fill].index, column] = new.loc[fill].to_numpy()
+            repaired_by_column[column] = int(fill.sum())
+    added = fetched.loc[~fetched.index.isin(stored.index)]
+    combined = pd.concat([stored, added]).sort_index().reset_index()
+    return GenerationMergeResult(combined, len(added), repaired_by_column)
 
 
 def append_csv_safely(

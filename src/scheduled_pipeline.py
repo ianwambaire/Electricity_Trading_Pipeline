@@ -352,6 +352,20 @@ def _operational_metadata(
     }
 
 
+def _skip_derived_rebuild(
+    mode: str,
+    complete_watermark_advanced: bool,
+    new_rows_ingested: int,
+    generation_cells_repaired: int,
+) -> bool:
+    return (
+        mode == "incremental"
+        and not complete_watermark_advanced
+        and new_rows_ingested == 0
+        and generation_cells_repaired == 0
+    )
+
+
 @flow(name="PowerFlow ENTSO-E Pipeline", log_prints=True)
 def powerflow_entsoe_pipeline(
     mode: str = "incremental",
@@ -394,6 +408,8 @@ def powerflow_entsoe_pipeline(
 
         stage_name = "ENTSO-E ingestion"
         entsoe_metadata = entsoe_ingestion_task(mode, start_date, end_date)
+        generation_cells_repaired = int(entsoe_metadata.get("repaired_cells", 0))
+        storage_state["generation_cells_repaired"] = generation_cells_repaired
         unresolved_gaps = _entsoe_unresolved_gaps(entsoe_metadata)
         _record_gap_warnings(unresolved_gaps)
         storage_state["warnings"].extend(
@@ -428,10 +444,9 @@ def powerflow_entsoe_pipeline(
                 or raw_watermark_after > raw_watermark_before
             )
         )
-        if (
-            mode == "incremental"
-            and not complete_watermark_advanced
-            and new_rows_ingested == 0
+        if _skip_derived_rebuild(
+            mode, complete_watermark_advanced,
+            new_rows_ingested, generation_cells_repaired,
         ):
             stage_name = "Next24h release and forecast processing"
             _run_next24h_stages(storage_sync, storage_state)

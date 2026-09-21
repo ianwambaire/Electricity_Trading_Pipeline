@@ -162,6 +162,31 @@ def load_next24h_forecast_report(path: Path) -> tuple[pd.DataFrame, str | None]:
     return data.loc[:, required], None
 
 
+def summarize_next24h_forecast(forecast: pd.DataFrame) -> dict | None:
+    """Summarize an already validated 24-row forecast without changing it."""
+    if forecast.empty or len(forecast) != 24:
+        return None
+    prices = pd.to_numeric(forecast["predicted_price_eur_mwh"], errors="coerce")
+    if prices.isna().any() or not all(math.isfinite(value) for value in prices):
+        return None
+    low = forecast.loc[prices.idxmin()]
+    high = forecast.loc[prices.idxmax()]
+    return {
+        "issue_time": forecast["forecast_issue_time"].iloc[0],
+        "release_id": forecast["model_release"].iloc[0],
+        "rows": len(forecast),
+        "minimum": float(prices.min()),
+        "minimum_time": low["target_timestamp"],
+        "maximum": float(prices.max()),
+        "maximum_time": high["target_timestamp"],
+        "average": float(prices.mean()),
+        "median": float(prices.median()),
+        "first_to_last_change": float(prices.iloc[-1] - prices.iloc[0]),
+        "negative_hours": int(prices.lt(0).sum()),
+        "elevated_hours": int(prices.ge(200).sum()),
+    }
+
+
 def downsample_time_series(
     data: pd.DataFrame,
     max_points: int = 4_000,

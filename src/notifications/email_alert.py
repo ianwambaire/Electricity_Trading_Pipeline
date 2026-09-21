@@ -8,14 +8,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def send_failure_alert(subject: str, message: str):
+def send_failure_alert(subject: str, message: str) -> str:
     sender = os.getenv("ALERT_EMAIL_SENDER")
     password = os.getenv("ALERT_EMAIL_PASSWORD")
     receiver = os.getenv("ALERT_EMAIL_RECEIVER")
 
     if not sender or not password or not receiver:
         print("Email alert settings missing. Skipping notification.")
-        return
+        return "NOT_CONFIGURED"
 
     email = EmailMessage()
     email["Subject"] = subject
@@ -29,6 +29,9 @@ def send_failure_alert(subject: str, message: str):
             smtp.send_message(email)
 
         print("Failure alert email sent successfully.")
+        return "SENT"
 
-    except Exception as error:
-        print(f"Failed to send email alert: {error}")
+    except Exception:
+        # SMTP exception text may contain addresses or authentication details.
+        print("Failed to send email alert; check protected service logs.")
+        return "FAILED"

@@ -65,6 +65,16 @@ To verify the promoted release and produce a forecast **only when live inputs ar
 
 The flow supports `historical` mode for a reproducible full rebuild and `incremental` mode for operational updates. Incremental ingestion advances each raw source from its own latest stored UTC timestamp, atomically appends non-conflicting observations, and treats publication-delay no-ops as successful runs. Silver and Gold are then rebuilt from the complete raw history so lag and rolling features remain correct across the old/new boundary. The deployment runs incremental mode hourly in UTC. Legacy EIA/California scripts are retained under `src/legacy/` for reference but are not part of the primary Prefect flow.
 
+## Operational Monitoring
+
+The Streamlit **Pipeline Summary** page shows rule-based Healthy, Warning, or Degraded status, latest source timestamps and ages, recent quality checks, filtered incidents, and measured pipeline-stage durations. Core ENTSO-E input freshness and the issued next24h forecast use live operational thresholds; completed-day Open-Meteo archive weather is labeled separately and is not treated as a stale live feed. The status rules and their thresholds are documented in `src/dashboard_health.py` and displayed on the page.
+
+PowerFlow persists incident records and stage timings in the existing SQLite operational database. `database/schema.sql` creates the new tables and indexes idempotently without replacing existing pipeline runs or quality history. Incidents cover failures, withheld forecasts, source gaps, and generation repairs/revisions; identical events within an hour are deduplicated. Stage timings include a run identifier, UTC start/end times, duration, and outcome. Monitoring writes do not change market data or model artifacts.
+
+The **Forecasting** page separates the rolling 24-hour production forecast from the frozen one-hour historical evaluation. It shows forecast provenance, analyst price summaries, a read-only CSV download, and realized error summaries for overall, last 24 hours, last 7 days, last 30 days, and each horizon. Aggregate/window metrics require at least 20 genuine pre-target issued/observed pairs; per-horizon metrics require at least five. With at least 100 pairs across seven target dates, a monitoring-only review recommendation appears if seven-day live RMSE exceeds both 1.5 times the approved model test RMSE and the approved persistence-test RMSE. This is a conservative operational heuristic, not a statistical significance test or an automatic release decision.
+
+Model retraining is separated from routine production inference. Production forecast performance is monitored and may trigger a recommendation for controlled model review and re-evaluation, but the deployed model is not automatically retrained.
+
 ## Technologies
 
 - Python and pandas for ingestion and transformation

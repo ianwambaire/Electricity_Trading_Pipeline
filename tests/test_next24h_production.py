@@ -550,6 +550,8 @@ def test_prefect_stage_preserves_prior_forecast_on_unavailable_data(monkeypatch)
     )
     monkeypatch.setattr(pipeline, "next24h_monitoring_task", lambda: (0, 0))
     monkeypatch.setattr(pipeline, "initialize_database", lambda: None)
+    monkeypatch.setattr(pipeline, "_record_incident", lambda *args, **kwargs: False)
+    monkeypatch.setattr(pipeline, "send_failure_alert", lambda *args, **kwargs: "NOT_CONFIGURED")
     monkeypatch.setattr(
         pipeline, "log_data_quality_result",
         lambda *args: calls.append(args),
@@ -567,9 +569,9 @@ def test_prefect_stage_preserves_prior_forecast_on_unavailable_data(monkeypatch)
 
 def test_prefect_keeps_one_hour_stage_before_next24h_without_training():
     source = (Path(__file__).parents[1] / "src/scheduled_pipeline.py").read_text()
-    assert source.index("predictions_generated = prediction_report_task(mode)") < source.index(
-        '_run_next24h_stages(storage_sync, storage_state)',
-        source.index('predictions_generated = prediction_report_task(mode)'),
+    report = source.index('"Actual-vs-predicted report", prediction_report_task, mode')
+    assert report < source.index(
+        '_run_next24h_stages(storage_sync, storage_state, run_id)', report,
     )
     assert "evaluate_next24h" not in source
     assert ".fit(" not in source

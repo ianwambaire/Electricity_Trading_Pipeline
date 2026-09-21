@@ -26,10 +26,17 @@ def test_schema_initialization_creates_only_operational_tables(temporary_databas
             )
         }
 
-    assert tables == {"pipeline_runs", "data_quality_results"}
+    assert tables == {
+        "pipeline_runs", "data_quality_results", "operational_incidents",
+        "pipeline_stage_timings",
+    }
     assert indexes == {
         "idx_pipeline_runs_run_time",
         "idx_data_quality_results_check_time",
+        "idx_operational_incidents_time",
+        "idx_operational_incidents_event",
+        "idx_pipeline_stage_timings_run",
+        "idx_pipeline_stage_timings_time",
     }
 
 

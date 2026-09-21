@@ -86,7 +86,7 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert metrics["Highest Predicted Price"] == "24.00 EUR/MWh"
     assert metrics["Lowest Predicted Price"] == "1.00 EUR/MWh"
     assert any("forecast is stale" in warning.value for warning in app.warning)
-    assert any("Not enough issued forecasts" in item.value for item in app.info)
+    assert any("Insufficient realized forecasts" in item.value for item in app.info)
 
 
 def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatch):
@@ -167,12 +167,15 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
     assert metrics["Quality Checks Passed"] == "0"
     assert metrics["Quality Checks Failed"] == "0"
     assert metrics["Continuity Warnings"] == "1"
-    assert metrics["Failure Email Alerts"] == "Configured"
+    assert any(
+        "Failure email alerts: Configured" in item.value
+        for item in app.caption
+    )
     assert metrics["Latest Run Time"] == "2026-09-19 12:32"
     assert metrics["New Rows Ingested"] == "3"
     assert metrics["Latest Complete Price Hour (UTC)"] == "2026-09-12 21:00"
     assert any("No complete aligned raw hour advanced" in item.value for item in app.info)
-    assert any("Operational with warnings" in item.value for item in app.warning)
+    assert any("Degraded" in item.value for item in app.error)
     assert any("1 source continuity warning detected" in item.value for item in app.warning)
     rendered_tables = "\n".join(frame.value.to_string() for frame in app.dataframe)
     assert "day-ahead prices" in rendered_tables

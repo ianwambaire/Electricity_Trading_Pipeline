@@ -140,7 +140,8 @@ def test_page_switches_only_request_their_full_csvs(tmp_path, monkeypatch):
     app.radio[0].set_value("Forecasting").run(timeout=30)
     assert loaded_files == [
         "next24h_forecast.csv",
-        "next24h_performance.csv",
+        "next24h_realized_errors.csv",
+        "next24h_forecast_history.csv",
         "actual_vs_predicted.csv",
     ]
 
@@ -150,4 +151,6 @@ def test_page_switches_only_request_their_full_csvs(tmp_path, monkeypatch):
 
     loaded_files.clear()
     app.radio[0].set_value("Pipeline Summary").run(timeout=30)
-    assert loaded_files == []
+    # Health status validates the small, 24-row production forecast; it does
+    # not load the historical market, model, or realized-error datasets.
+    assert loaded_files == ["next24h_forecast.csv"]

@@ -2,7 +2,6 @@ from pathlib import Path
 import json
 import math
 import os
-import sqlite3
 
 import pandas as pd
 import plotly.express as px
@@ -16,18 +15,30 @@ from dashboard_data import (
     load_dashboard_csv,
     load_final_release_metadata,
     load_next24h_forecast_report,
+    summarize_next24h_forecast,
 )
 from dashboard_health import (
+    age_label,
     alert_configuration_status,
+    assess_operational_health,
     count_quality_statuses,
-    derive_system_health,
+    filter_incidents,
+    forecast_freshness_state,
+    latest_quality_state,
+    load_recent_incidents,
+    load_recent_stage_timings,
+    model_performance_state,
     load_latest_successful_run_time,
     load_recent_data_quality_history,
     load_recent_pipeline_history,
     parse_operational_metadata,
     prepare_data_quality_history,
     prepare_pipeline_history,
+    redact_operational_text,
+    source_freshness_state,
+    summarize_pipeline_timings,
 )
+from models.next24h_monitoring import summarize_realized_performance
 
 
 SILVER_DATA = Path("data/processed/silver_electricity_market_data.csv")
@@ -40,6 +51,11 @@ FINAL_HOLDOUT_METRICS = Path("data/reports/final_holdout_metrics.csv")
 NEXT24H_FORECAST_DATA = Path("data/reports/next24h_forecast.csv")
 NEXT24H_PROVENANCE_DATA = Path("data/reports/next24h_forecast_provenance.json")
 NEXT24H_PERFORMANCE_DATA = Path("data/reports/next24h_performance.csv")
+NEXT24H_REALIZED_DATA = Path("data/reports/next24h_realized_errors.csv")
+NEXT24H_HISTORY_DATA = Path("data/reports/next24h_forecast_history.csv")
+NEXT24H_RELEASE_MANIFEST = Path("artifacts/models/releases/next24h/next24h_release_manifest.json")
+NEXT24H_RELEASE_MODEL = Path("artifacts/models/releases/next24h/next24h_model.joblib")
+NEXT24H_RELEASE_CONTRACT = Path("artifacts/models/releases/next24h/next24h_feature_contract.joblib")
 PIPELINE_DATABASE = Path("database/electricity_trading.db")
 CHART_MAX_POINTS = 4_000
 
@@ -348,38 +364,11 @@ PLOTLY_LAYOUT = dict(
 CHART_COLORS = ["#0B6FFB", "#16A3A3", "#F59E0B", "#2E9D68", "#7A5AF8", "#D92D20"]
 
 
-@st.cache_data(ttl=30, show_spinner=False)
 def load_latest_pipeline_run(path: Path):
-    if not path.exists():
-        return None, f"Pipeline database not found at {path}."
-
-    connection = None
-    try:
-        connection = sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True)
-        row = connection.execute(
-            """
-            SELECT id, run_time, status, records_processed, message
-            FROM pipeline_runs
-            ORDER BY id DESC
-            LIMIT 1
-            """
-        ).fetchone()
-    except sqlite3.Error as exc:
-        return None, f"Could not read pipeline history: {exc}"
-    finally:
-        if connection is not None:
-            connection.close()
-
-    if row is None:
+    recent = load_recent_pipeline_history(path, limit=1)
+    if recent.empty:
         return None, "No pipeline runs have been recorded yet."
-
-    return {
-        "id": row[0],
-        "run_time": row[1],
-        "status": row[2],
-        "records_processed": row[3],
-        "message": row[4],
-    }, None
+    return recent.iloc[0].to_dict(), None
 
 
 def fmt(value):
@@ -723,7 +712,18 @@ elif page == "Forecasting":
     next24h_forecast, next24h_error = load_next24h_forecast_report(
         NEXT24H_FORECAST_DATA
     )
-    next24h_performance = load_dashboard_csv(NEXT24H_PERFORMANCE_DATA)
+    realized_errors = load_dashboard_csv(
+        NEXT24H_REALIZED_DATA,
+        timestamp_columns=("forecast_issue_time", "target_timestamp", "issued_at_utc"),
+    )
+    forecast_history = load_dashboard_csv(
+        NEXT24H_HISTORY_DATA,
+        timestamp_columns=("forecast_issue_time", "target_timestamp", "issued_at_utc"),
+    )
+    try:
+        next24h_manifest = json.loads(NEXT24H_RELEASE_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        next24h_manifest = {}
     final_release, final_release_error = load_final_release_metadata(
         FINAL_RELEASE_MANIFEST,
         FINAL_HOLDOUT_METRICS,
@@ -733,13 +733,15 @@ elif page == "Forecasting":
         timestamp_columns=("timestamp",),
         sort_by="timestamp",
     )
-    page_title("Forecasting", "Actual vs Predicted Price Forecast")
+    page_title("Forecasting", "Electricity Price Forecasts")
 
-    section_header("Next 24-Hour Electricity Price Forecast")
+    section_header("Rolling Next 24-Hour Production Forecast")
+    st.caption("Histogram Gradient Boosting · 24 direct hourly predictions · not trading signals.")
     if next24h_error:
         st.warning(next24h_error)
     else:
         issue_time = next24h_forecast["forecast_issue_time"].iloc[0]
+        forecast_summary = summarize_next24h_forecast(next24h_forecast)
         try:
             provenance = json.loads(NEXT24H_PROVENANCE_DATA.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -791,6 +793,37 @@ elif page == "Forecasting":
                 "observations or future-horizon weather) · Acquired: "
                 f"{provenance['weather_acquired_at_utc']}"
             )
+        issued_rows = (
+            forecast_history.loc[forecast_history["forecast_issue_time"] == issue_time]
+            if "forecast_issue_time" in forecast_history and "issued_at_utc" in forecast_history
+            else pd.DataFrame()
+        )
+        issued_at = issued_rows["issued_at_utc"].min() if not issued_rows.empty else None
+        st.caption(
+            f"Forecast issued: {fmt_timestamp(issued_at)} · "
+            f"Freshness: {age_label(issue_time, now=display_now)} · "
+            f"Model: Histogram Gradient Boosting · Release: {forecast_summary['release_id']}"
+        )
+        analyst_metrics = [
+            ("24h Average", f"{forecast_summary['average']:.2f} EUR/MWh"),
+            ("24h Median", f"{forecast_summary['median']:.2f} EUR/MWh"),
+            ("First-to-Last Change", f"{forecast_summary['first_to_last_change']:+.2f} EUR/MWh"),
+            ("Negative-Price Hours", str(forecast_summary["negative_hours"])),
+            ("Hours ≥ 200 EUR/MWh", str(forecast_summary["elevated_hours"])),
+            ("Forecast Rows", str(forecast_summary["rows"])),
+        ]
+        for offset in range(0, len(analyst_metrics), 3):
+            columns = st.columns(3)
+            for column, (label, value) in zip(columns, analyst_metrics[offset:offset + 3]):
+                column.metric(label, value)
+        if forecast_summary["negative_hours"]:
+            st.warning(
+                f"Negative price conditions are forecast for {forecast_summary['negative_hours']} hour(s)."
+            )
+        if forecast_summary["elevated_hours"]:
+            st.warning(
+                f"Elevated price conditions are forecast for {forecast_summary['elevated_hours']} hour(s)."
+            )
         figure = go.Figure()
         figure.add_trace(go.Scatter(
             x=next24h_forecast["target_timestamp"],
@@ -803,37 +836,54 @@ elif page == "Forecasting":
         st.plotly_chart(figure, width="stretch")
         with st.expander("View all 24 forecast hours"):
             st.dataframe(next24h_forecast, width="stretch", hide_index=True)
+        st.download_button(
+            "Download current 24-hour forecast (CSV)",
+            data=next24h_forecast.to_csv(index=False),
+            file_name=f"powerflow_next24h_{issue_time:%Y%m%d_%H00}_UTC.csv",
+            mime="text/csv",
+        )
 
     section_header("Realized Next24h Performance")
-    performance_columns = {
-        "scope", "horizon_hours", "rolling_window", "rolling_mae",
-        "rolling_rmse", "rolling_bias",
+    required_errors = {
+        "forecast_issue_time", "target_timestamp", "issued_at_utc",
+        "horizon_hours", "absolute_error", "squared_error", "signed_error",
     }
-    if next24h_performance.empty or not performance_columns.issubset(next24h_performance):
-        st.info("Not enough issued forecasts have matching observed prices yet.")
+    if required_errors.issubset(realized_errors.columns):
+        monitoring = summarize_realized_performance(realized_errors)
     else:
-        overall = next24h_performance.loc[next24h_performance["scope"] == "overall"]
-        if overall.empty:
-            st.info("Not enough realized forecast pairs for aggregate metrics yet.")
-        else:
-            performance = overall.iloc[0]
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Rolling MAE", f"{performance['rolling_mae']:.2f} EUR/MWh")
-            c2.metric("Rolling RMSE", f"{performance['rolling_rmse']:.2f} EUR/MWh")
-            c3.metric("Rolling Bias", f"{performance['rolling_bias']:.2f} EUR/MWh")
-            st.caption(
-                f"Last {int(performance['rolling_window'])} realized forecast pairs; "
-                "bias = predicted minus observed."
-            )
-        horizons = next24h_performance.loc[next24h_performance["scope"] == "horizon"]
-        if not horizons.empty:
-            with st.expander("View realized performance by horizon"):
-                st.dataframe(horizons, width="stretch", hide_index=True)
+        monitoring = summarize_realized_performance(pd.DataFrame())
+    overall = monitoring["overall"]
+    if overall["status"] == "Available":
+        columns = st.columns(4)
+        for column, (label, value) in zip(columns, [
+            ("Overall MAE", overall["mae"]), ("Overall RMSE", overall["rmse"]),
+            ("Overall Bias", overall["bias"]), ("Matched Pairs", overall["pair_count"]),
+        ]):
+            column.metric(label, str(value) if label == "Matched Pairs" else f"{value:.2f} EUR/MWh")
+    else:
+        st.info(f"Insufficient realized forecasts for aggregate metrics ({overall['pair_count']} matched pairs; minimum 20).")
+    window_rows = []
+    for window, values in monitoring["windows"].items():
+        window_rows.append({
+            "Period": window, "Pairs": values["pair_count"],
+            "MAE (EUR/MWh)": round(values["mae"], 2) if values["mae"] is not None else None,
+            "RMSE (EUR/MWh)": round(values["rmse"], 2) if values["rmse"] is not None else None,
+            "Bias (EUR/MWh)": round(values["bias"], 2) if values["bias"] is not None else None,
+            "Status": values["status"],
+        })
+    st.dataframe(pd.DataFrame(window_rows), width="stretch", hide_index=True)
+    st.caption("Windows use observed target time; bias = predicted minus observed. Minimum 20 pairs per aggregate/window and 5 per horizon.")
+    model_health = model_performance_state(monitoring, next24h_manifest)
+    st.info(f"Model performance: {model_health['label']}. {model_health['reason']}")
+    with st.expander("View realized performance by horizon (h+1 to h+24)"):
+        st.dataframe(monitoring["horizons"], width="stretch", hide_index=True)
 
+    section_header("Frozen One-Hour Model Evaluation")
+    st.caption("Ordinary Linear Regression · historical final holdout evaluation, not live next24h performance.")
     if final_release is None:
         st.warning(final_release_error)
     else:
-        section_header("Final Model Metrics")
+        section_header("Final Holdout Metrics")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Final Model", str(final_release["model_name"]))
         col2.metric("MAE", fmt(final_release["mae"]))
@@ -854,7 +904,7 @@ elif page == "Forecasting":
     if not has_columns(predictions, prediction_columns):
         show_data_warning("Actual-vs-predicted report", PREDICTIONS_DATA)
     else:
-        section_header("Actual vs Predicted")
+        section_header("Historical One-Hour Actual vs Predicted")
         plot_data = predictions.tail(500)
 
         fig = go.Figure()
@@ -986,6 +1036,14 @@ elif page == "Model Insights":
 
 elif page == "Pipeline Summary":
     gold_summary = load_csv_summary(GOLD_DATA)
+    source_summaries = {
+        "ENTSO-E prices": load_csv_summary(Path("data/raw/entsoe/prices.csv")),
+        "ENTSO-E load": load_csv_summary(Path("data/raw/entsoe/load.csv")),
+        "ENTSO-E generation": load_csv_summary(Path("data/raw/entsoe/generation.csv")),
+        "Open-Meteo historical weather": load_csv_summary(Path("data/raw/weather/open_meteo_weather.csv")),
+        "Silver": silver_summary,
+        "Gold": gold_summary,
+    }
     gold_feature_count = (
         len(
             [
@@ -1008,6 +1066,8 @@ elif page == "Pipeline Summary":
     }
     pipeline_history = load_recent_pipeline_history(PIPELINE_DATABASE, limit=10)
     quality_history = load_recent_data_quality_history(PIPELINE_DATABASE, limit=20)
+    incident_history = load_recent_incidents(PIPELINE_DATABASE, limit=100)
+    stage_timings = load_recent_stage_timings(PIPELINE_DATABASE, limit=200)
     latest_successful_run_time = load_latest_successful_run_time(PIPELINE_DATABASE)
     quality_counts = count_quality_statuses(quality_history)
     stored_message = latest_pipeline_run["message"] if latest_pipeline_run else None
@@ -1020,11 +1080,38 @@ elif page == "Pipeline Summary":
     if not isinstance(unresolved_gaps, dict):
         unresolved_gaps = {}
     continuity_warning_count = len(unresolved_gaps)
-    health = derive_system_health(
-        latest_pipeline_run["status"] if latest_pipeline_run else None,
-        quality_counts["failed"],
-        quality_counts["warnings"],
-        continuity_warning_count,
+    current_forecast, current_forecast_error = load_next24h_forecast_report(
+        NEXT24H_FORECAST_DATA
+    )
+    forecast_issue = (
+        current_forecast["forecast_issue_time"].iloc[0]
+        if current_forecast_error is None else None
+    )
+    withheld = (
+        isinstance(operational_metadata, dict)
+        and operational_metadata.get("next24h_forecast_status") == "UNAVAILABLE"
+    )
+    forecast_status = forecast_freshness_state(
+        forecast_issue, withholding_known=withheld
+    )
+    health = assess_operational_health(
+        latest_run_status=latest_pipeline_run["status"] if latest_pipeline_run else None,
+        latest_success_time=latest_successful_run_time,
+        core_source_timestamps={
+            name: source_summaries[name]["latest_timestamp"]
+            for name in ("ENTSO-E prices", "ENTSO-E load", "ENTSO-E generation")
+        },
+        forecast_issue_time=forecast_issue,
+        forecast_withheld=withheld,
+        quality_state=latest_quality_state(quality_history),
+        unresolved_gap_count=continuity_warning_count,
+        required_artifacts_available=(
+            final_release is not None
+            and all(path.is_file() for path in (
+                NEXT24H_RELEASE_MANIFEST, NEXT24H_RELEASE_MODEL,
+                NEXT24H_RELEASE_CONTRACT,
+            ))
+        ),
     )
     email_alert_status = alert_configuration_status()
     page_title("Pipeline Summary", "Automated DataOps Workflow")
@@ -1032,10 +1119,14 @@ elif page == "Pipeline Summary":
     section_header("System Health / Data Quality")
     health_message = f"{health['label']}. {health['reason']}"
     getattr(st, health["level"])(health_message)
-    st.caption(
-        "Status is derived from the latest pipeline result, the 20 most recent "
-        "data-quality checks, and unresolved source-continuity warnings."
-    )
+    with st.expander("How health status is determined"):
+        st.caption(
+            "Hourly health rules: degraded for a failed latest run, missing release/core "
+            "market source, failed current quality check, or >6-hour pipeline/core-market "
+            "age; warning for >2-hour last success, >3-hour core-market age, stale/withheld "
+            "forecast, or current quality/continuity warnings. Archive weather is excluded "
+            "from live freshness thresholds."
+        )
 
     health_metrics = [
         (
@@ -1067,10 +1158,12 @@ elif page == "Pipeline Summary":
         ("Quality Checks Passed", fmt_int(quality_counts["passed"])),
         ("Quality Checks Failed", fmt_int(quality_counts["failed"])),
         ("Continuity Warnings", fmt_int(continuity_warning_count)),
+        ("Next24h Forecast", forecast_status),
     ]
-    if email_alert_status is not None:
-        health_metrics.append(("Failure Email Alerts", email_alert_status))
-
+    try:
+        next24h_release = json.loads(NEXT24H_RELEASE_MANIFEST.read_text(encoding="utf-8")).get("release_id")
+    except (OSError, ValueError):
+        next24h_release = None
     for metric_start in range(0, len(health_metrics), 4):
         metric_columns = st.columns(4)
         for column, (label, value) in zip(
@@ -1078,6 +1171,18 @@ elif page == "Pipeline Summary":
             health_metrics[metric_start : metric_start + 4],
         ):
             column.metric(label, value)
+    st.caption(
+        f"Latest successful pipeline run: {fmt_timestamp(latest_successful_run_time)} · "
+        f"Latest next24h issue: {fmt_timestamp(forecast_issue)} "
+        f"({age_label(forecast_issue)})"
+    )
+    st.caption(
+        f"Market: DE-LU · Storage: "
+        f"{operational_metadata.get('storage_backend', 'Unavailable') if isinstance(operational_metadata, dict) else 'Unavailable'} "
+        f"· One-hour model: {final_release['model_name'] if final_release else 'Unavailable'} "
+        f"· Next24h release: {next24h_release or 'Unavailable'} "
+        f"· Failure email alerts: {email_alert_status}"
+    )
 
     section_header("Latest Pipeline Run")
     if latest_pipeline_run is None:
@@ -1101,7 +1206,7 @@ elif page == "Pipeline Summary":
         col3.metric(records_label, fmt_int(records_value))
 
         if not isinstance(operational_metadata, dict):
-            st.info(str(stored_message or "No pipeline message recorded."))
+            st.info(redact_operational_text(stored_message or "No pipeline message recorded."))
         else:
             summary_fields = [
                 ("mode", "Mode"),
@@ -1137,12 +1242,9 @@ elif page == "Pipeline Summary":
                             value = fmt_timestamp(value).removesuffix(" UTC")
                         column.metric(label, str(value))
 
-            st.info(
-                str(
-                    operational_metadata.get("message")
-                    or "No pipeline message recorded."
-                )
-            )
+            st.info(redact_operational_text(
+                operational_metadata.get("message") or "No pipeline message recorded."
+            ))
 
             if unresolved_gaps:
                 warning_count = len(unresolved_gaps)
@@ -1198,6 +1300,97 @@ elif page == "Pipeline Summary":
             width="stretch",
             hide_index=True,
         )
+
+    section_header("Data-Source Health")
+    issue_by_source = {}
+    for incident in incident_history.to_dict(orient="records"):
+        if incident.get("severity") not in {"WARNING", "ERROR"}:
+            continue
+        component = str(incident.get("component", ""))
+        message = str(incident.get("message", ""))
+        for source_name in (*source_summaries, "Open-Meteo operational weather", "next24h forecast"):
+            if source_name not in issue_by_source and (
+                source_name.lower() in component.lower()
+                or source_name.lower() in message.lower()
+            ):
+                issue_by_source[source_name] = message
+    source_rows = []
+    for name, summary in source_summaries.items():
+        timestamp = summary["latest_timestamp"]
+        kind = (
+            "historical_weather" if name == "Open-Meteo historical weather"
+            else name.lower() if name in {"Silver", "Gold"}
+            else "market"
+        )
+        source_rows.append({
+            "Source": name,
+            "Status": source_freshness_state(timestamp, source_kind=kind),
+            "Latest UTC": fmt_timestamp(timestamp),
+            "Age": age_label(timestamp),
+            "Rows": summary["row_count"] if summary["available"] else None,
+            "Last Known Issue": issue_by_source.get(name, ""),
+        })
+    operational_weather_time = (
+        operational_metadata.get("next24h_weather_acquired_at_utc")
+        if isinstance(operational_metadata, dict) else None
+    )
+    source_rows.extend([
+        {
+            "Source": "Open-Meteo operational weather",
+            "Status": source_freshness_state(operational_weather_time, source_kind="market"),
+            "Latest UTC": fmt_timestamp(operational_weather_time),
+            "Age": age_label(operational_weather_time),
+            "Rows": None,
+            "Last Known Issue": issue_by_source.get("Open-Meteo operational weather", ""),
+        },
+        {
+            "Source": "next24h forecast",
+            "Status": forecast_status,
+            "Latest UTC": fmt_timestamp(forecast_issue),
+            "Age": age_label(forecast_issue),
+            "Rows": len(current_forecast) if current_forecast_error is None else None,
+            "Last Known Issue": issue_by_source.get("next24h forecast", ""),
+        },
+    ])
+    st.dataframe(pd.DataFrame(source_rows), width="stretch", hide_index=True)
+    st.caption("Historical weather and Silver/Gold are archive-aligned; operational weather is an in-memory issue-hour input, so its acquisition time—not an archive watermark—is shown.")
+
+    section_header("Recent Operational Incidents")
+    if incident_history.empty:
+        st.info("No operational incidents have been recorded yet.")
+    else:
+        filters = st.columns(3)
+        severity = filters[0].selectbox("Severity", ["All", *sorted(incident_history["severity"].dropna().unique())])
+        component = filters[1].selectbox("Component", ["All", *sorted(incident_history["component"].dropna().unique())])
+        period = filters[2].selectbox("Recent period", ["All", "24 hours", "7 days", "30 days"])
+        visible = filter_incidents(
+            incident_history, severity=severity, component=component, period=period,
+        )
+        if visible.empty:
+            st.info("No incidents match these filters.")
+        else:
+            st.dataframe(
+                visible.loc[:, ["timestamp_utc", "severity", "component", "message"]]
+                .rename(columns={"timestamp_utc": "Time (UTC)", "severity": "Severity", "component": "Component", "message": "Message"}),
+                width="stretch", hide_index=True,
+            )
+
+    section_header("Pipeline Performance")
+    timing_summary = summarize_pipeline_timings(stage_timings)
+    if timing_summary is None:
+        st.info("Stage timings will appear after an instrumented pipeline run.")
+    else:
+        columns = st.columns(4)
+        columns[0].metric("Latest Pipeline", f"{timing_summary['latest_total_seconds']:.1f} s")
+        columns[1].metric("Recent Average (≤10)", f"{timing_summary['recent_average_seconds']:.1f} s" if timing_summary["recent_average_seconds"] is not None else "Unavailable")
+        columns[2].metric("Forecast Generation", f"{timing_summary['latest_forecast_seconds']:.1f} s" if timing_summary["latest_forecast_seconds"] is not None else "Unavailable")
+        columns[3].metric("Slowest Stage", timing_summary["slowest_stage"] or "Unavailable")
+        with st.expander("View latest stage durations"):
+            st.dataframe(
+                timing_summary["latest_run_timings"].loc[:, ["stage_name", "duration_seconds", "status"]]
+                .rename(columns={"stage_name": "Stage", "duration_seconds": "Seconds", "status": "Status"}),
+                width="stretch", hide_index=True,
+            )
 
     section_header("Dataset Status")
     col1, col2, col3 = st.columns(3)

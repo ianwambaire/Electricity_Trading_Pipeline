@@ -3,6 +3,9 @@ import json
 import os
 import subprocess
 import sys
+import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -22,9 +25,12 @@ from models.next24h_production import (
 from models.prediction_visualization import run_prediction_report
 from notifications.email_alert import send_failure_alert
 from store_data import (
+    incident_is_active,
     initialize_database,
     log_data_quality_result,
+    log_incident,
     log_pipeline_run,
+    log_stage_timing,
 )
 from storage import StorageConfig, StorageSync
 from utils.logger import get_logger
@@ -38,6 +44,44 @@ from validate_data import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 logger = get_logger(__name__)
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _record_incident(*args, **kwargs) -> bool:
+    """Observability failure must not replace the pipeline's primary outcome."""
+    try:
+        initialize_database()
+        return log_incident(*args, **kwargs)
+    except Exception:
+        logger.exception("Unable to record PowerFlow operational incident.")
+        return False
+
+
+def _timed_stage(run_id: str | None, stage_name: str, operation, *args, **kwargs):
+    if run_id is None:
+        return operation(*args, **kwargs)
+    started_at = _utc_now()
+    started_clock = time.perf_counter()
+    status = "SUCCESS"
+    try:
+        return operation(*args, **kwargs)
+    except ForecastUnavailableError:
+        status = "WITHHELD"
+        raise
+    except Exception:
+        status = "FAILED"
+        raise
+    finally:
+        try:
+            log_stage_timing(
+                run_id, stage_name, started_at, _utc_now(),
+                time.perf_counter() - started_clock, status,
+            )
+        except Exception:
+            logger.exception("Unable to record timing for %s.", stage_name)
 
 
 def _ensure_runtime_directories():
@@ -234,6 +278,15 @@ def _record_gap_warnings(unresolved_gaps):
             status="WARNING",
             message=json.dumps(gap, sort_keys=True),
         )
+        _record_incident(
+            "WARNING", "ENTSO-E", "source_gap", "ACTIVE",
+            f"ENTSO-E {dataset_name} has {gap.get('missing_count', 'unknown')} missing source intervals.",
+            {
+                "source": dataset_name,
+                "first_unresolved_timestamp": gap.get("first_unresolved_timestamp"),
+                "missing_count": gap.get("missing_count"),
+            },
+        )
 
 
 def _sync_storage_group(synchronizer, storage_state, group, stage_name):
@@ -261,20 +314,35 @@ def _sync_storage_group(synchronizer, storage_state, group, stage_name):
     return result
 
 
-def _run_next24h_stages(storage_sync, storage_state):
-    release_id = verify_next24h_release_task()
+def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
+    release_id = _timed_stage(
+        run_id, "Next24h model verification", verify_next24h_release_task
+    )
     storage_state["next24h_model_release"] = release_id
     _sync_storage_group(
         storage_sync, storage_state, "next24h_release", "Next24h model release S3 synchronization"
     )
     try:
-        issue_time, changed, provenance = next24h_forecast_task()
+        issue_time, changed, provenance = _timed_stage(
+            run_id, "Next24h forecast generation", next24h_forecast_task
+        )
     except ForecastUnavailableError as error:
         warning = f"Next24h forecast unavailable: {error}"
         storage_state["next24h_forecast_status"] = "UNAVAILABLE"
         storage_state["warnings"].append(warning)
         initialize_database()
         log_data_quality_result("next24h_forecast_freshness", "WARNING", warning)
+        recorded = _record_incident(
+            "WARNING", "next24h forecast", "forecast_withheld", "ACTIVE",
+            warning,
+        )
+        if recorded:
+            alert_result = send_failure_alert("PowerFlow next24h forecast withheld", warning)
+            if alert_result == "FAILED":
+                _record_incident(
+                    "ERROR", "email alerts", "email_alert_failed", "ACTIVE",
+                    "Forecast withholding email alert could not be delivered.",
+                )
     else:
         storage_state["next24h_forecast_status"] = (
             "GENERATED" if changed else "UNCHANGED"
@@ -282,10 +350,24 @@ def _run_next24h_stages(storage_sync, storage_state):
         storage_state["next24h_forecast_issue_time"] = str(issue_time)
         storage_state["next24h_weather_source"] = provenance["weather_source"]
         storage_state["next24h_weather_acquired_at_utc"] = provenance["weather_acquired_at_utc"]
+        try:
+            if incident_is_active("next24h forecast", "forecast_withheld"):
+                _record_incident(
+                    "INFO", "next24h forecast", "forecast_withheld", "RESOLVED",
+                    "Next24h forecasting resumed with complete current inputs.",
+                )
+                log_data_quality_result(
+                    "next24h_forecast_freshness", "PASSED",
+                    "Next24h forecast issuance resumed with fresh complete inputs.",
+                )
+        except Exception:
+            logger.exception("Unable to inspect prior forecast withholding state.")
         _sync_storage_group(
             storage_sync, storage_state, "next24h_forecasts", "Next24h forecast S3 synchronization"
         )
-    realized_count, metric_count = next24h_monitoring_task()
+    realized_count, metric_count = _timed_stage(
+        run_id, "Next24h monitoring", next24h_monitoring_task
+    )
     storage_state["next24h_realized_pairs"] = realized_count
     storage_state["next24h_performance_rows"] = metric_count
     if (
@@ -380,6 +462,10 @@ def powerflow_entsoe_pipeline(
     if mode == "incremental" and (start_date is not None or end_date is not None):
         raise ValueError("start_date/end_date are supported only in historical mode.")
 
+    run_id = uuid.uuid4().hex
+    total_started_at = _utc_now()
+    total_started_clock = time.perf_counter()
+    total_status = "FAILED"
     stage_name = "Runtime directory initialization"
     records_processed = 0
     new_rows_ingested = 0
@@ -392,6 +478,7 @@ def powerflow_entsoe_pipeline(
     storage_config = StorageConfig.from_env(storage_backend)
     storage_sync = StorageSync(storage_config, PROJECT_ROOT)
     storage_state = {
+        "run_id": run_id,
         "storage_backend": storage_config.backend,
         "s3_bucket": storage_config.s3_bucket,
         "s3_sync_status": "PENDING" if storage_config.backend == "s3" else "NOT_REQUIRED",
@@ -405,11 +492,15 @@ def powerflow_entsoe_pipeline(
 
     try:
         _ensure_runtime_directories()
+        initialize_database()
         raw_rows_before = _raw_row_counts()
         raw_watermark_before = _raw_watermark()
 
         stage_name = "ENTSO-E ingestion"
-        entsoe_metadata = entsoe_ingestion_task(mode, start_date, end_date)
+        entsoe_metadata = _timed_stage(
+            run_id, "ENTSO-E ingestion", entsoe_ingestion_task,
+            mode, start_date, end_date,
+        )
         generation_cells_repaired = int(entsoe_metadata.get("repaired_cells", 0))
         generation_cells_revised = int(entsoe_metadata.get("revised_cells", 0))
         storage_state["generation_cells_repaired"] = generation_cells_repaired
@@ -423,6 +514,19 @@ def powerflow_entsoe_pipeline(
         storage_state["generation_revised_by_column"] = generation_metadata.get(
             "revised_by_column", {}
         )
+        for event_type, count, by_column in (
+            ("generation_repair", generation_cells_repaired,
+             storage_state["generation_repaired_by_column"]),
+            ("generation_revision", generation_cells_revised,
+             storage_state["generation_revised_by_column"]),
+        ):
+            if count:
+                verb = "repaired missing cells" if event_type == "generation_repair" else "accepted recent source revisions"
+                _record_incident(
+                    "INFO", "ENTSO-E generation", event_type, "RECORDED",
+                    f"ENTSO-E generation {verb}: {count}.",
+                    {"cell_count": count, "by_column": by_column},
+                )
         unresolved_gaps = _entsoe_unresolved_gaps(entsoe_metadata)
         _record_gap_warnings(unresolved_gaps)
         storage_state["warnings"].extend(
@@ -434,7 +538,10 @@ def powerflow_entsoe_pipeline(
         _sync_storage_group(storage_sync, storage_state, "raw_entsoe", stage_name)
 
         stage_name = "Open-Meteo weather ingestion"
-        weather_metadata = weather_ingestion_task(mode, start_date, end_date)
+        weather_metadata = _timed_stage(
+            run_id, "Weather ingestion", weather_ingestion_task,
+            mode, start_date, end_date,
+        )
 
         stage_name = "Open-Meteo raw S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "raw_weather", stage_name)
@@ -462,7 +569,7 @@ def powerflow_entsoe_pipeline(
             new_rows_ingested, generation_cells_repaired, generation_cells_revised,
         ):
             stage_name = "Next24h release and forecast processing"
-            _run_next24h_stages(storage_sync, storage_state)
+            _run_next24h_stages(storage_sync, storage_state, run_id)
             stage_name = "Pipeline run-history logging"
             initialize_database()
             metadata = _operational_metadata(
@@ -483,49 +590,56 @@ def powerflow_entsoe_pipeline(
                 message=json.dumps(metadata, sort_keys=True),
             )
             logger.info(metadata["message"])
+            total_status = "SUCCESS"
             return metadata
 
         stage_name = "Silver dataset creation"
-        build_silver_task()
+        _timed_stage(run_id, "Silver build", build_silver_task)
 
         stage_name = "Silver dataset validation"
-        records_processed = validate_silver_task()
+        records_processed = _timed_stage(
+            run_id, "Silver validation", validate_silver_task
+        )
 
         stage_name = "Silver S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "silver", stage_name)
 
         stage_name = "Gold dataset creation"
-        build_gold_task()
+        _timed_stage(run_id, "Gold build", build_gold_task)
 
         stage_name = "Gold dataset validation"
-        records_processed = validate_gold_task()
+        records_processed = _timed_stage(
+            run_id, "Gold validation", validate_gold_task
+        )
 
         stage_name = "Gold S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "gold", stage_name)
 
         stage_name = "Frozen final model verification"
-        verify_final_model_release_task()
+        _timed_stage(run_id, "One-hour model verification", verify_final_model_release_task)
 
         stage_name = "Frozen model release S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "model_release", stage_name)
 
         stage_name = "Actual-vs-predicted report generation"
-        predictions_generated = prediction_report_task(mode)
+        predictions_generated = _timed_stage(
+            run_id, "Actual-vs-predicted report", prediction_report_task, mode
+        )
 
         stage_name = "Prediction report S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "predictions", stage_name)
 
         stage_name = "Next24h release and forecast processing"
-        _run_next24h_stages(storage_sync, storage_state)
+        _run_next24h_stages(storage_sync, storage_state, run_id)
 
         stage_name = "Anomaly detection"
-        anomaly_detection_task()
+        _timed_stage(run_id, "Anomaly detection", anomaly_detection_task)
 
         stage_name = "Anomaly report S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "anomalies", stage_name)
 
         stage_name = "Feature importance generation"
-        feature_importance_task()
+        _timed_stage(run_id, "Feature importance", feature_importance_task)
 
         stage_name = "Monitoring report S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "monitoring", stage_name)
@@ -550,6 +664,7 @@ def powerflow_entsoe_pipeline(
             "PowerFlow ENTSO-E pipeline completed successfully (%s gold rows).",
             records_processed,
         )
+        total_status = "SUCCESS"
         return metadata
 
     except Exception as error:
@@ -568,6 +683,19 @@ def powerflow_entsoe_pipeline(
             f"PowerFlow ENTSO-E pipeline failed during '{stage_name}': {error}"
         )
         logger.exception(message)
+
+        failure_type = "pipeline_stage_failed"
+        if "validation" in stage_name.lower():
+            failure_type = "data_quality_validation_failed"
+        elif "model" in stage_name.lower() and "verification" in stage_name.lower():
+            failure_type = "model_verification_failed"
+        elif "ingestion" in stage_name.lower():
+            failure_type = "ingestion_failed"
+        _record_incident(
+            "ERROR", "pipeline", failure_type, "ACTIVE",
+            f"Pipeline stage failed: {stage_name}.",
+            {"run_id": run_id, "stage": stage_name},
+        )
 
         try:
             initialize_database()
@@ -589,7 +717,7 @@ def powerflow_entsoe_pipeline(
         except Exception:
             logger.exception("Unable to record the failed pipeline run in SQLite.")
 
-        send_failure_alert(
+        alert_result = send_failure_alert(
             subject="PowerFlow ENTSO-E Pipeline Failed",
             message=(
                 f"Failed stage: {stage_name}\n\n"
@@ -598,7 +726,21 @@ def powerflow_entsoe_pipeline(
                 "Check logs/pipeline.log and Prefect for details."
             ),
         )
+        if alert_result == "FAILED":
+            _record_incident(
+                "ERROR", "email alerts", "email_alert_failed", "ACTIVE",
+                "Pipeline failure email alert could not be delivered.",
+                {"run_id": run_id},
+            )
         raise
+    finally:
+        try:
+            log_stage_timing(
+                run_id, "Total pipeline", total_started_at, _utc_now(),
+                time.perf_counter() - total_started_clock, total_status,
+            )
+        except Exception:
+            logger.exception("Unable to record total pipeline duration.")
 
 
 def parse_args():

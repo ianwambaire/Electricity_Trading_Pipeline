@@ -12,6 +12,7 @@ from dashboard_health import (
     load_recent_data_quality_history,
     load_recent_pipeline_history,
     prepare_pipeline_history,
+    redact_operational_text,
 )
 
 
@@ -153,7 +154,7 @@ def test_alert_status_detection_never_returns_secret_values():
 
     assert status == "Configured"
     assert all(value not in status for value in environment.values())
-    assert alert_configuration_status({}) is None
+    assert alert_configuration_status({}) == "Not configured"
 
 
 def test_continuity_message_omits_missing_timestamp_array():
@@ -174,3 +175,17 @@ def test_continuity_message_omits_missing_timestamp_array():
         "72 missing timestamps; first unresolved 2026-01-01T03:00:00+00:00"
     )
     assert "2026-01-01T04:00:00+00:00" not in summary
+
+
+def test_legacy_operational_messages_redact_credentials_before_display():
+    message = (
+        "Request failed: token=sample-secret Bearer another-secret "
+        "postgresql://user:private-pass@localhost/db"
+    )
+
+    redacted = redact_operational_text(message)
+    assert "sample-secret" not in redacted
+    assert "another-secret" not in redacted
+    assert "private-pass" not in redacted
+    assert "[REDACTED]" in redacted
+    assert "sample-secret" not in concise_history_message(message)

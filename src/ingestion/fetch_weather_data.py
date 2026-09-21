@@ -30,7 +30,6 @@ WEATHER_VARIABLES = [
     "cloud_cover",
     "shortwave_radiation",
 ]
-WEATHER_PUBLICATION_DELAY_DAYS = 5
 
 
 def combine_weather_chunks(chunks: list[pd.DataFrame]) -> pd.DataFrame:
@@ -90,7 +89,9 @@ def fetch_weather_timestamp_range(
                 f"Open-Meteo response is missing variables: {missing_variables}"
             )
 
-        weather_chunk = pd.DataFrame(hourly).rename(columns={"time": "timestamp"})
+        weather_chunk = pd.DataFrame(hourly).rename(columns={"time": "timestamp"})[
+            ["timestamp", *WEATHER_VARIABLES]
+        ]
         if not weather_chunk.empty:
             weather_chunk["timestamp"] = pd.to_datetime(
                 weather_chunk["timestamp"], utc=True
@@ -163,10 +164,9 @@ def fetch_open_meteo_weather(
             if latest is None
             else latest + pd.Timedelta(hours=1)
         )
-        archive_cutoff = completed_utc_hour(now) - pd.Timedelta(
-            days=WEATHER_PUBLICATION_DELAY_DAYS
-        )
-        end_utc_exclusive = archive_cutoff.floor("D")
+        # The archive endpoint includes recent IFS data. Request completed UTC
+        # days only; do not treat current-day or future forecast hours as history.
+        end_utc_exclusive = completed_utc_hour(now).floor("D")
         if start_utc >= end_utc_exclusive:
             print("No new Open-Meteo weather interval is currently due.")
             return {

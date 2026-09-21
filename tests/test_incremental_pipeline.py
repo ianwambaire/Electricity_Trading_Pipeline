@@ -610,7 +610,7 @@ def test_weather_no_new_interval_does_not_call_api(tmp_path):
 
     result = fetch_open_meteo_weather(
         mode="incremental",
-        now=pd.Timestamp("2025-01-15T12:00:00Z"),
+        now=pd.Timestamp("2025-01-11T12:00:00Z"),
         output_path=path,
         session=NoNetworkSession(),
     )

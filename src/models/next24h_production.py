@@ -10,7 +10,9 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import requests
 
+from ingestion.fetch_weather_data import fetch_operational_weather
 from models.final_evaluation import FINAL_FEATURES
 from models.next24h import (
     FORECAST_COLUMNS,
@@ -19,12 +21,16 @@ from models.next24h import (
     build_issue_features,
     create_next24h_forecast,
 )
+from processing.build_silver_dataset import clean_generation, clean_load, clean_prices
 
 
 RELEASE_DIR = Path("artifacts/models/releases/next24h")
-SILVER_PATH = Path("data/processed/silver_electricity_market_data.csv")
+PRICES_PATH = Path("data/raw/entsoe/prices.csv")
+LOAD_PATH = Path("data/raw/entsoe/load.csv")
+GENERATION_PATH = Path("data/raw/entsoe/generation.csv")
 LATEST_PATH = Path("data/reports/next24h_forecast.csv")
 HISTORY_PATH = Path("data/reports/next24h_forecast_history.csv")
+PROVENANCE_PATH = Path("data/reports/next24h_forecast_provenance.json")
 HISTORY_COLUMNS = (*FORECAST_COLUMNS, "issued_at_utc")
 DEFAULT_MAX_AGE_HOURS = 3.0
 
@@ -138,6 +144,83 @@ def forecast_from_silver(
     return forecast
 
 
+def assemble_operational_issue_features(
+    *,
+    prices_path: Path = PRICES_PATH,
+    load_path: Path = LOAD_PATH,
+    generation_path: Path = GENERATION_PATH,
+    now: pd.Timestamp | None = None,
+    max_age_hours: float = DEFAULT_MAX_AGE_HOURS,
+    weather_session=requests,
+) -> tuple[pd.DataFrame, dict]:
+    """Select the newest exact-hour market/operational-weather feature row."""
+    if not 0 < max_age_hours <= 24:
+        raise ValueError("Forecast freshness threshold must be > 0 and <= 24 hours.")
+    current = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    current = current.tz_localize("UTC") if current.tzinfo is None else current.tz_convert("UTC")
+    try:
+        market = clean_prices(prices_path).join(clean_load(load_path), how="inner")
+        market = market.join(clean_generation(generation_path), how="inner")
+    except (OSError, ValueError, KeyError) as error:
+        raise ForecastUnavailableError(f"Complete market inputs unavailable: {error}") from error
+    # Raw quarter-hours within hour T are not known until T+1. Never use a
+    # nominally complete future/in-progress hour in live inference.
+    market = market.loc[market.index < current.floor("h")].sort_index()
+    if market.empty:
+        raise ForecastUnavailableError("No complete market hour is available.")
+    newest_market = market.index.max()
+    if current - newest_market > pd.Timedelta(hours=max_age_hours):
+        raise ForecastUnavailableError(
+            f"Latest complete market hour {newest_market.isoformat()} exceeds the "
+            f"{max_age_hours:g}-hour freshness threshold."
+        )
+    try:
+        weather, acquired_at = fetch_operational_weather(
+            current, lookback_hours=max(4, int(np.ceil(max_age_hours)) + 1),
+            session=weather_session,
+        )
+    except (requests.RequestException, ValueError, KeyError) as error:
+        raise ForecastUnavailableError(f"Operational weather unavailable: {error}") from error
+    if weather.empty:
+        raise ForecastUnavailableError("No complete operational weather hour is available.")
+    market = market.reset_index().rename(columns={"index": "timestamp"})
+    issue_data = market.merge(weather, on="timestamp", how="left", validate="one_to_one")
+    # The shared feature builder reindexes exact UTC hours before lag/rolling
+    # calculations; absent market hours cannot be silently skipped.
+    try:
+        issues = build_issue_features(issue_data)
+    except (ValueError, KeyError) as error:
+        raise ForecastUnavailableError(f"Issue-time feature history unavailable: {error}") from error
+    issues = issues.loc[
+        (issues["timestamp"] <= current)
+        & (current - issues["timestamp"] <= pd.Timedelta(hours=max_age_hours))
+    ]
+    if not issues.empty:
+        issues = issues.loc[
+            np.isfinite(issues.loc[:, list(FINAL_FEATURES)].to_numpy(dtype=float)).all(axis=1)
+        ]
+    if issues.empty:
+        raise ForecastUnavailableError(
+            "No fresh issue hour has both complete exact-hour market history "
+            "and matching operational weather."
+        )
+    issue = issues.tail(1).rename(columns={"timestamp": ISSUE_TIME})
+    issue_time = issue[ISSUE_TIME].iloc[0]
+    if issue_time not in set(weather["timestamp"]):
+        raise ForecastUnavailableError("Operational weather does not match the issue hour.")
+    provenance = {
+        "forecast_issue_time": issue_time.isoformat(),
+        "market_latest_complete_hour": newest_market.isoformat(),
+        "weather_hour": issue_time.isoformat(),
+        "weather_acquired_at_utc": acquired_at.isoformat(),
+        "weather_source": "open_meteo_forecast_api_operational_model",
+        "historical_weather_source": "open_meteo_archive_api_historical_reanalysis",
+        "weather_endpoint": "https://api.open-meteo.com/v1/forecast",
+        "weather_note": "Operational model weather; not historical observations or future weather.",
+    }
+    return issue, provenance
+
+
 def _atomic_csv(data: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -199,19 +282,42 @@ def save_forecast(
 def run_next24h_forecast(
     *,
     release_dir: Path = RELEASE_DIR,
-    silver_path: Path = SILVER_PATH,
+    prices_path: Path = PRICES_PATH,
+    load_path: Path = LOAD_PATH,
+    generation_path: Path = GENERATION_PATH,
     latest_path: Path = LATEST_PATH,
     history_path: Path = HISTORY_PATH,
+    provenance_path: Path = PROVENANCE_PATH,
     now: pd.Timestamp | None = None,
     max_age_hours: float | None = None,
+    weather_session=requests,
 ) -> tuple[pd.DataFrame, bool]:
     model, features, manifest = load_next24h_release(release_dir)
-    silver = pd.read_csv(silver_path, low_memory=False)
-    forecast = forecast_from_silver(
-        silver, model, features, manifest["release_id"], now=now,
+    issue, provenance = assemble_operational_issue_features(
+        prices_path=prices_path, load_path=load_path, generation_path=generation_path,
+        now=now, weather_session=weather_session,
         max_age_hours=max_age_hours if max_age_hours is not None else max_age_hours_from_env(),
     )
+    if tuple(features) != tuple(FINAL_FEATURES):
+        raise ValueError("Next24h feature contract mismatch.")
+    forecast = create_next24h_forecast(
+        issue, model, model_release=manifest["release_id"], features=features,
+    )
+    validate_forecast(forecast)
+    forecast.attrs["provenance"] = provenance
     changed = save_forecast(forecast, latest_path, history_path, issued_at_utc=now)
+    provenance_path = Path(provenance_path)
+    try:
+        existing_provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        existing_provenance = {}
+    if changed or not isinstance(existing_provenance, dict) or (
+        existing_provenance.get("forecast_issue_time") != provenance["forecast_issue_time"]
+    ):
+        provenance_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = provenance_path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(provenance_path)
     return forecast, changed
 
 

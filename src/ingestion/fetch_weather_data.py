@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+import numpy as np
 
 if __package__:
     from .historical_range import get_historical_date_range, iter_time_chunks, iter_utc_chunks
@@ -23,6 +24,7 @@ else:
 RAW_WEATHER_DIR = Path("data/raw/weather")
 OUTPUT_PATH = RAW_WEATHER_DIR / "open_meteo_weather.csv"
 OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
+OPERATIONAL_OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 WEATHER_VARIABLES = [
     "temperature_2m",
     "relative_humidity_2m",
@@ -30,6 +32,60 @@ WEATHER_VARIABLES = [
     "cloud_cover",
     "shortwave_radiation",
 ]
+
+
+def fetch_operational_weather(
+    now: pd.Timestamp | None = None,
+    *,
+    lookback_hours: int = 4,
+    session=requests,
+) -> tuple[pd.DataFrame, pd.Timestamp]:
+    """Fetch recent model weather in memory; never append it to observed history.
+
+    The forecast API may revise past model hours. This feed is for live inference
+    only, not historical training, backtests, or the observed-weather CSV.
+    """
+    current = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    current = current.tz_localize("UTC") if current.tzinfo is None else current.tz_convert("UTC")
+    if lookback_hours < 1:
+        raise ValueError("lookback_hours must be positive.")
+    end_hour = current.floor("h")
+    start_hour = end_hour - pd.Timedelta(hours=lookback_hours)
+    response = session.get(
+        OPERATIONAL_OPEN_METEO_URL,
+        params={
+            "latitude": 52.52,
+            "longitude": 13.41,
+            "hourly": WEATHER_VARIABLES,
+            "timezone": "UTC",
+            "start_hour": start_hour.strftime("%Y-%m-%dT%H:%M"),
+            "end_hour": end_hour.strftime("%Y-%m-%dT%H:%M"),
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if payload.get("timezone") not in {"GMT", "UTC"} or payload.get("utc_offset_seconds") != 0:
+        raise ValueError("Operational Open-Meteo response is not explicitly UTC.")
+    hourly = payload.get("hourly", {})
+    missing = [name for name in ["time", *WEATHER_VARIABLES] if name not in hourly]
+    if missing:
+        raise ValueError(f"Operational Open-Meteo response is missing: {missing}")
+    weather = pd.DataFrame(hourly).rename(columns={"time": "timestamp"})
+    weather = weather.loc[:, ["timestamp", *WEATHER_VARIABLES]]
+    weather["timestamp"] = pd.to_datetime(weather["timestamp"], errors="raise", utc=True)
+    if weather["timestamp"].duplicated().any() or (
+        weather["timestamp"] != weather["timestamp"].dt.floor("h")
+    ).any():
+        raise ValueError("Operational weather must have unique exact UTC hours.")
+    weather = weather.loc[
+        weather["timestamp"].between(start_hour, end_hour)
+    ].copy()
+    for name in WEATHER_VARIABLES:
+        weather[name] = pd.to_numeric(weather[name], errors="coerce")
+    weather[WEATHER_VARIABLES] = weather[WEATHER_VARIABLES].replace([np.inf, -np.inf], np.nan)
+    weather = weather.dropna(subset=WEATHER_VARIABLES)
+    return weather.sort_values("timestamp").reset_index(drop=True), current
 
 
 def combine_weather_chunks(chunks: list[pd.DataFrame]) -> pd.DataFrame:

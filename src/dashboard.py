@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import math
 import os
 import sqlite3
@@ -37,6 +38,7 @@ FEATURE_IMPORTANCE_DATA = Path("data/reports/feature_importance.csv")
 FINAL_RELEASE_MANIFEST = Path("artifacts/models/final_model_release_manifest.json")
 FINAL_HOLDOUT_METRICS = Path("data/reports/final_holdout_metrics.csv")
 NEXT24H_FORECAST_DATA = Path("data/reports/next24h_forecast.csv")
+NEXT24H_PROVENANCE_DATA = Path("data/reports/next24h_forecast_provenance.json")
 NEXT24H_PERFORMANCE_DATA = Path("data/reports/next24h_performance.csv")
 PIPELINE_DATABASE = Path("database/electricity_trading.db")
 CHART_MAX_POINTS = 4_000
@@ -738,6 +740,12 @@ elif page == "Forecasting":
         st.warning(next24h_error)
     else:
         issue_time = next24h_forecast["forecast_issue_time"].iloc[0]
+        try:
+            provenance = json.loads(NEXT24H_PROVENANCE_DATA.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            provenance = {}
+        if not isinstance(provenance, dict) or provenance.get("forecast_issue_time") != issue_time.isoformat():
+            provenance = {}
         display_now = pd.Timestamp.now(tz="UTC")
         freshness_hours = (display_now - issue_time).total_seconds() / 3600
         try:
@@ -748,7 +756,7 @@ elif page == "Forecasting":
             maximum_age = 3.0
         if freshness_hours < 0 or freshness_hours > maximum_age:
             st.warning(
-                f"This forecast is stale: its Silver issue hour is {freshness_hours:.1f} "
+                f"This forecast is stale: its issue hour is {freshness_hours:.1f} "
                 f"hours old (limit {maximum_age:g} hours). It is retained for reference, "
                 "not presented as a current forecast."
             )
@@ -761,10 +769,14 @@ elif page == "Forecasting":
         low = next24h_forecast.loc[next24h_forecast["predicted_price_eur_mwh"].idxmin()]
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Forecast Issue (UTC)", issue_time.strftime("%Y-%m-%d %H:%M"))
+        market_hour = provenance.get("market_latest_complete_hour")
         col2.metric(
-            "Silver Data Through (UTC)",
-            latest_timestamp.strftime("%Y-%m-%d %H:%M")
-            if latest_timestamp is not None and pd.notna(latest_timestamp) else "N/A",
+            "Market Data Through (UTC)" if market_hour else "Silver Data Through (UTC)",
+            pd.Timestamp(market_hour).strftime("%Y-%m-%d %H:%M")
+            if market_hour else (
+                latest_timestamp.strftime("%Y-%m-%d %H:%M")
+                if latest_timestamp is not None and pd.notna(latest_timestamp) else "N/A"
+            ),
         )
         col3.metric("Highest Predicted Price", f"{high['predicted_price_eur_mwh']:.2f} EUR/MWh")
         col4.metric("Lowest Predicted Price", f"{low['predicted_price_eur_mwh']:.2f} EUR/MWh")
@@ -773,6 +785,12 @@ elif page == "Forecasting":
             f"Peak: {high['target_timestamp']:%Y-%m-%d %H:%M} UTC · "
             f"Low: {low['target_timestamp']:%Y-%m-%d %H:%M} UTC"
         )
+        if provenance.get("weather_acquired_at_utc"):
+            st.caption(
+                "Issue-hour weather: Open-Meteo operational model (not historical "
+                "observations or future-horizon weather) · Acquired: "
+                f"{provenance['weather_acquired_at_utc']}"
+            )
         figure = go.Figure()
         figure.add_trace(go.Scatter(
             x=next24h_forecast["target_timestamp"],

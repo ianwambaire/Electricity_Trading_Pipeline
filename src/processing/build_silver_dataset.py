@@ -47,8 +47,8 @@ def aggregate_quarter_hourly(
     return hourly
 
 
-def clean_prices():
-    prices = pd.read_csv("data/raw/entsoe/prices.csv")
+def clean_prices(path: Path = Path("data/raw/entsoe/prices.csv")):
+    prices = pd.read_csv(path)
     parsed = pd.to_datetime(prices["timestamp"], errors="coerce", utc=True)
     if parsed.isna().any() or parsed.duplicated().any():
         raise ValueError("Raw ENTSO-E prices require unique, valid UTC timestamps.")
@@ -129,8 +129,8 @@ def aggregate_hourly_prices(prices: pd.DataFrame) -> pd.DataFrame:
     return hourly.loc[complete[complete].index]
 
 
-def clean_load():
-    load = pd.read_csv("data/raw/entsoe/load.csv")
+def clean_load(path: Path = Path("data/raw/entsoe/load.csv")):
+    load = pd.read_csv(path)
     load = set_utc_timestamp_index(load)
 
     load["load_mw"] = pd.to_numeric(load["load_mw"], errors="coerce")
@@ -141,8 +141,8 @@ def clean_load():
     return hourly_load
 
 
-def clean_generation():
-    generation = pd.read_csv("data/raw/entsoe/generation.csv", low_memory=False)
+def clean_generation(path: Path = Path("data/raw/entsoe/generation.csv")):
+    generation = pd.read_csv(path, low_memory=False)
 
     generation = set_utc_timestamp_index(generation)
 

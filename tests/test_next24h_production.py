@@ -16,11 +16,13 @@ from models.next24h_monitoring import (
 from models.next24h_production import (
     ForecastUnavailableError,
     RELEASE_DIR,
+    assemble_operational_issue_features,
     forecast_from_silver,
     load_next24h_release,
     run_next24h_forecast,
     save_forecast,
 )
+from ingestion.fetch_weather_data import WEATHER_VARIABLES, fetch_operational_weather
 from storage.mappings import object_key
 from storage.config import StorageConfig
 from storage.sync import SyncResult, StorageSync
@@ -40,6 +42,61 @@ def silver_hours(count=220):
         }:
             data[feature] = 100.0 + steps / 10
     return pd.DataFrame(data)
+
+
+def operational_inputs(tmp_path, *, count=220, missing_market_hour=None, weather_offset=0):
+    silver = silver_hours(count)
+    hours = pd.to_datetime(silver["timestamp"], utc=True)
+    prices = tmp_path / "prices.csv"
+    load = tmp_path / "load.csv"
+    generation = tmp_path / "generation.csv"
+    pd.DataFrame({
+        "timestamp": hours, "price_eur_mwh": silver["price_eur_mwh"],
+        "source_resolution": "PT60M",
+    }).to_csv(prices, index=False)
+    quarter_hours = pd.DatetimeIndex(
+        [hour + pd.Timedelta(minutes=minute) for hour in hours for minute in (0, 15, 30, 45)]
+    )
+    if missing_market_hour is not None:
+        quarter_hours = quarter_hours[quarter_hours != missing_market_hour]
+    pd.DataFrame({"timestamp": quarter_hours, "load_mw": 110.0}).to_csv(load, index=False)
+    pd.DataFrame({
+        "timestamp": quarter_hours,
+        "Biomass": 10.0, "Fossil Brown coal/Lignite": 10.0,
+        "Fossil Gas": 10.0, "Fossil Hard coal": 10.0,
+        "Hydro Run-of-river and poundage": 10.0,
+        "Nuclear": 0.0, "Solar": 10.0, "Wind Offshore": 5.0,
+        "Wind Onshore": 5.0,
+    }).to_csv(generation, index=False)
+
+    class WeatherSession:
+        def __init__(self):
+            self.params = None
+
+        def get(self, url, *, params, timeout):
+            assert url == "https://api.open-meteo.com/v1/forecast"
+            assert timeout == 60
+            self.params = params
+            end = pd.Timestamp(params["end_hour"], tz="UTC") + pd.Timedelta(hours=weather_offset)
+            times = pd.date_range(end - pd.Timedelta(hours=4), end, freq="h")
+
+            class Response:
+                def raise_for_status(self):
+                    pass
+
+                def json(self):
+                    return {
+                        "timezone": "GMT",
+                        "utc_offset_seconds": 0,
+                        "hourly": {
+                            "time": [time.strftime("%Y-%m-%dT%H:%M") for time in times],
+                            **{name: [50.0] * len(times) for name in WEATHER_VARIABLES},
+                        },
+                    }
+
+            return Response()
+
+    return (prices, load, generation), WeatherSession(), hours.iloc[-1]
 
 
 def test_promoted_release_is_separate_and_matches_approved_candidate():
@@ -99,16 +156,23 @@ def test_missing_latest_feature_history_refuses_issue():
         )
 
 
-def test_local_forecast_and_append_only_history(tmp_path):
-    silver = silver_hours()
-    issue = silver["timestamp"].max()
-    silver_path = tmp_path / "silver.csv"
+def test_local_forecast_and_append_only_history(tmp_path, monkeypatch):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    release_dir = RELEASE_DIR.resolve()
+    silver = tmp_path / "data/processed/silver_electricity_market_data.csv"
+    historical_weather = tmp_path / "data/raw/weather/open_meteo_weather.csv"
+    for path in (silver, historical_weather):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("unchanged historical data\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
     latest = tmp_path / "latest.csv"
     history = tmp_path / "history.csv"
-    silver.to_csv(silver_path, index=False)
+    provenance = tmp_path / "provenance.json"
     first, changed = run_next24h_forecast(
-        silver_path=silver_path, latest_path=latest, history_path=history,
-        now=issue + pd.Timedelta(minutes=30),
+        release_dir=release_dir,
+        prices_path=prices, load_path=load, generation_path=generation,
+        latest_path=latest, history_path=history, provenance_path=provenance,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
     )
     assert changed and len(pd.read_csv(latest)) == len(pd.read_csv(history)) == 24
     assert list(pd.read_csv(latest).columns) == [
@@ -116,30 +180,159 @@ def test_local_forecast_and_append_only_history(tmp_path):
         "predicted_price_eur_mwh", "model_release",
     ]
     assert "issued_at_utc" in pd.read_csv(history).columns
+    assert json.loads(provenance.read_text())["weather_source"] == (
+        "open_meteo_forecast_api_operational_model"
+    )
     latest.unlink()  # Simulate interruption after the history write.
     second, changed = run_next24h_forecast(
-        silver_path=silver_path, latest_path=latest, history_path=history,
-        now=issue + pd.Timedelta(minutes=40),
+        release_dir=release_dir,
+        prices_path=prices, load_path=load, generation_path=generation,
+        latest_path=latest, history_path=history, provenance_path=provenance,
+        now=issue + pd.Timedelta(hours=1, minutes=40), weather_session=session,
     )
     assert not changed and len(pd.read_csv(history)) == len(pd.read_csv(latest)) == 24
     assert first.equals(second)
-    next_hour = silver.tail(1).copy()
-    next_hour["timestamp"] = issue + pd.Timedelta(hours=1)
-    next_hour["price_eur_mwh"] += 1
-    pd.concat([silver, next_hour], ignore_index=True).to_csv(silver_path, index=False)
+    next_hour = issue + pd.Timedelta(hours=1)
+    price_data = pd.read_csv(prices)
+    price_data.loc[len(price_data)] = [next_hour, 111.0, "PT60M"]
+    price_data.to_csv(prices, index=False)
+    for path in (load, generation):
+        data = pd.read_csv(path)
+        additions = data.tail(4).copy()
+        additions["timestamp"] = [next_hour + pd.Timedelta(minutes=m) for m in (0, 15, 30, 45)]
+        pd.concat([data, additions], ignore_index=True).to_csv(path, index=False)
     _, changed = run_next24h_forecast(
-        silver_path=silver_path, latest_path=latest, history_path=history,
-        now=issue + pd.Timedelta(hours=1, minutes=30),
+        release_dir=release_dir,
+        prices_path=prices, load_path=load, generation_path=generation,
+        latest_path=latest, history_path=history, provenance_path=provenance,
+        now=issue + pd.Timedelta(hours=2, minutes=30), weather_session=session,
     )
     assert changed and len(pd.read_csv(history)) == 48
     assert len(pd.read_csv(latest)) == 24
     with pytest.raises(ForecastUnavailableError):
         run_next24h_forecast(
-            silver_path=silver_path, latest_path=latest, history_path=history,
-            now=issue + pd.Timedelta(hours=5),
+            release_dir=release_dir,
+            prices_path=prices, load_path=load, generation_path=generation,
+            latest_path=latest, history_path=history, provenance_path=provenance,
+            now=issue + pd.Timedelta(hours=5), weather_session=session,
         )
     assert len(pd.read_csv(latest)) == 24
     assert len(pd.read_csv(history)) == 48
+    assert silver.read_text() == "unchanged historical data\n"
+    assert historical_weather.read_text() == "unchanged historical data\n"
+
+
+def test_operational_weather_is_utc_bounded_and_separate_from_history(tmp_path):
+    paths, session, issue = operational_inputs(tmp_path)
+    historical = tmp_path / "open_meteo_weather.csv"
+    historical.write_text("historical sentinel\n", encoding="utf-8")
+    weather, acquired = fetch_operational_weather(
+        issue + pd.Timedelta(hours=1, minutes=30), session=session,
+    )
+    assert acquired == issue + pd.Timedelta(hours=1, minutes=30)
+    assert weather["timestamp"].dt.tz is not None
+    assert weather["timestamp"].max() == issue + pd.Timedelta(hours=1)
+    assert session.params["timezone"] == "UTC"
+    assert session.params["end_hour"] == (issue + pd.Timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
+    assert historical.read_text() == "historical sentinel\n"
+
+
+def test_operational_weather_rejects_duplicate_utc_hours_at_dst(tmp_path):
+    _, session, _ = operational_inputs(tmp_path)
+
+    class DuplicateSession:
+        def get(self, *args, **kwargs):
+            response = session.get(*args, **kwargs)
+            payload = response.json()
+            payload["hourly"]["time"][-1] = payload["hourly"]["time"][-2]
+
+            class DuplicateResponse:
+                def raise_for_status(self):
+                    pass
+
+                def json(self):
+                    return payload
+
+            return DuplicateResponse()
+
+    with pytest.raises(ValueError, match="unique exact UTC hours"):
+        fetch_operational_weather(
+            pd.Timestamp("2026-10-25T03:30Z"), session=DuplicateSession(),
+        )
+
+
+def test_operational_issue_ignores_future_market_rows(tmp_path):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    future = issue + pd.Timedelta(hours=1)
+    price_data = pd.read_csv(prices)
+    price_data.loc[len(price_data)] = [future, 999.0, "PT60M"]
+    price_data.to_csv(prices, index=False)
+    for path in (load, generation):
+        data = pd.read_csv(path)
+        additions = data.tail(4).copy()
+        additions["timestamp"] = [future + pd.Timedelta(minutes=m) for m in (0, 15, 30, 45)]
+        pd.concat([data, additions], ignore_index=True).to_csv(path, index=False)
+    row, provenance = assemble_operational_issue_features(
+        prices_path=prices, load_path=load, generation_path=generation,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+    )
+    assert row["forecast_issue_time"].iloc[0] == issue
+    assert provenance["market_latest_complete_hour"] == issue.isoformat()
+
+
+def test_operational_issue_exact_contract_and_market_history(tmp_path):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    row, provenance = assemble_operational_issue_features(
+        prices_path=prices, load_path=load, generation_path=generation,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+    )
+    assert row["forecast_issue_time"].iloc[0] == issue
+    assert tuple(row.drop(columns="forecast_issue_time")) == tuple(FINAL_FEATURES)
+    assert row["price_lag_1h"].iloc[0] == pytest.approx(100 + 218 / 10)
+    assert row["price_lag_24h"].iloc[0] == pytest.approx(100 + 195 / 10)
+    assert row["price_lag_168h"].iloc[0] == pytest.approx(100 + 51 / 10)
+    assert row["renewable_generation_mw"].iloc[0] == pytest.approx(40.0)
+    assert row["renewable_share"].iloc[0] == pytest.approx(4 / 7)
+    assert provenance["weather_hour"] == issue.isoformat()
+    assert provenance["weather_acquired_at_utc"] == (
+        issue + pd.Timedelta(hours=1, minutes=30)
+    ).isoformat()
+
+
+def test_operational_issue_uses_latest_eligible_not_gap_crossing(tmp_path):
+    gap = pd.Timestamp("2026-09-10T02:45Z")
+    (prices, load, generation), session, issue = operational_inputs(
+        tmp_path, missing_market_hour=gap,
+    )
+    assert gap.floor("h") == issue - pd.Timedelta(hours=1)
+    row, _ = assemble_operational_issue_features(
+        prices_path=prices, load_path=load, generation_path=generation,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+        max_age_hours=4,
+    )
+    assert row["forecast_issue_time"].iloc[0] == issue - pd.Timedelta(hours=2)
+
+
+@pytest.mark.parametrize("weather_offset", [-5, 6])
+def test_operational_issue_refuses_stale_or_missing_weather(tmp_path, weather_offset):
+    (prices, load, generation), session, issue = operational_inputs(
+        tmp_path, weather_offset=weather_offset,
+    )
+    with pytest.raises(ForecastUnavailableError, match="weather|issue hour"):
+        assemble_operational_issue_features(
+            prices_path=prices, load_path=load, generation_path=generation,
+            now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+        )
+
+
+def test_operational_issue_refuses_stale_market_before_weather_request(tmp_path):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    with pytest.raises(ForecastUnavailableError, match="market hour"):
+        assemble_operational_issue_features(
+            prices_path=prices, load_path=load, generation_path=generation,
+            now=issue + pd.Timedelta(hours=5), weather_session=session,
+        )
+    assert session.params is None
 
 
 def test_realized_matching_requires_true_pre_target_issuance():
@@ -240,10 +433,12 @@ def test_next24h_release_s3_group_uses_existing_storage_abstraction(tmp_path):
     reports.mkdir(parents=True)
     (reports / "next24h_forecast.csv").write_text("forecast_issue_time\n", encoding="utf-8")
     (reports / "next24h_forecast_history.csv").write_text("forecast_issue_time\n", encoding="utf-8")
+    (reports / "next24h_forecast_provenance.json").write_text("{}\n", encoding="utf-8")
     forecast_sync = sync.sync_group("next24h_forecasts")
     assert forecast_sync.uploaded == [
         "reports/predictions/next24h/next24h_forecast.csv",
         "reports/predictions/next24h/next24h_forecast_history.csv",
+        "reports/predictions/next24h/next24h_forecast_provenance.json",
     ]
 
 

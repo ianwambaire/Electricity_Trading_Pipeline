@@ -157,9 +157,9 @@ def verify_next24h_release_task() -> str:
 
 
 @task(name="Generate next24h production forecast")
-def next24h_forecast_task() -> tuple[str, bool]:
+def next24h_forecast_task() -> tuple[str, bool, dict]:
     forecast, changed = run_next24h_forecast()
-    return forecast["forecast_issue_time"].iloc[0], changed
+    return forecast["forecast_issue_time"].iloc[0], changed, forecast.attrs["provenance"]
 
 
 @task(name="Monitor next24h realized forecast errors")
@@ -268,7 +268,7 @@ def _run_next24h_stages(storage_sync, storage_state):
         storage_sync, storage_state, "next24h_release", "Next24h model release S3 synchronization"
     )
     try:
-        issue_time, changed = next24h_forecast_task()
+        issue_time, changed, provenance = next24h_forecast_task()
     except ForecastUnavailableError as error:
         warning = f"Next24h forecast unavailable: {error}"
         storage_state["next24h_forecast_status"] = "UNAVAILABLE"
@@ -280,6 +280,8 @@ def _run_next24h_stages(storage_sync, storage_state):
             "GENERATED" if changed else "UNCHANGED"
         )
         storage_state["next24h_forecast_issue_time"] = str(issue_time)
+        storage_state["next24h_weather_source"] = provenance["weather_source"]
+        storage_state["next24h_weather_acquired_at_utc"] = provenance["weather_acquired_at_utc"]
         _sync_storage_group(
             storage_sync, storage_state, "next24h_forecasts", "Next24h forecast S3 synchronization"
         )

@@ -14,6 +14,7 @@ ARTIFACT_MAPPINGS = {
     "data/reports/actual_vs_predicted.png": "reports/predictions/actual_vs_predicted.png",
     "data/reports/next24h_forecast.csv": "reports/predictions/next24h/next24h_forecast.csv",
     "data/reports/next24h_forecast_history.csv": "reports/predictions/next24h/next24h_forecast_history.csv",
+    "data/reports/next24h_forecast_provenance.json": "reports/predictions/next24h/next24h_forecast_provenance.json",
     "data/reports/next24h_realized_errors.csv": "reports/predictions/next24h/next24h_realized_errors.csv",
     "data/reports/next24h_performance.csv": "reports/predictions/next24h/next24h_performance.csv",
     "data/reports/detected_anomalies.csv": "reports/anomalies/detected_anomalies.csv",

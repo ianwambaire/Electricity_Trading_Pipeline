@@ -8,16 +8,26 @@ def build_gold_dataset(
 ):
     df = pd.read_csv(silver_path)
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="raise", utc=True)
     df = df.sort_values("timestamp")
+    if df["timestamp"].duplicated().any():
+        raise ValueError("Silver timestamps must be unique before Gold construction.")
+    if (df["timestamp"] != df["timestamp"].dt.floor("h")).any():
+        raise ValueError("Silver timestamps must be exact UTC hours.")
+    # Missing Silver hours remain NaN placeholders in memory. Positional shifts
+    # and rolling windows therefore represent real elapsed UTC hours, not rows.
+    complete_hours = pd.date_range(
+        df["timestamp"].min(), df["timestamp"].max(), freq="h", tz="UTC"
+    )
+    df = df.set_index("timestamp").reindex(complete_hours).rename_axis("timestamp")
     # Germany's final nuclear plants stopped reporting from local midnight on
     # 2023-04-16 (2023-04-15 22:00 UTC). Later missing values represent 0 MW.
     df["nuclear_mw"] = df["nuclear_mw"].fillna(0)
 
     # Time-based features
-    df["hour"] = df["timestamp"].dt.hour
-    df["day_of_week"] = df["timestamp"].dt.dayofweek
-    df["month"] = df["timestamp"].dt.month
+    df["hour"] = df.index.hour
+    df["day_of_week"] = df.index.dayofweek
+    df["month"] = df.index.month
     df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
 
     # Price lag features
@@ -51,7 +61,7 @@ def build_gold_dataset(
     df["target_price_next_hour"] = df["price_eur_mwh"].shift(-1)
 
     # Remove rows created by lag/rolling/target shifts
-    df = df.dropna()
+    df = df.dropna().reset_index()
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

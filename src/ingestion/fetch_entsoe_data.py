@@ -84,7 +84,8 @@ def combine_time_chunks(chunks: list[pd.Series | pd.DataFrame]):
         raise ValueError("At least one non-empty ENTSO-E chunk is required.")
 
     combined = pd.concat(chunks)
-    combined = combined.loc[~combined.index.duplicated(keep="last")]
+    if combined.index.duplicated().any():
+        raise ValueError("ENTSO-E chunks contain duplicate timestamps.")
     return combined.sort_index()
 
 
@@ -338,6 +339,20 @@ def _append_generation_safely(path: Path, generation: pd.DataFrame):
     return new_rows, latest
 
 
+def _latest_complete_price_hour(path: Path) -> str | None:
+    if not path.exists() or path.stat().st_size == 0:
+        return None
+    from processing.build_silver_dataset import aggregate_hourly_prices
+
+    prices = pd.read_csv(path)
+    prices["timestamp"] = pd.to_datetime(
+        prices["timestamp"], errors="raise", utc=True
+    )
+    prices = prices.set_index("timestamp")
+    complete = aggregate_hourly_prices(prices)
+    return complete.index[-1].isoformat() if not complete.empty else None
+
+
 def _incremental_dataset(
     client,
     query_method,
@@ -390,9 +405,7 @@ def _incremental_dataset(
             "unresolved_gap": None,
         }
         if is_price:
-            metadata["latest_complete_hour"] = (
-                latest.floor("h").isoformat() if latest is not None else None
-            )
+            metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
         return metadata
 
     values = fetch_timestamp_range(
@@ -411,9 +424,7 @@ def _incremental_dataset(
             "unresolved_gap": None,
         }
         if is_price:
-            metadata["latest_complete_hour"] = (
-                latest.floor("h").isoformat() if latest is not None else None
-            )
+            metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
         return metadata
 
     continuity = (
@@ -425,7 +436,9 @@ def _incremental_dataset(
         if is_price
         else contiguous_prefix(values, start_utc, interval)
     )
-    safe_values = continuity.data
+    # Retain genuine observations on both sides of an isolated source gap.
+    # Hourly completeness is decided downstream; no missing value is filled.
+    observed_values = values
 
     unresolved_gap = None
     if continuity.missing_timestamps:
@@ -449,24 +462,30 @@ def _incremental_dataset(
                 if continuity.returned_last_timestamp is not None
                 else None
             ),
+            "later_observations_retained": int(
+                (values.index > continuity.first_unresolved_timestamp).sum()
+            ),
+            "affected_hour": (
+                continuity.first_unresolved_timestamp.floor("h").isoformat()
+            ),
         }
         print(
             f"ENTSO-E {dataset_name} has an unresolved source gap at "
-            f"{unresolved_gap['first_unresolved_timestamp']}; appending only "
-            "the preceding contiguous prefix."
+            f"{unresolved_gap['first_unresolved_timestamp']}; retaining later "
+            "observed rows while excluding incomplete hours downstream."
         )
 
-    if safe_values.empty:
+    if observed_values.empty:
         new_rows = 0
         latest_timestamp = latest
     elif allow_column_union and value_name is None:
         new_rows, latest_timestamp = _append_generation_safely(
-            output_path, safe_values
+            output_path, observed_values
         )
     else:
         result = append_csv_safely(
             output_path,
-            _to_value_frame(safe_values, value_name),
+            _to_value_frame(observed_values, value_name),
             allow_column_union=allow_column_union or is_price,
         )
         new_rows = result.new_rows
@@ -481,11 +500,7 @@ def _incremental_dataset(
         "unresolved_gap": unresolved_gap,
     }
     if is_price:
-        metadata["latest_complete_hour"] = (
-            latest_timestamp.floor("h").isoformat()
-            if latest_timestamp is not None
-            else None
-        )
+        metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
         if unresolved_gap is not None:
             unresolved_gap["last_complete_hour"] = metadata[
                 "latest_complete_hour"
@@ -583,10 +598,25 @@ def fetch_entsoe_data(
         historical_range.start_utc,
         quarter_hourly_transition=QUARTER_HOURLY_PRICE_START_UTC,
     )
+    price_gap = None
     if price_continuity.first_unresolved_timestamp is not None:
-        raise RuntimeError(
+        price_gap = {
+            "first_unresolved_timestamp": (
+                price_continuity.first_unresolved_timestamp.isoformat()
+            ),
+            "missing_count": len(price_continuity.missing_timestamps),
+            "missing_timestamps": [
+                timestamp.isoformat()
+                for timestamp in price_continuity.missing_timestamps
+            ],
+            "later_observations_retained": int(
+                (prices.index > price_continuity.first_unresolved_timestamp).sum()
+            ),
+        }
+        print(
             "Historical ENTSO-E prices have a source gap at "
-            f"{price_continuity.first_unresolved_timestamp.isoformat()}."
+            f"{price_gap['first_unresolved_timestamp']}; retaining later "
+            "observed rows."
         )
     save_series(prices, RAW_ENTSOE_DIR / "prices.csv", "price_eur_mwh")
 
@@ -613,6 +643,7 @@ def fetch_entsoe_data(
             "day-ahead prices": {
                 "new_rows": len(prices),
                 "latest_timestamp": prices.index.max(),
+                "unresolved_gap": price_gap,
             },
             "actual load": {
                 "new_rows": len(load),

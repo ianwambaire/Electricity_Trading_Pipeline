@@ -59,7 +59,7 @@ def test_entsoe_chunk_boundaries_are_contiguous_and_end_exclusive():
     )
 
 
-def test_entsoe_chunk_combination_removes_duplicate_timestamps_and_sorts():
+def test_entsoe_chunk_combination_rejects_duplicate_timestamps():
     first = pd.Series(
         [10.0, 20.0],
         index=pd.to_datetime(["2020-01-01T01:00Z", "2020-01-01T02:00Z"]),
@@ -69,8 +69,11 @@ def test_entsoe_chunk_combination_removes_duplicate_timestamps_and_sorts():
         index=pd.to_datetime(["2020-01-01T02:00Z", "2020-01-01T03:00Z"]),
     )
 
-    combined = combine_time_chunks([second, first])
+    with pytest.raises(ValueError, match="duplicate timestamps"):
+        combine_time_chunks([second, first])
 
+    unique_second = second.iloc[1:]
+    combined = combine_time_chunks([unique_second, first])
     assert combined.index.is_monotonic_increasing
     assert combined.index.is_unique
     assert combined.loc[pd.Timestamp("2020-01-01T02:00Z")] == 20.0

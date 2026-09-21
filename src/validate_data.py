@@ -189,8 +189,8 @@ def _validate_hourly_continuity(
     timestamps = pd.to_datetime(data["timestamp"], errors="coerce", utc=True)
     valid_timestamps = pd.DatetimeIndex(timestamps.dropna())
     if valid_timestamps.empty:
-        missing_timestamps = []
-        continuous = False
+        missing_timestamps = pd.DatetimeIndex([], tz="UTC")
+        valid_hours = False
     else:
         expected = pd.date_range(
             valid_timestamps.min(),
@@ -199,24 +199,30 @@ def _validate_hourly_continuity(
             tz="UTC",
         )
         missing_timestamps = expected.difference(valid_timestamps)
-        spacing = timestamps.diff().dropna()
-        continuous = (
+        valid_hours = (
             timestamps.notna().all()
             and timestamps.is_unique
             and timestamps.is_monotonic_increasing
-            and spacing.eq(pd.Timedelta(hours=1)).all()
-            and len(missing_timestamps) == 0
+            and timestamps.eq(timestamps.dt.floor("h")).all()
         )
 
-    missing_display = [timestamp.isoformat() for timestamp in missing_timestamps]
     _log_check(
         f"{dataset_name} Hourly Continuity Check",
-        continuous,
-        "Timestamps are strictly increasing at exactly one-hour UTC intervals.",
-        f"Missing or irregular hourly UTC timestamps: {missing_display}",
+        valid_hours,
+        "Timestamps are unique, ordered, exact UTC hours.",
+        "Timestamps must be unique, ordered, exact UTC hours.",
         errors,
         log_results,
     )
+    if valid_hours and len(missing_timestamps) and log_results:
+        log_data_quality_result(
+            f"{dataset_name} Missing Hour Coverage",
+            "WARNING",
+            f"{len(missing_timestamps)} hourly timestamps excluded; first="
+            f"{missing_timestamps[0].isoformat()}, last="
+            f"{missing_timestamps[-1].isoformat()}, later valid hours retained through "
+            f"{valid_timestamps.max().isoformat()}.",
+        )
 
 
 def _validate_nuclear_shutdown_missingness(

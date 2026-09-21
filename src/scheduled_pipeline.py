@@ -369,7 +369,11 @@ def powerflow_entsoe_pipeline(
                 or raw_watermark_after > raw_watermark_before
             )
         )
-        if mode == "incremental" and not complete_watermark_advanced:
+        if (
+            mode == "incremental"
+            and not complete_watermark_advanced
+            and new_rows_ingested == 0
+        ):
             stage_name = "Pipeline run-history logging"
             initialize_database()
             metadata = _operational_metadata(

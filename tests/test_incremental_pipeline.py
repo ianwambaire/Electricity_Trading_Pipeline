@@ -7,6 +7,7 @@ import pytest
 from ingestion.fetch_weather_data import fetch_open_meteo_weather
 from ingestion.fetch_entsoe_data import (
     _incremental_dataset,
+    combine_time_chunks,
     fetch_entsoe_data,
     parse_price_observations,
 )
@@ -21,7 +22,12 @@ from ingestion.incremental_utils import (
 from models.final_evaluation import FINAL_FEATURES
 from models import prediction_visualization
 from processing.build_gold_dataset import build_gold_dataset
-from processing.build_silver_dataset import aggregate_hourly_prices
+from processing.build_silver_dataset import (
+    aggregate_hourly_prices,
+    aggregate_quarter_hourly,
+    build_silver_dataset,
+    set_utc_timestamp_index,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -233,7 +239,7 @@ def test_incremental_price_transition_appends_without_duplicates(tmp_path):
     assert stored_hourly["price_eur_mwh"].tolist() == [2.5, 1.0, 2.0]
 
 
-def test_historical_price_ingestion_preserves_resolution_and_rejects_gaps(
+def test_historical_price_ingestion_preserves_resolution_and_later_rows_after_gap(
     tmp_path, monkeypatch
 ):
     import ingestion.fetch_entsoe_data as ingestion
@@ -285,12 +291,13 @@ def test_historical_price_ingestion_preserves_resolution_and_rejects_gaps(
     assert pd.to_datetime(stored["timestamp"], utc=True).is_unique
 
     client.prices = client.prices.drop(pd.Timestamp("2026-09-12T20:15Z"))
-    before = (tmp_path / "raw" / "prices.csv").read_bytes()
-    with pytest.raises(RuntimeError, match="source gap"):
-        fetch_entsoe_data(
-            "2026-09-12", "2026-09-12", mode="historical", client=client
-        )
-    assert (tmp_path / "raw" / "prices.csv").read_bytes() == before
+    with_gap = fetch_entsoe_data(
+        "2026-09-12", "2026-09-12", mode="historical", client=client
+    )
+    stored_with_gap = pd.read_csv(tmp_path / "raw" / "prices.csv")
+    assert with_gap["datasets"]["day-ahead prices"]["unresolved_gap"]["missing_count"] == 1
+    assert "2026-09-12 23:00:00+00:00" in stored_with_gap["timestamp"].tolist()
+    assert "2026-09-12 20:15:00+00:00" not in stored_with_gap["timestamp"].tolist()
 
 
 def test_no_new_data_leaves_stored_csv_unchanged(tmp_path):
@@ -442,7 +449,7 @@ def test_real_quarter_hour_gap_returns_only_complete_contiguous_hours():
     assert set(result.data.index).issubset(set(returned.index))
 
 
-def test_gap_watermark_stops_before_incomplete_hour_and_retry_starts_there(
+def test_gap_retains_later_raw_observations_without_duplicates(
     tmp_path,
 ):
     path = tmp_path / "prices.csv"
@@ -490,19 +497,42 @@ def test_gap_watermark_stops_before_incomplete_hour_and_retry_starts_there(
     stored = pd.read_csv(path)
     stored_timestamps = pd.to_datetime(stored["timestamp"], utc=True)
 
-    assert first["latest_timestamp"] == pd.Timestamp("2026-09-12T21:45:00Z")
+    assert first["latest_timestamp"] == pd.Timestamp("2026-09-12T23:00:00Z")
     assert first["latest_complete_hour"] == "2026-09-12T21:00:00+00:00"
+    assert first["unresolved_gap"]["later_observations_retained"] == 1
     assert first["unresolved_gap"]["first_unresolved_timestamp"] == (
         "2026-09-12T22:15:00+00:00"
     )
     assert second["new_rows"] == 0
-    assert starts == [
-        pd.Timestamp("2026-09-12T20:00:00Z"),
-        pd.Timestamp("2026-09-12T22:00:00Z"),
-    ]
+    assert starts == [pd.Timestamp("2026-09-12T20:00:00Z")]
     assert path.read_bytes() == first_bytes
     assert stored_timestamps.is_unique
-    assert pd.Timestamp("2026-09-12T22:00:00Z") not in set(stored_timestamps)
+    assert pd.Timestamp("2026-09-12T22:00:00Z") in set(stored_timestamps)
+    assert pd.Timestamp("2026-09-12T23:00:00Z") in set(stored_timestamps)
+
+
+def test_missing_load_quarter_hour_does_not_block_later_raw_hours(tmp_path):
+    path = tmp_path / "load.csv"
+    pd.DataFrame({"timestamp": ["2026-09-19T08:00Z"], "load_mw": [40000.0]}).to_csv(
+        path, index=False
+    )
+
+    def query(_country_code, start, end):
+        observed = pd.date_range(start, end - pd.Timedelta(minutes=15), freq="15min")
+        observed = observed.difference(pd.DatetimeIndex(["2026-09-19T08:45Z"]))
+        return pd.Series(40000.0, index=observed)
+
+    result = _incremental_dataset(
+        None, query, dataset_name="actual load", output_path=path,
+        default_interval="15min", end_utc_exclusive=pd.Timestamp("2026-09-19T11:00Z"),
+        value_name="load_mw",
+    )
+    stored = pd.read_csv(path)
+    timestamps = pd.to_datetime(stored["timestamp"], utc=True)
+    assert result["unresolved_gap"]["first_unresolved_timestamp"] == "2026-09-19T08:45:00+00:00"
+    assert result["unresolved_gap"]["later_observations_retained"] > 0
+    assert pd.Timestamp("2026-09-19T10:45Z") in set(timestamps)
+    assert pd.Timestamp("2026-09-19T08:45Z") not in set(timestamps)
 
 
 def test_incomplete_quarter_hour_price_is_not_aggregated():
@@ -521,6 +551,80 @@ def test_incomplete_quarter_hour_price_is_not_aggregated():
 
     assert hourly.index.tolist() == [pd.Timestamp("2026-09-12T20:00:00Z")]
     assert hourly.iloc[0]["price_eur_mwh"] == 25
+
+
+def test_quarter_hour_gaps_exclude_only_affected_silver_hours_across_dst():
+    index = pd.date_range("2026-03-28T22:00Z", periods=20, freq="15min")
+    gaps = pd.DatetimeIndex(["2026-03-28T23:45Z", "2026-03-29T01:15Z"])
+    observed = index.difference(gaps)
+    load = pd.DataFrame({"load_mw": 40000.0}, index=observed)
+    hourly = aggregate_quarter_hourly(
+        load, require_complete_hours=True, required_columns=["load_mw"]
+    )
+
+    assert hourly.index.tolist() == [
+        pd.Timestamp("2026-03-28T22:00Z"),
+        pd.Timestamp("2026-03-29T00:00Z"),
+        pd.Timestamp("2026-03-29T02:00Z"),
+    ]
+    assert hourly.index.is_unique
+    assert str(hourly.index.tz) == "UTC"
+
+
+def test_duplicate_raw_timestamp_is_rejected_not_silently_deduplicated():
+    raw = pd.DataFrame(
+        {"timestamp": ["2026-09-19T08:00Z", "2026-09-19T08:00Z"], "load_mw": [1, 2]}
+    )
+    with pytest.raises(ValueError, match="unique"):
+        set_utc_timestamp_index(raw)
+
+
+def test_duplicate_source_chunks_are_rejected():
+    timestamp = pd.Timestamp("2026-09-19T08:00Z")
+    source = pd.Series([1.0], index=pd.DatetimeIndex([timestamp]))
+    with pytest.raises(ValueError, match="duplicate timestamps"):
+        combine_time_chunks([source, source])
+
+
+def test_silver_rebuild_skips_incomplete_hour_and_keeps_later_hour(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    quarter_hours = pd.date_range("2026-09-19T08:00Z", periods=12, freq="15min")
+    complete_hours = pd.date_range("2026-09-19T08:00Z", periods=3, freq="h")
+    raw_dir = tmp_path / "data/raw/entsoe"
+    weather_dir = tmp_path / "data/raw/weather"
+    raw_dir.mkdir(parents=True)
+    weather_dir.mkdir(parents=True)
+    pd.DataFrame({
+        "timestamp": quarter_hours,
+        "price_eur_mwh": np.arange(12, dtype=float),
+        "source_resolution": "PT15M",
+    }).to_csv(raw_dir / "prices.csv", index=False)
+    observed_load = quarter_hours.difference(pd.DatetimeIndex(["2026-09-19T08:45Z"]))
+    pd.DataFrame({"timestamp": observed_load, "load_mw": 40000.0}).to_csv(
+        raw_dir / "load.csv", index=False
+    )
+    generation = pd.DataFrame({"timestamp": quarter_hours})
+    for column in (
+        "Biomass", "Fossil Brown coal/Lignite", "Fossil Gas",
+        "Fossil Hard coal", "Hydro Run-of-river and poundage", "Nuclear",
+        "Solar", "Wind Offshore", "Wind Onshore",
+    ):
+        generation[column] = 100.0
+    generation.to_csv(raw_dir / "generation.csv", index=False)
+    weather = pd.DataFrame({"timestamp": complete_hours})
+    for column in (
+        "temperature_2m", "relative_humidity_2m", "wind_speed_10m",
+        "cloud_cover", "shortwave_radiation",
+    ):
+        weather[column] = 10.0
+    weather.to_csv(weather_dir / "open_meteo_weather.csv", index=False)
+
+    build_silver_dataset()
+    silver = pd.read_csv("data/processed/silver_electricity_market_data.csv")
+    assert pd.to_datetime(silver["timestamp"], utc=True).tolist() == [
+        pd.Timestamp("2026-09-19T09:00Z"),
+        pd.Timestamp("2026-09-19T10:00Z"),
+    ]
 
 
 def test_entsoe_no_new_data_after_clean_catchup_does_not_query(tmp_path):

@@ -13,15 +13,17 @@ def set_utc_timestamp_index(data: pd.DataFrame) -> pd.DataFrame:
         errors="coerce",
         utc=True,
     )
-    data = data.dropna(subset=["timestamp"])
+    if data["timestamp"].isna().any() or data["timestamp"].duplicated().any():
+        raise ValueError("Raw source timestamps must be valid and unique in UTC.")
     data = data.set_index("timestamp").sort_index()
-    return data.loc[~data.index.duplicated(keep="last")]
+    return data
 
 
 def aggregate_quarter_hourly(
     data: pd.DataFrame,
     *,
     require_complete_hours: bool = False,
+    required_columns: list[str] | None = None,
 ) -> pd.DataFrame:
     data = data.copy()
     data.index = pd.to_datetime(data.index, utc=True)
@@ -29,7 +31,19 @@ def aggregate_quarter_hourly(
     hourly = data.resample("h").mean()
     if require_complete_hours:
         counts = data.resample("h").size()
-        hourly = hourly.loc[counts == 4]
+        aligned = (
+            data.index.minute.isin([0, 15, 30, 45])
+            & (data.index.second == 0)
+            & (data.index.microsecond == 0)
+            & (data.index.nanosecond == 0)
+        )
+        aligned_hours = pd.Series(aligned, index=data.index).resample("h").min()
+        complete = counts.eq(4) & aligned_hours
+        if required_columns:
+            complete &= (
+                data[required_columns].notna().resample("h").sum().eq(4).all(axis=1)
+            )
+        hourly = hourly.loc[complete[complete].index]
     return hourly
 
 
@@ -54,10 +68,29 @@ def aggregate_hourly_prices(prices: pd.DataFrame) -> pd.DataFrame:
     hourly = prices[["price_eur_mwh"]].resample("h").mean()
     counts = prices.resample("h").size()
     if "source_resolution" not in prices.columns:
-        incomplete_quarter_hours = (
-            hourly.index >= QUARTER_HOURLY_PRICE_START_UTC
-        ) & (counts != 4)
-        return hourly.loc[~incomplete_quarter_hours]
+        quarter_hourly = hourly.index >= QUARTER_HOURLY_PRICE_START_UTC
+        expected_count = pd.Series(
+            [4 if recent else 1 for recent in quarter_hourly], index=hourly.index
+        )
+        aligned = (
+            (prices.index.second == 0)
+            & (prices.index.microsecond == 0)
+            & (prices.index.nanosecond == 0)
+            & (
+                (
+                    (prices.index >= QUARTER_HOURLY_PRICE_START_UTC)
+                    & (prices.index.minute % 15 == 0)
+                )
+                | (
+                    (prices.index < QUARTER_HOURLY_PRICE_START_UTC)
+                    & (prices.index.minute == 0)
+                )
+            )
+        )
+        aligned_hours = pd.Series(aligned, index=prices.index).resample("h").min()
+        valid_prices = prices["price_eur_mwh"].notna().resample("h").min()
+        complete = counts.eq(expected_count) & aligned_hours & valid_prices
+        return hourly.loc[complete]
 
     resolutions = prices["source_resolution"].copy()
     legacy = resolutions.isna()
@@ -102,7 +135,9 @@ def clean_load():
 
     load["load_mw"] = pd.to_numeric(load["load_mw"], errors="coerce")
 
-    hourly_load = aggregate_quarter_hourly(load, require_complete_hours=True)
+    hourly_load = aggregate_quarter_hourly(
+        load, require_complete_hours=True, required_columns=["load_mw"]
+    )
     return hourly_load
 
 
@@ -113,11 +148,6 @@ def clean_generation():
 
     for col in generation.columns:
         generation[col] = pd.to_numeric(generation[col], errors="coerce")
-
-    hourly_generation = aggregate_quarter_hourly(
-        generation,
-        require_complete_hours=True,
-    )
 
     useful_columns = [
         "Biomass",
@@ -133,8 +163,16 @@ def clean_generation():
 
     existing_columns = [
         col for col in useful_columns
-        if col in hourly_generation.columns
+        if col in generation.columns
     ]
+
+    hourly_generation = aggregate_quarter_hourly(
+        generation,
+        require_complete_hours=True,
+        required_columns=[
+            column for column in existing_columns if column != "Nuclear"
+        ],
+    )
 
     hourly_generation = hourly_generation[existing_columns]
 
@@ -174,11 +212,14 @@ def clean_weather():
         )
 
     weather = set_utc_timestamp_index(weather)
+    if (weather.index != weather.index.floor("h")).any():
+        raise ValueError("Open-Meteo weather timestamps must be exact UTC hours.")
 
     for col in weather.columns:
         weather[col] = pd.to_numeric(weather[col], errors="coerce")
 
-    return weather
+    return weather.dropna()
+
 
 def build_silver_dataset():
     prices = clean_prices()

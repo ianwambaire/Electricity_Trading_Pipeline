@@ -144,6 +144,48 @@ def forecast_from_silver(
     return forecast
 
 
+def _historical_market_features(hourly: pd.DataFrame, source: str) -> pd.DataFrame:
+    """Calculate lags and rolls on this source's own exact UTC-hour timeline."""
+    value = "price_eur_mwh" if source == "price" else "load_mw"
+    if hourly.empty:
+        return pd.DataFrame(index=pd.DatetimeIndex([], tz="UTC"))
+    if hourly.index.has_duplicates or (hourly.index != hourly.index.floor("h")).any():
+        raise ValueError(f"Cleaned {source} hours must be unique exact UTC hours.")
+    full_hours = pd.date_range(hourly.index.min(), hourly.index.max(), freq="h", tz="UTC")
+    history = hourly[[value]].reindex(full_hours)
+    lags = (1, 24, 168) if source == "price" else (1, 24)
+    for lag in lags:
+        history[f"{source}_lag_{lag}h"] = history[value].shift(lag)
+    history[f"{source}_rolling_mean_24h"] = history[value].rolling(24).mean()
+    if source == "price":
+        history["price_rolling_std_24h"] = history[value].rolling(24).std()
+    return history.replace([np.inf, -np.inf], np.nan).dropna()
+
+
+def _current_generation_features(hourly: pd.DataFrame) -> pd.DataFrame:
+    """Use only current-hour generation, with the same nuclear rule as Gold."""
+    columns = (
+        "biomass_mw", "lignite_mw", "gas_mw", "hard_coal_mw", "hydro_mw",
+        "nuclear_mw", "solar_mw", "wind_offshore_mw", "wind_onshore_mw",
+        "wind_total_mw",
+    )
+    missing = sorted(set(columns) - set(hourly.columns))
+    if missing:
+        raise ValueError(f"Current generation is missing required columns: {missing}")
+    generation = hourly.loc[:, list(columns)].copy()
+    generation["nuclear_mw"] = generation["nuclear_mw"].fillna(0)
+    generation["renewable_generation_mw"] = (
+        generation["solar_mw"] + generation["wind_total_mw"]
+        + generation["biomass_mw"] + generation["hydro_mw"]
+    )
+    generation["renewable_share"] = generation["renewable_generation_mw"] / (
+        generation["renewable_generation_mw"] + generation["lignite_mw"]
+        + generation["gas_mw"] + generation["hard_coal_mw"]
+        + generation["nuclear_mw"]
+    )
+    return generation.replace([np.inf, -np.inf], np.nan).dropna()
+
+
 def assemble_operational_issue_features(
     *,
     prices_path: Path = PRICES_PATH,
@@ -159,21 +201,51 @@ def assemble_operational_issue_features(
     current = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
     current = current.tz_localize("UTC") if current.tzinfo is None else current.tz_convert("UTC")
     try:
-        market = clean_prices(prices_path).join(clean_load(load_path), how="inner")
-        market = market.join(clean_generation(generation_path), how="inner")
+        prices = clean_prices(prices_path)
     except (OSError, ValueError, KeyError) as error:
-        raise ForecastUnavailableError(f"Complete market inputs unavailable: {error}") from error
+        raise ForecastUnavailableError(f"Price source unavailable: {error}") from error
+    try:
+        load = clean_load(load_path)
+    except (OSError, ValueError, KeyError) as error:
+        raise ForecastUnavailableError(f"Load source unavailable: {error}") from error
+    try:
+        generation = _current_generation_features(clean_generation(generation_path))
+    except (OSError, ValueError, KeyError) as error:
+        raise ForecastUnavailableError(f"Current generation unavailable: {error}") from error
     # Raw quarter-hours within hour T are not known until T+1. Never use a
     # nominally complete future/in-progress hour in live inference.
-    market = market.loc[market.index < current.floor("h")].sort_index()
+    completed_before = current.floor("h")
+    freshness = pd.Timedelta(hours=max_age_hours)
+    prices = prices.loc[prices.index < completed_before]
+    load = load.loc[load.index < completed_before]
+    generation = generation.loc[generation.index < completed_before]
+    # Provenance retains the latest complete current market hour, regardless
+    # of whether its independent lag/rolling histories make it eligible.
+    current_market_hours = prices.index.intersection(load.index).intersection(generation.index)
+    price_history = _historical_market_features(prices, "price")
+    load_history = _historical_market_features(load, "load")
+
+    def recent(history: pd.DataFrame, cleaned: pd.DataFrame, source: str) -> pd.DataFrame:
+        eligible = history.loc[current - history.index <= freshness]
+        if not eligible.empty:
+            return eligible
+        if not cleaned.empty and current - cleaned.index.max() > freshness:
+            raise ForecastUnavailableError(
+                f"Latest complete market hour for {source} "
+                f"{cleaned.index.max().isoformat()} exceeds the "
+                f"{max_age_hours:g}-hour freshness threshold."
+            )
+        raise ForecastUnavailableError(f"Required {source} history unavailable for a fresh issue hour.")
+
+    price_history = recent(price_history, prices, "price")
+    load_history = recent(load_history, load, "load")
+    market = price_history.join(load_history, how="inner")
     if market.empty:
-        raise ForecastUnavailableError("No complete market hour is available.")
-    newest_market = market.index.max()
-    if current - newest_market > pd.Timedelta(hours=max_age_hours):
-        raise ForecastUnavailableError(
-            f"Latest complete market hour {newest_market.isoformat()} exceeds the "
-            f"{max_age_hours:g}-hour freshness threshold."
-        )
+        raise ForecastUnavailableError("Required load history unavailable at fresh price issue hours.")
+    market = market.join(generation, how="inner")
+    if market.empty:
+        raise ForecastUnavailableError("Current generation unavailable at fresh issue hours.")
+    newest_market = current_market_hours.max()
     try:
         weather, acquired_at = fetch_operational_weather(
             current, lookback_hours=max(4, int(np.ceil(max_age_hours)) + 1),
@@ -183,31 +255,27 @@ def assemble_operational_issue_features(
         raise ForecastUnavailableError(f"Operational weather unavailable: {error}") from error
     if weather.empty:
         raise ForecastUnavailableError("No complete operational weather hour is available.")
-    market = market.reset_index().rename(columns={"index": "timestamp"})
-    issue_data = market.merge(weather, on="timestamp", how="left", validate="one_to_one")
-    # The shared feature builder reindexes exact UTC hours before lag/rolling
-    # calculations; absent market hours cannot be silently skipped.
-    try:
-        issues = build_issue_features(issue_data)
-    except (ValueError, KeyError) as error:
-        raise ForecastUnavailableError(f"Issue-time feature history unavailable: {error}") from error
-    issues = issues.loc[
-        (issues["timestamp"] <= current)
-        & (current - issues["timestamp"] <= pd.Timedelta(hours=max_age_hours))
-    ]
-    if not issues.empty:
-        issues = issues.loc[
-            np.isfinite(issues.loc[:, list(FINAL_FEATURES)].to_numpy(dtype=float)).all(axis=1)
-        ]
+    weather_by_hour = weather.set_index("timestamp")
+    issues = market.join(weather_by_hour, how="inner")
     if issues.empty:
-        raise ForecastUnavailableError(
-            "No fresh issue hour has both complete exact-hour market history "
-            "and matching operational weather."
-        )
-    issue = issues.tail(1).rename(columns={"timestamp": ISSUE_TIME})
+        raise ForecastUnavailableError("Operational weather unavailable at fresh market issue hours.")
+    issues["hour"] = issues.index.hour
+    issues["day_of_week"] = issues.index.dayofweek
+    issues["month"] = issues.index.month
+    issues["is_weekend"] = issues["day_of_week"].isin([5, 6]).astype(int)
+    missing = sorted(set(FINAL_FEATURES) - set(issues.columns))
+    if missing:
+        raise ForecastUnavailableError(f"Issue-time features unavailable: {missing}")
+    issues = issues.loc[
+        np.isfinite(issues.loc[:, list(FINAL_FEATURES)].to_numpy(dtype=float)).all(axis=1)
+    ]
+    if issues.empty:
+        raise ForecastUnavailableError("No fresh issue hour has 31 finite market and weather features.")
+    issue = (
+        issues.tail(1).loc[:, list(FINAL_FEATURES)]
+        .rename_axis(ISSUE_TIME).reset_index()
+    )
     issue_time = issue[ISSUE_TIME].iloc[0]
-    if issue_time not in set(weather["timestamp"]):
-        raise ForecastUnavailableError("Operational weather does not match the issue hour.")
     provenance = {
         "forecast_issue_time": issue_time.isoformat(),
         "market_latest_complete_hour": newest_market.isoformat(),

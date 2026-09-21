@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from dashboard_data import load_next24h_forecast_report
-from models.next24h import FINAL_FEATURES
+from models.next24h import FINAL_FEATURES, build_issue_features
 from models.next24h_monitoring import (
     match_realized_forecasts,
     performance_metrics,
@@ -23,6 +23,7 @@ from models.next24h_production import (
     save_forecast,
 )
 from ingestion.fetch_weather_data import WEATHER_VARIABLES, fetch_operational_weather
+from processing.build_silver_dataset import clean_generation, clean_load, clean_prices
 from storage.mappings import object_key
 from storage.config import StorageConfig
 from storage.sync import SyncResult, StorageSync
@@ -299,18 +300,106 @@ def test_operational_issue_exact_contract_and_market_history(tmp_path):
     ).isoformat()
 
 
+def test_operational_features_match_complete_gold_style_history(tmp_path):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    row, _ = assemble_operational_issue_features(
+        prices_path=prices, load_path=load, generation_path=generation,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+    )
+    silver = clean_prices(prices).join(clean_load(load)).join(clean_generation(generation))
+    for name in WEATHER_VARIABLES:
+        silver[name] = 50.0
+    expected = build_issue_features(silver.rename_axis("timestamp").reset_index())
+    expected = expected.loc[expected["timestamp"] == issue, list(FINAL_FEATURES)].iloc[0]
+    np.testing.assert_allclose(
+        row.loc[0, list(FINAL_FEATURES)].to_numpy(dtype=float),
+        expected.to_numpy(dtype=float), rtol=1e-12, atol=1e-12,
+    )
+    assert tuple(row.columns) == ("forecast_issue_time", *FINAL_FEATURES)
+    assert np.isfinite(row[list(FINAL_FEATURES)].to_numpy(dtype=float)).all()
+
+
+def test_old_generation_gap_does_not_poison_later_price_load_history(tmp_path):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    old_gap = issue - pd.Timedelta(hours=5) + pd.Timedelta(minutes=45)
+    raw_generation = pd.read_csv(generation)
+    raw_generation = raw_generation.loc[
+        pd.to_datetime(raw_generation["timestamp"], utc=True) != old_gap
+    ]
+    raw_generation.to_csv(generation, index=False)
+    assert old_gap.floor("h") not in clean_generation(generation).index
+    row, _ = assemble_operational_issue_features(
+        prices_path=prices, load_path=load, generation_path=generation,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+    )
+    assert row["forecast_issue_time"].iloc[0] == issue
+    price = clean_prices(prices)["price_eur_mwh"]
+    assert row["price_rolling_mean_24h"].iloc[0] == pytest.approx(price.loc[issue - pd.Timedelta(hours=23):issue].mean())
+    assert row["price_rolling_std_24h"].iloc[0] == pytest.approx(price.loc[issue - pd.Timedelta(hours=23):issue].std())
+    assert row["load_rolling_mean_24h"].iloc[0] == pytest.approx(110.0)
+
+
+def test_missing_latest_generation_uses_previous_eligible_or_withholds(tmp_path):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    raw_generation = pd.read_csv(generation)
+    raw_generation = raw_generation.loc[
+        pd.to_datetime(raw_generation["timestamp"], utc=True)
+        != issue + pd.Timedelta(minutes=45)
+    ]
+    raw_generation.to_csv(generation, index=False)
+    row, _ = assemble_operational_issue_features(
+        prices_path=prices, load_path=load, generation_path=generation,
+        now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+    )
+    assert row["forecast_issue_time"].iloc[0] == issue - pd.Timedelta(hours=1)
+    with pytest.raises(ForecastUnavailableError, match="Current generation unavailable"):
+        assemble_operational_issue_features(
+            prices_path=prices, load_path=load, generation_path=generation,
+            now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+            max_age_hours=1.75,
+        )
+
+
+@pytest.mark.parametrize("source,hours_ago,expected", [
+    ("price", 1, "Required price history unavailable"),
+    ("price", 24, "Required price history unavailable"),
+    ("price", 168, "Required price history unavailable"),
+    ("load", 1, "Required load history unavailable"),
+    ("load", 5, "Required load history unavailable"),
+    ("load", 24, "Required load history unavailable"),
+])
+def test_missing_exact_historical_dependency_withholds(
+    tmp_path, source, hours_ago, expected,
+):
+    (prices, load, generation), session, issue = operational_inputs(tmp_path)
+    path = prices if source == "price" else load
+    raw = pd.read_csv(path)
+    missing = issue - pd.Timedelta(hours=hours_ago)
+    if source == "load":
+        missing += pd.Timedelta(minutes=45)
+    raw = raw.loc[pd.to_datetime(raw["timestamp"], utc=True) != missing]
+    raw.to_csv(path, index=False)
+    with pytest.raises(ForecastUnavailableError, match=expected):
+        assemble_operational_issue_features(
+            prices_path=prices, load_path=load, generation_path=generation,
+            now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
+            max_age_hours=1.75,
+        )
+
+
 def test_operational_issue_uses_latest_eligible_not_gap_crossing(tmp_path):
     gap = pd.Timestamp("2026-09-10T02:45Z")
     (prices, load, generation), session, issue = operational_inputs(
         tmp_path, missing_market_hour=gap,
     )
     assert gap.floor("h") == issue - pd.Timedelta(hours=1)
-    row, _ = assemble_operational_issue_features(
+    row, provenance = assemble_operational_issue_features(
         prices_path=prices, load_path=load, generation_path=generation,
         now=issue + pd.Timedelta(hours=1, minutes=30), weather_session=session,
         max_age_hours=4,
     )
     assert row["forecast_issue_time"].iloc[0] == issue - pd.Timedelta(hours=2)
+    assert provenance["market_latest_complete_hour"] == issue.isoformat()
 
 
 @pytest.mark.parametrize("weather_offset", [-5, 6])

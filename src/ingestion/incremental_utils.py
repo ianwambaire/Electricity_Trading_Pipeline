@@ -117,6 +117,83 @@ def contiguous_prefix(
     )
 
 
+def contiguous_price_prefix(
+    values: pd.Series | pd.DataFrame,
+    start_utc: pd.Timestamp,
+    *,
+    quarter_hourly_transition: pd.Timestamp,
+) -> ContiguousPrefixResult:
+    """Accept complete PT15M or PT60M hours without crossing missing price hours.
+
+    A legacy Series has no resolution metadata and therefore retains the
+    historical, conservative cadence rule. New raw XML responses carry an
+    explicit ``source_resolution`` column, so a lone PT15M point can never be
+    mistaken for a complete PT60M hour.
+    """
+    if values is None or values.empty:
+        return ContiguousPrefixResult(values, (), None, None, None)
+
+    ordered = values.sort_index()
+    actual_index = _utc_index(ordered)
+    if actual_index.duplicated().any():
+        raise ValueError("Incremental price response contains duplicate timestamps.")
+
+    start = pd.Timestamp(start_utc)
+    start = start.tz_localize("UTC") if start.tzinfo is None else start.tz_convert("UTC")
+    transition = pd.Timestamp(quarter_hourly_transition).tz_convert("UTC")
+    if start != start.floor("h"):
+        raise ValueError("Price continuity must start at a complete UTC hour.")
+
+    if isinstance(ordered, pd.DataFrame) and "source_resolution" in ordered:
+        resolutions = ordered["source_resolution"].astype(str).tolist()
+    else:
+        resolutions = [
+            "PT15M" if timestamp >= transition else "PT60M"
+            for timestamp in actual_index
+        ]
+    if any(value not in {"PT15M", "PT60M"} for value in resolutions):
+        raise ValueError("Price observations have an unknown source resolution.")
+
+    resolution_by_time = dict(zip(actual_index, resolutions))
+    missing = []
+    first_incomplete_hour = None
+    previous_resolution = "PT15M" if start >= transition else "PT60M"
+    for hour in pd.date_range(start, actual_index[-1].floor("h"), freq="h"):
+        points = actual_index[(actual_index >= hour) & (actual_index < hour + pd.Timedelta(hours=1))]
+        hour_resolutions = {resolution_by_time[point] for point in points}
+        if len(hour_resolutions) > 1:
+            raise ValueError("Price hour mixes PT15M and PT60M observations.")
+        resolution = next(iter(hour_resolutions)) if hour_resolutions else previous_resolution
+        offsets = (0, 15, 30, 45) if resolution == "PT15M" else (0,)
+        expected = pd.DatetimeIndex(
+            [hour + pd.Timedelta(minutes=offset) for offset in offsets]
+        )
+        if not points.isin(expected).all():
+            raise ValueError("Price timestamps do not align with their resolution.")
+        absent = expected.difference(points)
+        if len(absent):
+            missing.extend(absent.tolist())
+            if first_incomplete_hour is None:
+                first_incomplete_hour = hour
+        if len(points):
+            previous_resolution = resolution
+
+    prefix = (
+        ordered
+        if first_incomplete_hour is None
+        else ordered.loc[actual_index < first_incomplete_hour]
+    )
+    prefix_index = _utc_index(prefix) if not prefix.empty else pd.DatetimeIndex([])
+    missing_index = pd.DatetimeIndex(sorted(set(missing)))
+    return ContiguousPrefixResult(
+        data=prefix,
+        missing_timestamps=tuple(missing_index),
+        first_unresolved_timestamp=missing_index[0] if len(missing_index) else None,
+        last_contiguous_timestamp=prefix_index[-1] if len(prefix_index) else None,
+        returned_last_timestamp=actual_index[-1],
+    )
+
+
 def normalize_utc_timestamps(
     data: pd.DataFrame,
     timestamp_column: str = TIMESTAMP_COLUMN,

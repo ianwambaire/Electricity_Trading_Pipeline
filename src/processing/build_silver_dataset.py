@@ -35,6 +35,9 @@ def aggregate_quarter_hourly(
 
 def clean_prices():
     prices = pd.read_csv("data/raw/entsoe/prices.csv")
+    parsed = pd.to_datetime(prices["timestamp"], errors="coerce", utc=True)
+    if parsed.isna().any() or parsed.duplicated().any():
+        raise ValueError("Raw ENTSO-E prices require unique, valid UTC timestamps.")
     prices = set_utc_timestamp_index(prices)
     return aggregate_hourly_prices(prices)
 
@@ -43,15 +46,54 @@ def aggregate_hourly_prices(prices: pd.DataFrame) -> pd.DataFrame:
     prices = prices.copy()
     prices.index = pd.to_datetime(prices.index, utc=True)
     prices = prices.sort_index()
+    if prices.index.duplicated().any():
+        raise ValueError("Raw ENTSO-E prices contain duplicate timestamps.")
     prices["price_eur_mwh"] = pd.to_numeric(
         prices["price_eur_mwh"], errors="coerce"
     )
-    hourly = prices.resample("h").mean()
+    hourly = prices[["price_eur_mwh"]].resample("h").mean()
     counts = prices.resample("h").size()
-    incomplete_quarter_hours = (hourly.index >= QUARTER_HOURLY_PRICE_START_UTC) & (
-        counts != 4
+    if "source_resolution" not in prices.columns:
+        incomplete_quarter_hours = (
+            hourly.index >= QUARTER_HOURLY_PRICE_START_UTC
+        ) & (counts != 4)
+        return hourly.loc[~incomplete_quarter_hours]
+
+    resolutions = prices["source_resolution"].copy()
+    legacy = resolutions.isna()
+    resolutions.loc[legacy] = [
+        "PT15M" if timestamp >= QUARTER_HOURLY_PRICE_START_UTC else "PT60M"
+        for timestamp in resolutions.index[legacy]
+    ]
+    if not resolutions.isin({"PT15M", "PT60M"}).all():
+        raise ValueError("Raw ENTSO-E prices contain an unsupported resolution.")
+
+    hours = prices.index.floor("h")
+    resolution_by_hour = resolutions.groupby(hours).first()
+    mixed_resolution = resolutions.groupby(hours).nunique() > 1
+    if mixed_resolution.any():
+        raise ValueError("Raw ENTSO-E price hour mixes source resolutions.")
+    expected_count = resolution_by_hour.map({"PT15M": 4, "PT60M": 1})
+    aligned = (
+        (prices.index.second == 0)
+        & (prices.index.microsecond == 0)
+        & (prices.index.nanosecond == 0)
+        & (
+            (
+                (resolutions.to_numpy() == "PT15M")
+                & (prices.index.minute % 15 == 0)
+            )
+            | (prices.index.minute == 0)
+        )
     )
-    return hourly.loc[~incomplete_quarter_hours]
+    aligned_by_hour = pd.Series(aligned, index=prices.index).groupby(hours).all()
+    valid_values = prices["price_eur_mwh"].notna().groupby(hours).all()
+    complete = (
+        counts.reindex(resolution_by_hour.index).eq(expected_count)
+        & aligned_by_hour
+        & valid_values
+    )
+    return hourly.loc[complete[complete].index]
 
 
 def clean_load():

@@ -5,10 +5,15 @@ import pandas as pd
 import pytest
 
 from ingestion.fetch_weather_data import fetch_open_meteo_weather
-from ingestion.fetch_entsoe_data import _incremental_dataset
+from ingestion.fetch_entsoe_data import (
+    _incremental_dataset,
+    fetch_entsoe_data,
+    parse_price_observations,
+)
 from ingestion.incremental_utils import (
     append_csv_safely,
     contiguous_prefix,
+    contiguous_price_prefix,
     infer_stored_interval,
     merge_incremental_rows,
     normalize_utc_timestamps,
@@ -25,6 +30,267 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def observations(timestamps, values=None):
     values = values if values is not None else range(len(timestamps))
     return pd.DataFrame({"timestamp": timestamps, "value": list(values)})
+
+
+def price_xml(periods):
+    """Minimal ENTSO-E period shape with explicit resolution and positions."""
+    elements = []
+    for start, end, resolution, positions in periods:
+        points = "".join(
+            f"<Point><position>{position}</position>"
+            f"<price.amount>{position}</price.amount></Point>"
+            for position in positions
+        )
+        elements.append(
+            "<TimeSeries><Period><timeInterval>"
+            f"<start>{start}</start><end>{end}</end>"
+            "</timeInterval>"
+            f"<resolution>{resolution}</resolution>{points}"
+            "</Period></TimeSeries>"
+        )
+    return (
+        '<Publication_MarketDocument xmlns="urn:iec62325.351:tc57wg16:451-3:publicationdocument:7:0">'
+        + "".join(elements)
+        + "</Publication_MarketDocument>"
+    )
+
+
+def test_price_parser_retains_pt15m_and_pt60m_periods():
+    parsed = parse_price_observations(
+        price_xml(
+            [
+                ("2026-09-12T21:00Z", "2026-09-12T22:00Z", "PT15M", range(1, 5)),
+                ("2026-09-12T22:00Z", "2026-09-13T00:00Z", "PT60M", range(1, 3)),
+            ]
+        )
+    )
+
+    assert parsed.index.tolist() == list(
+        pd.to_datetime(
+            [
+                "2026-09-12T21:00Z",
+                "2026-09-12T21:15Z",
+                "2026-09-12T21:30Z",
+                "2026-09-12T21:45Z",
+                "2026-09-12T22:00Z",
+                "2026-09-12T23:00Z",
+            ],
+            utc=True,
+        )
+    )
+    assert parsed["source_resolution"].tolist() == ["PT15M"] * 4 + ["PT60M"] * 2
+    assert parsed.index.is_unique
+
+
+def test_price_parser_rejects_duplicate_source_timestamps():
+    xml = price_xml(
+        [
+            ("2026-09-12T22:00Z", "2026-09-12T23:00Z", "PT60M", [1]),
+            ("2026-09-12T22:00Z", "2026-09-12T23:00Z", "PT60M", [1]),
+        ]
+    )
+    with pytest.raises(ValueError, match="duplicate timestamps"):
+        parse_price_observations(xml)
+
+
+def test_price_parser_uses_explicit_utc_across_autumn_dst():
+    parsed = parse_price_observations(
+        price_xml(
+            [
+                ("2024-10-27T00:00Z", "2024-10-27T02:00Z", "PT60M", [1, 2])
+            ]
+        )
+    )
+    assert parsed.index.tolist() == [
+        pd.Timestamp("2024-10-27T00:00:00Z"),
+        pd.Timestamp("2024-10-27T01:00:00Z"),
+    ]
+
+
+def test_price_continuity_accepts_complete_mixed_resolution_hours():
+    values = parse_price_observations(
+        price_xml(
+            [
+                ("2026-09-12T21:00Z", "2026-09-12T22:00Z", "PT15M", range(1, 5)),
+                ("2026-09-12T22:00Z", "2026-09-13T00:00Z", "PT60M", range(1, 3)),
+            ]
+        )
+    )
+    result = contiguous_price_prefix(
+        values,
+        pd.Timestamp("2026-09-12T21:00Z"),
+        quarter_hourly_transition=pd.Timestamp("2025-09-30T22:00Z"),
+    )
+    hourly = aggregate_hourly_prices(values)
+
+    assert result.first_unresolved_timestamp is None
+    assert len(result.data) == 6
+    assert hourly.index.tolist() == list(
+        pd.date_range("2026-09-12T21:00Z", periods=3, freq="h")
+    )
+    assert hourly["price_eur_mwh"].tolist() == [2.5, 1.0, 2.0]
+
+
+def test_price_continuity_does_not_complete_partial_pt15m_hour_with_pt60m():
+    values = parse_price_observations(
+        price_xml(
+            [
+                ("2026-09-12T21:00Z", "2026-09-12T22:00Z", "PT15M", range(1, 5)),
+                ("2026-09-12T22:00Z", "2026-09-12T23:00Z", "PT15M", [1]),
+                ("2026-09-12T23:00Z", "2026-09-13T00:00Z", "PT60M", [1]),
+            ]
+        )
+    )
+    result = contiguous_price_prefix(
+        values,
+        pd.Timestamp("2026-09-12T21:00Z"),
+        quarter_hourly_transition=pd.Timestamp("2025-09-30T22:00Z"),
+    )
+    hourly = aggregate_hourly_prices(values)
+
+    assert result.data.index[-1] == pd.Timestamp("2026-09-12T21:45Z")
+    assert result.first_unresolved_timestamp == pd.Timestamp("2026-09-12T22:15Z")
+    assert set(result.missing_timestamps) == {
+        pd.Timestamp("2026-09-12T22:15Z"),
+        pd.Timestamp("2026-09-12T22:30Z"),
+        pd.Timestamp("2026-09-12T22:45Z"),
+    }
+    assert hourly.index.tolist() == [pd.Timestamp("2026-09-12T21:00Z"), pd.Timestamp("2026-09-12T23:00Z")]
+
+
+def test_price_continuity_stops_at_missing_pt60m_hour():
+    values = parse_price_observations(
+        price_xml(
+            [
+                ("2026-09-12T22:00Z", "2026-09-13T01:00Z", "PT60M", [1, 3]),
+            ]
+        )
+    )
+    result = contiguous_price_prefix(
+        values,
+        pd.Timestamp("2026-09-12T22:00Z"),
+        quarter_hourly_transition=pd.Timestamp("2025-09-30T22:00Z"),
+    )
+
+    assert result.data.index.tolist() == [pd.Timestamp("2026-09-12T22:00Z")]
+    assert result.first_unresolved_timestamp == pd.Timestamp("2026-09-12T23:00Z")
+    assert result.missing_timestamps == (pd.Timestamp("2026-09-12T23:00Z"),)
+
+
+def test_incremental_price_transition_appends_without_duplicates(tmp_path):
+    path = tmp_path / "prices.csv"
+    old_index = pd.date_range("2026-09-12T21:00Z", periods=4, freq="15min")
+    pd.DataFrame({"timestamp": old_index, "price_eur_mwh": [1, 2, 3, 4]}).to_csv(
+        path, index=False
+    )
+    requests = []
+
+    def query(_country_code, start, end):
+        requests.append((start, end))
+        return parse_price_observations(
+            price_xml(
+                [
+                    ("2026-09-12T22:00Z", "2026-09-13T00:00Z", "PT60M", [1, 2])
+                ]
+            )
+        )
+
+    first = _incremental_dataset(
+        None,
+        query,
+        dataset_name="day-ahead prices",
+        output_path=path,
+        default_interval="1h",
+        end_utc_exclusive=pd.Timestamp("2026-09-13T00:00Z"),
+        value_name="price_eur_mwh",
+    )
+    after_first = path.read_bytes()
+    second = _incremental_dataset(
+        None,
+        query,
+        dataset_name="day-ahead prices",
+        output_path=path,
+        default_interval="1h",
+        end_utc_exclusive=pd.Timestamp("2026-09-13T00:00Z"),
+        value_name="price_eur_mwh",
+    )
+    stored = pd.read_csv(path)
+
+    assert requests == [
+        (pd.Timestamp("2026-09-12T22:00Z"), pd.Timestamp("2026-09-13T00:00Z"))
+    ]
+    assert first["new_rows"] == 2
+    assert first["unresolved_gap"] is None
+    assert first["latest_complete_hour"] == "2026-09-12T23:00:00+00:00"
+    assert second["new_rows"] == 0
+    assert path.read_bytes() == after_first
+    assert stored["timestamp"].is_unique
+    assert stored["source_resolution"].tail(2).tolist() == ["PT60M", "PT60M"]
+    stored_hourly = aggregate_hourly_prices(
+        stored.assign(timestamp=pd.to_datetime(stored["timestamp"], utc=True))
+        .set_index("timestamp")
+    )
+    assert stored_hourly["price_eur_mwh"].tolist() == [2.5, 1.0, 2.0]
+
+
+def test_historical_price_ingestion_preserves_resolution_and_rejects_gaps(
+    tmp_path, monkeypatch
+):
+    import ingestion.fetch_entsoe_data as ingestion
+
+    monkeypatch.setattr(ingestion, "RAW_ENTSOE_DIR", tmp_path / "raw")
+    quarter_hours = pd.date_range(
+        "2026-09-12T00:00Z", "2026-09-12T21:45Z", freq="15min"
+    )
+    price_rows = pd.DataFrame(
+        {
+            "price_eur_mwh": np.arange(len(quarter_hours), dtype="float64"),
+            "source_resolution": "PT15M",
+        },
+        index=quarter_hours,
+    )
+    hourly_rows = pd.DataFrame(
+        {
+            "price_eur_mwh": [100.0, 101.0],
+            "source_resolution": ["PT60M", "PT60M"],
+        },
+        index=pd.date_range("2026-09-12T22:00Z", periods=2, freq="h"),
+    )
+
+    class FakeClient:
+        prices = pd.concat([price_rows, hourly_rows])
+
+        def query_day_ahead_prices(self, _country_code, start, end):
+            return self.prices.loc[(self.prices.index >= start) & (self.prices.index < end)]
+
+        def query_load(self, _country_code, start, end):
+            return pd.Series(
+                [1.0], index=pd.DatetimeIndex([pd.Timestamp("2026-09-12T00:00Z")])
+            )
+
+        def query_generation(self, _country_code, start, end):
+            return pd.DataFrame(
+                {"Biomass": [1.0]},
+                index=pd.DatetimeIndex([pd.Timestamp("2026-09-12T00:00Z")]),
+            )
+
+    client = FakeClient()
+    result = fetch_entsoe_data(
+        "2026-09-12", "2026-09-12", mode="historical", client=client
+    )
+    stored = pd.read_csv(tmp_path / "raw" / "prices.csv")
+
+    assert result["datasets"]["day-ahead prices"]["new_rows"] == 90
+    assert stored["source_resolution"].tail(2).tolist() == ["PT60M", "PT60M"]
+    assert pd.to_datetime(stored["timestamp"], utc=True).is_unique
+
+    client.prices = client.prices.drop(pd.Timestamp("2026-09-12T20:15Z"))
+    before = (tmp_path / "raw" / "prices.csv").read_bytes()
+    with pytest.raises(RuntimeError, match="source gap"):
+        fetch_entsoe_data(
+            "2026-09-12", "2026-09-12", mode="historical", client=client
+        )
+    assert (tmp_path / "raw" / "prices.csv").read_bytes() == before
 
 
 def test_no_new_data_leaves_stored_csv_unchanged(tmp_path):

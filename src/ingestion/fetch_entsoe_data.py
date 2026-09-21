@@ -2,10 +2,11 @@ import argparse
 import os
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from xml.etree import ElementTree
 
 import pandas as pd
 from dotenv import load_dotenv
-from entsoe import EntsoePandasClient
+from entsoe import EntsoePandasClient, EntsoeRawClient
 from entsoe.exceptions import NoMatchingDataError
 
 if __package__:
@@ -18,6 +19,7 @@ if __package__:
         append_csv_safely,
         completed_utc_hour,
         contiguous_prefix,
+        contiguous_price_prefix,
         infer_stored_interval,
         latest_stored_timestamp,
         merge_incremental_rows,
@@ -29,6 +31,7 @@ else:
         append_csv_safely,
         completed_utc_hour,
         contiguous_prefix,
+        contiguous_price_prefix,
         infer_stored_interval,
         latest_stored_timestamp,
         merge_incremental_rows,
@@ -85,7 +88,9 @@ def combine_time_chunks(chunks: list[pd.Series | pd.DataFrame]):
     return combined.sort_index()
 
 
-def fetch_in_chunks(client, query_method, historical_range, dataset_name):
+def fetch_in_chunks(
+    client, query_method, historical_range, dataset_name, *, chunk_months=6
+):
     return fetch_timestamp_range(
         client,
         query_method,
@@ -93,6 +98,7 @@ def fetch_in_chunks(client, query_method, historical_range, dataset_name):
         historical_range.end_utc_exclusive,
         dataset_name,
         allow_empty=False,
+        chunk_months=chunk_months,
     )
 
 
@@ -104,9 +110,12 @@ def fetch_timestamp_range(
     dataset_name,
     *,
     allow_empty: bool,
+    chunk_months: int = 6,
 ):
     chunks = []
-    for chunk_start, chunk_end in iter_utc_chunks(start_utc, end_utc_exclusive):
+    for chunk_start, chunk_end in iter_utc_chunks(
+        start_utc, end_utc_exclusive, chunk_months=chunk_months
+    ):
         print(
             f"Fetching {dataset_name}: "
             f"{chunk_start.isoformat()} to {chunk_end.isoformat()} (end exclusive)"
@@ -163,10 +172,77 @@ def fetch_timestamp_range(
     return combine_time_chunks(chunks)
 
 
+def parse_price_observations(xml_text: str) -> pd.DataFrame:
+    """Keep each explicit ENTSO-E price point and its declared period resolution."""
+    root = ElementTree.fromstring(xml_text)
+
+    def child_text(parent, name):
+        child = parent.find(f"{{*}}{name}")
+        if child is None or child.text is None:
+            raise ValueError(f"ENTSO-E price response is missing {name}.")
+        return child.text
+
+    rows = []
+    for series in root.findall(".//{*}TimeSeries"):
+        for period in series.findall("{*}Period"):
+            interval = period.find("{*}timeInterval")
+            if interval is None:
+                raise ValueError("ENTSO-E price period has no time interval.")
+            start = pd.Timestamp(child_text(interval, "start"))
+            end = pd.Timestamp(child_text(interval, "end"))
+            if start.tzinfo is None or end.tzinfo is None:
+                raise ValueError("ENTSO-E price interval must specify a timezone.")
+            start, end = start.tz_convert("UTC"), end.tz_convert("UTC")
+            resolution = child_text(period, "resolution")
+            if resolution not in {"PT15M", "PT60M"}:
+                raise ValueError(f"Unsupported ENTSO-E price resolution: {resolution}")
+            step = pd.Timedelta(minutes=15 if resolution == "PT15M" else 60)
+            for point in period.findall("{*}Point"):
+                position = int(child_text(point, "position"))
+                timestamp = start + (position - 1) * step
+                if position < 1 or timestamp >= end:
+                    raise ValueError("ENTSO-E price point falls outside its period.")
+                rows.append(
+                    (
+                        timestamp,
+                        float(child_text(point, "price.amount")),
+                        resolution,
+                    )
+                )
+
+    result = pd.DataFrame(
+        rows, columns=["timestamp", "price_eur_mwh", "source_resolution"]
+    )
+    if result.empty:
+        return result.set_index("timestamp")
+    result = result.sort_values("timestamp")
+    if result["timestamp"].duplicated().any():
+        raise ValueError("ENTSO-E price response contains duplicate timestamps.")
+    return result.set_index("timestamp")
+
+
+def query_price_observations(client, country_code, start, end):
+    """Use raw price XML so PT15M and PT60M remain distinguishable."""
+    if isinstance(client, EntsoePandasClient):
+        xml_text = EntsoeRawClient.query_day_ahead_prices(
+            client,
+            country_code,
+            start=start,
+            end=end,
+            sequence=1,
+        )
+        return parse_price_observations(xml_text)
+    return client.query_day_ahead_prices(country_code, start=start, end=end)
+
+
 def save_series(series, filepath: Path, value_name: str):
     filepath.parent.mkdir(parents=True, exist_ok=True)
     if isinstance(series, pd.Series):
         data = series.rename(value_name).to_frame()
+    elif value_name == "price_eur_mwh" and set(series.columns) == {
+        "price_eur_mwh", "source_resolution"
+    }:
+        data = series.copy()
     elif series.shape[1] == 1:
         data = series.copy()
         data.columns = [value_name]
@@ -190,7 +266,11 @@ def _to_value_frame(values, value_name: str | None = None) -> pd.DataFrame:
         data = values.rename(value_name or values.name).to_frame()
     else:
         data = values.copy()
-        if value_name is not None:
+        if value_name == "price_eur_mwh" and set(data.columns) == {
+            "price_eur_mwh", "source_resolution"
+        }:
+            pass
+        elif value_name is not None:
             if data.shape[1] != 1:
                 raise ValueError(
                     f"Expected one {value_name} column, found {data.shape[1]}."
@@ -284,6 +364,19 @@ def _incremental_dataset(
             if latest is not None
             else pd.Timedelta(default_interval)
         )
+        if is_price and latest is not None:
+            stored_columns = pd.read_csv(output_path, nrows=0).columns
+            if "source_resolution" in stored_columns:
+                stored_resolutions = pd.read_csv(
+                    output_path, usecols=["source_resolution"]
+                )["source_resolution"]
+                last_resolution = stored_resolutions.iloc[-1]
+                if pd.notna(last_resolution):
+                    if last_resolution not in {"PT15M", "PT60M"}:
+                        raise ValueError("Stored price resolution is unsupported.")
+                    interval = pd.Timedelta(
+                        minutes=15 if last_resolution == "PT15M" else 60
+                    )
     if latest is None:
         start_utc = get_historical_date_range().start_utc
     else:
@@ -309,6 +402,7 @@ def _incremental_dataset(
         end_utc_exclusive,
         dataset_name,
         allow_empty=True,
+        chunk_months=1 if is_price else 6,
     )
     if values is None:
         metadata = {
@@ -322,14 +416,14 @@ def _incremental_dataset(
             )
         return metadata
 
-    continuity = contiguous_prefix(
-        values,
-        start_utc,
-        interval,
-        quarter_hourly_transition=(
-            QUARTER_HOURLY_PRICE_START_UTC if is_price else None
-        ),
-        require_complete_quarter_hourly_hours=is_price,
+    continuity = (
+        contiguous_price_prefix(
+            values,
+            start_utc,
+            quarter_hourly_transition=QUARTER_HOURLY_PRICE_START_UTC,
+        )
+        if is_price
+        else contiguous_prefix(values, start_utc, interval)
     )
     safe_values = continuity.data
 
@@ -373,7 +467,7 @@ def _incremental_dataset(
         result = append_csv_safely(
             output_path,
             _to_value_frame(safe_values, value_name),
-            allow_column_union=allow_column_union,
+            allow_column_union=allow_column_union or is_price,
         )
         new_rows = result.new_rows
         latest_timestamp = result.latest_timestamp
@@ -421,10 +515,13 @@ def fetch_entsoe_data(
 
     if mode == "incremental":
         end_utc_exclusive = completed_utc_hour(now)
+        price_query = lambda country_code, start, end: query_price_observations(
+            client, country_code, start, end
+        )
         specifications = [
             (
                 "day-ahead prices",
-                client.query_day_ahead_prices,
+                price_query,
                 RAW_ENTSOE_DIR / "prices.csv",
                 "1h",
                 "price_eur_mwh",
@@ -474,10 +571,23 @@ def fetch_entsoe_data(
 
     prices = fetch_in_chunks(
         client,
-        client.query_day_ahead_prices,
+        lambda country_code, start, end: query_price_observations(
+            client, country_code, start, end
+        ),
         historical_range,
         "day-ahead prices",
+        chunk_months=1,
     )
+    price_continuity = contiguous_price_prefix(
+        prices,
+        historical_range.start_utc,
+        quarter_hourly_transition=QUARTER_HOURLY_PRICE_START_UTC,
+    )
+    if price_continuity.first_unresolved_timestamp is not None:
+        raise RuntimeError(
+            "Historical ENTSO-E prices have a source gap at "
+            f"{price_continuity.first_unresolved_timestamp.isoformat()}."
+        )
     save_series(prices, RAW_ENTSOE_DIR / "prices.csv", "price_eur_mwh")
 
     load = fetch_in_chunks(

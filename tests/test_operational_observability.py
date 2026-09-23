@@ -218,6 +218,69 @@ def test_email_delivery_failure_records_once_without_recursive_alert(
     assert event_types == ["email_alert_failed"]
 
 
+def test_next24h_withholding_path_uses_incident_cooldown(
+    temporary_database, monkeypatch,
+):
+    import scheduled_pipeline as pipeline
+
+    sent = []
+    reason = ["load history incomplete token=withheld-secret"]
+
+    class LocalSync:
+        config = type("Config", (), {"backend": "local"})()
+
+        def sync_group(self, group):
+            return type("Result", (), {"uploaded": [], "unchanged": []})()
+
+    monkeypatch.setenv("POWERFLOW_ALERT_COOLDOWN_HOURS", "12")
+    monkeypatch.setattr(pipeline, "verify_next24h_release_task", lambda: "release-v1")
+    monkeypatch.setattr(
+        pipeline,
+        "next24h_forecast_task",
+        lambda: (_ for _ in ()).throw(pipeline.ForecastUnavailableError(reason[0])),
+    )
+    monkeypatch.setattr(pipeline, "next24h_monitoring_task", lambda: (0, 0))
+    monkeypatch.setattr(
+        pipeline,
+        "send_failure_alert",
+        lambda subject, message: sent.append((subject, message)) or "SENT",
+    )
+
+    def run_once():
+        state = {
+            "warnings": [], "objects_uploaded": [], "objects_unchanged": [],
+            "s3_sync_status": "NOT_REQUIRED",
+        }
+        pipeline._run_next24h_stages(LocalSync(), state)
+
+    run_once()
+    run_once()
+    assert len(sent) == 1
+    with sqlite3.connect(temporary_database) as connection:
+        old = (datetime.now(timezone.utc) - timedelta(hours=13)).isoformat()
+        connection.execute(
+            """
+            UPDATE operational_incidents SET timestamp_utc = ?
+            WHERE event_type = 'failure_alert_sent'
+            """,
+            (old,),
+        )
+    run_once()
+    assert len(sent) == 2
+    reason[0] = "operational weather unavailable"
+    run_once()
+    assert len(sent) == 3
+
+    with sqlite3.connect(temporary_database) as connection:
+        incidents = connection.execute(
+            "SELECT event_type, message, details_json FROM operational_incidents"
+        ).fetchall()
+    assert sum(row[0] == "forecast_withheld" for row in incidents) == 4
+    assert sum(row[0] == "failure_alert_suppressed" for row in incidents) == 1
+    assert "withheld-secret" not in str(incidents)
+    assert all("withheld-secret" not in message for _, message in sent)
+
+
 @pytest.mark.parametrize("value", ["0", "169", "nan", "invalid"])
 def test_alert_cooldown_configuration_validation(value):
     with pytest.raises(ValueError, match="POWERFLOW_ALERT_COOLDOWN_HOURS"):

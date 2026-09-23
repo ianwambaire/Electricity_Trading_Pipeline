@@ -43,6 +43,7 @@ COUNTRY_CODE = "DE_LU"
 RAW_ENTSOE_DIR = Path("data/raw/entsoe")
 QUARTER_HOURLY_PRICE_START_UTC = pd.Timestamp("2025-09-30T22:00:00Z")
 GENERATION_REQUERY_OVERLAP = pd.Timedelta(hours=48)
+LOAD_REQUERY_OVERLAP = pd.Timedelta(hours=48)
 SENSITIVE_QUERY_PARAMETERS = {
     "accesskey",
     "accesstoken",
@@ -366,6 +367,57 @@ def _append_generation_safely(
     )
 
 
+def _append_load_safely(
+    path: Path,
+    load: pd.DataFrame,
+    *,
+    revision_window: tuple[pd.Timestamp, pd.Timestamp],
+):
+    """Atomically merge a recent load overlap under the source-revision policy."""
+    incoming = normalize_utc_timestamps(load)
+    if path.exists():
+        existing = pd.read_csv(path, low_memory=False)
+        merged = merge_generation_rows(
+            existing,
+            incoming,
+            revision_window=revision_window,
+            retain_protected_conflicts=True,
+        )
+        combined = merged.data
+    else:
+        combined = incoming
+        merged = None
+
+    new_rows = len(incoming) if merged is None else merged.new_rows
+    repaired_by_column = {} if merged is None else merged.repaired_by_column
+    revised_by_column = {} if merged is None else merged.revised_by_column
+    protected_by_column = (
+        {} if merged is None else merged.protected_conflicts_by_column
+    )
+    protected_timestamps = (
+        () if merged is None else merged.protected_conflict_timestamps
+    )
+    changed = bool(new_rows or repaired_by_column or revised_by_column)
+    latest = combined["timestamp"].iloc[-1] if not combined.empty else None
+    if changed:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = path.with_suffix(path.suffix + ".tmp")
+        try:
+            combined.to_csv(temporary_path, index=False)
+            temporary_path.replace(path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+    return {
+        "new_rows": new_rows,
+        "latest_timestamp": latest,
+        "repaired_by_column": repaired_by_column,
+        "revised_by_column": revised_by_column,
+        "protected_conflicts_by_column": protected_by_column,
+        "protected_conflict_timestamps": protected_timestamps,
+        "changed": changed,
+    }
+
+
 def repair_generation_interval(
     client,
     start_utc: pd.Timestamp,
@@ -453,6 +505,7 @@ def _incremental_dataset(
     allow_column_union: bool = False,
 ) -> dict:
     is_price = value_name == "price_eur_mwh"
+    is_load = value_name == "load_mw"
     if allow_column_union and value_name is None and output_path.exists():
         stored_generation = normalize_utc_timestamps(
             _read_stored_generation(output_path)
@@ -489,6 +542,11 @@ def _incremental_dataset(
                 get_historical_date_range().start_utc,
                 latest - GENERATION_REQUERY_OVERLAP,
             )
+        elif is_load:
+            start_utc = max(
+                get_historical_date_range().start_utc,
+                latest - LOAD_REQUERY_OVERLAP,
+            )
 
     if start_utc >= end_utc_exclusive:
         print(f"No new ENTSO-E {dataset_name} interval is currently due.")
@@ -496,6 +554,7 @@ def _incremental_dataset(
             "new_rows": 0,
             "latest_timestamp": latest,
             "unresolved_gap": None,
+            "changed": False,
         }
         if is_price:
             metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
@@ -515,10 +574,26 @@ def _incremental_dataset(
             "new_rows": 0,
             "latest_timestamp": latest,
             "unresolved_gap": None,
+            "changed": False,
         }
         if is_price:
             metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
         return metadata
+
+    continuity_values = values
+    if is_load and output_path.exists():
+        stored_load = pd.read_csv(output_path, usecols=["timestamp"])
+        stored_index = pd.DatetimeIndex(
+            pd.to_datetime(stored_load["timestamp"], errors="raise", utc=True)
+        )
+        stored_index = stored_index[
+            (stored_index >= start_utc) & (stored_index < end_utc_exclusive)
+        ]
+        fetched_index = pd.DatetimeIndex(pd.to_datetime(values.index, utc=True))
+        continuity_values = pd.Series(
+            1.0,
+            index=stored_index.union(fetched_index).sort_values(),
+        )
 
     continuity = (
         contiguous_price_prefix(
@@ -527,7 +602,7 @@ def _incremental_dataset(
             quarter_hourly_transition=QUARTER_HOURLY_PRICE_START_UTC,
         )
         if is_price
-        else contiguous_prefix(values, start_utc, interval)
+        else contiguous_prefix(continuity_values, start_utc, interval)
     )
     # Retain genuine observations on both sides of an isolated source gap.
     # Hourly completeness is decided downstream; no missing value is filled.
@@ -561,6 +636,10 @@ def _incremental_dataset(
             "affected_hour": (
                 continuity.first_unresolved_timestamp.floor("h").isoformat()
             ),
+            "affected_hours": sorted({
+                timestamp.floor("h").isoformat()
+                for timestamp in continuity.missing_timestamps
+            }),
         }
         print(
             f"ENTSO-E {dataset_name} has an unresolved source gap at "
@@ -575,6 +654,28 @@ def _incremental_dataset(
         revised_by_column = {}
         protected_conflicts_by_column = {}
         protected_conflict_timestamps = ()
+        changed = False
+    elif is_load:
+        revision_window = (
+            max(start_utc, end_utc_exclusive - LOAD_REQUERY_OVERLAP),
+            end_utc_exclusive,
+        )
+        load_merge = _append_load_safely(
+            output_path,
+            _to_value_frame(observed_values, value_name),
+            revision_window=revision_window,
+        )
+        new_rows = load_merge["new_rows"]
+        latest_timestamp = load_merge["latest_timestamp"]
+        repaired_by_column = load_merge["repaired_by_column"]
+        revised_by_column = load_merge["revised_by_column"]
+        protected_conflicts_by_column = load_merge[
+            "protected_conflicts_by_column"
+        ]
+        protected_conflict_timestamps = load_merge[
+            "protected_conflict_timestamps"
+        ]
+        changed = load_merge["changed"]
     elif allow_column_union and value_name is None:
         # The retry may cover old backlog. Only the last 48 operational hours
         # may revise existing non-null values; older conflicts remain protected.
@@ -597,6 +698,7 @@ def _incremental_dataset(
                 retain_protected_conflicts=True,
             )
         )
+        changed = bool(new_rows or repaired_by_column or revised_by_column)
     else:
         result = append_csv_safely(
             output_path,
@@ -609,6 +711,7 @@ def _incremental_dataset(
         revised_by_column = {}
         protected_conflicts_by_column = {}
         protected_conflict_timestamps = ()
+        changed = result.changed
     protected_conflicts = sum(protected_conflicts_by_column.values())
     if protected_conflicts:
         print(
@@ -630,6 +733,7 @@ def _incremental_dataset(
         "unresolved_gap": unresolved_gap,
         "repaired_by_column": repaired_by_column,
         "repaired_cells": sum(repaired_by_column.values()),
+        "repaired_rows": sum(repaired_by_column.values()),
         "revised_by_column": revised_by_column,
         "revised_cells": sum(revised_by_column.values()),
         "protected_conflicts_by_column": protected_conflicts_by_column,
@@ -642,6 +746,7 @@ def _incremental_dataset(
             protected_conflict_timestamps[-1].isoformat()
             if protected_conflict_timestamps else None
         ),
+        "changed": changed,
     }
     if is_price:
         metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
@@ -724,9 +829,10 @@ def fetch_entsoe_data(
                 item.get("protected_conflicts", 0) for item in datasets.values()
             ),
             "datasets": datasets,
+            "changed": any(item.get("changed", False) for item in datasets.values()),
         }
-        if metadata["new_rows"] == 0:
-            print("ENTSO-E incremental ingestion completed: no new records available.")
+        if not metadata["changed"]:
+            print("ENTSO-E incremental ingestion completed: no stored changes.")
         else:
             print("ENTSO-E incremental ingestion completed.")
         return metadata

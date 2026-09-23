@@ -26,6 +26,7 @@ from processing.build_silver_dataset import (
     aggregate_hourly_prices,
     aggregate_quarter_hourly,
     build_silver_dataset,
+    clean_load,
     set_utc_timestamp_index,
 )
 
@@ -533,6 +534,163 @@ def test_missing_load_quarter_hour_does_not_block_later_raw_hours(tmp_path):
     assert result["unresolved_gap"]["later_observations_retained"] > 0
     assert pd.Timestamp("2026-09-19T10:45Z") in set(timestamps)
     assert pd.Timestamp("2026-09-19T08:45Z") not in set(timestamps)
+
+
+def test_recent_load_overlap_repairs_late_quarter_and_restores_clean_hour(tmp_path):
+    path = tmp_path / "load.csv"
+    end = pd.Timestamp("2026-09-23T06:00:00Z")
+    timestamps = pd.date_range(end - pd.Timedelta(hours=50), end, freq="15min", inclusive="left")
+    missing = end - pd.Timedelta(hours=20, minutes=45)
+    stored = timestamps.difference(pd.DatetimeIndex([missing]))
+    pd.DataFrame({"timestamp": stored, "load_mw": 40000.0}).to_csv(path, index=False)
+    starts = []
+
+    def query(_country_code, start, end):
+        starts.append(start)
+        returned = pd.date_range(
+            start, end - pd.Timedelta(minutes=15), freq="15min"
+        )
+        return pd.Series(40000.0, index=returned)
+
+    result = _incremental_dataset(
+        None, query, dataset_name="actual load", output_path=path,
+        default_interval="15min", end_utc_exclusive=end, value_name="load_mw",
+    )
+    repaired = pd.read_csv(path)
+    repaired_timestamps = pd.to_datetime(repaired["timestamp"], utc=True)
+    assert starts[0] <= missing
+    assert result["new_rows"] == 1
+    assert result["changed"] is True
+    assert repaired_timestamps.is_unique
+    assert missing in set(repaired_timestamps)
+    assert missing.floor("h") in clean_load(path).index
+
+
+def test_identical_load_overlap_is_noop_without_file_rewrite(tmp_path):
+    path = tmp_path / "load.csv"
+    end = pd.Timestamp("2026-09-23T06:00:00Z")
+    timestamps = pd.date_range(end - pd.Timedelta(hours=50), end, freq="15min", inclusive="left")
+    pd.DataFrame({"timestamp": timestamps, "load_mw": 40000.0}).to_csv(path, index=False)
+    before = path.read_bytes()
+
+    def query(_country_code, start, end):
+        returned = pd.date_range(
+            start, end - pd.Timedelta(minutes=15), freq="15min"
+        )
+        return pd.Series(40000.0, index=returned)
+
+    result = _incremental_dataset(
+        None, query, dataset_name="actual load", output_path=path,
+        default_interval="15min", end_utc_exclusive=end, value_name="load_mw",
+    )
+    assert result["new_rows"] == 0
+    assert result["repaired_cells"] == 0
+    assert result["revised_cells"] == 0
+    assert result["changed"] is False
+    assert path.read_bytes() == before
+
+
+def test_load_overlap_does_not_report_gap_for_timestamp_already_stored(tmp_path):
+    path = tmp_path / "load.csv"
+    end = pd.Timestamp("2026-09-23T06:00:00Z")
+    timestamps = pd.date_range(
+        end - pd.Timedelta(hours=50), end, freq="15min", inclusive="left"
+    )
+    omitted_by_retry = end - pd.Timedelta(hours=12, minutes=15)
+    pd.DataFrame({"timestamp": timestamps, "load_mw": 40000.0}).to_csv(
+        path, index=False
+    )
+    before = path.read_bytes()
+
+    def query(_country_code, start, end):
+        returned = pd.date_range(
+            start, end - pd.Timedelta(minutes=15), freq="15min"
+        ).difference(pd.DatetimeIndex([omitted_by_retry]))
+        return pd.Series(40000.0, index=returned)
+
+    result = _incremental_dataset(
+        None, query, dataset_name="actual load", output_path=path,
+        default_interval="15min", end_utc_exclusive=end, value_name="load_mw",
+    )
+    assert result["unresolved_gap"] is None
+    assert result["changed"] is False
+    assert path.read_bytes() == before
+
+
+def test_recent_load_revision_is_accepted_and_old_revision_is_protected(tmp_path):
+    end = pd.Timestamp("2026-09-23T06:00:00Z")
+    recent_path = tmp_path / "recent-load.csv"
+    timestamps = pd.date_range(end - pd.Timedelta(hours=50), end, freq="15min", inclusive="left")
+    pd.DataFrame({"timestamp": timestamps, "load_mw": 40000.0}).to_csv(
+        recent_path, index=False
+    )
+    revised_at = end - pd.Timedelta(hours=2)
+
+    def recent_query(_country_code, start, end):
+        returned = pd.date_range(
+            start, end - pd.Timedelta(minutes=15), freq="15min"
+        )
+        values = pd.Series(40000.0, index=returned)
+        values.loc[revised_at] = 40123.0
+        return values
+
+    recent = _incremental_dataset(
+        None, recent_query, dataset_name="actual load", output_path=recent_path,
+        default_interval="15min", end_utc_exclusive=end, value_name="load_mw",
+    )
+    recent_stored = pd.read_csv(recent_path)
+    recent_stored["timestamp"] = pd.to_datetime(recent_stored["timestamp"], utc=True)
+    assert recent["revised_cells"] == 1 and recent["changed"] is True
+    assert recent_stored.loc[
+        recent_stored["timestamp"] == revised_at, "load_mw"
+    ].iloc[0] == 40123.0
+
+    old_path = tmp_path / "old-load.csv"
+    old_start = end - pd.Timedelta(hours=50)
+    old_timestamps = pd.date_range(old_start, periods=8, freq="15min")
+    pd.DataFrame({"timestamp": old_timestamps, "load_mw": 40000.0}).to_csv(
+        old_path, index=False
+    )
+    before = old_path.read_bytes()
+
+    def old_query(_country_code, start, end):
+        values = pd.Series(40000.0, index=old_timestamps)
+        values.iloc[0] = 49999.0
+        return values
+
+    protected = _incremental_dataset(
+        None, old_query, dataset_name="actual load", output_path=old_path,
+        default_interval="15min", end_utc_exclusive=end, value_name="load_mw",
+    )
+    assert protected["protected_conflicts"] == 1
+    assert protected["revised_cells"] == 0
+    assert protected["changed"] is False
+    assert old_path.read_bytes() == before
+
+
+def test_unresolved_recent_load_gap_is_warning_metadata_only(tmp_path):
+    path = tmp_path / "load.csv"
+    end = pd.Timestamp("2026-09-23T06:00:00Z")
+    timestamps = pd.date_range(end - pd.Timedelta(hours=50), end, freq="15min", inclusive="left")
+    missing = end - pd.Timedelta(hours=10, minutes=45)
+    observed = timestamps.difference(pd.DatetimeIndex([missing]))
+    pd.DataFrame({"timestamp": observed, "load_mw": 40000.0}).to_csv(path, index=False)
+    before = path.read_bytes()
+
+    def query(_country_code, start, end):
+        returned = pd.date_range(
+            start, end - pd.Timedelta(minutes=15), freq="15min"
+        ).difference(pd.DatetimeIndex([missing]))
+        return pd.Series(40000.0, index=returned)
+
+    result = _incremental_dataset(
+        None, query, dataset_name="actual load", output_path=path,
+        default_interval="15min", end_utc_exclusive=end, value_name="load_mw",
+    )
+    assert result["changed"] is False
+    assert result["unresolved_gap"]["first_unresolved_timestamp"] == missing.isoformat()
+    assert result["unresolved_gap"]["affected_hours"] == [missing.floor("h").isoformat()]
+    assert path.read_bytes() == before
 
 
 def test_incomplete_quarter_hour_price_is_not_aggregated():

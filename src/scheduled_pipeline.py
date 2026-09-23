@@ -353,6 +353,7 @@ def _record_gap_warnings(unresolved_gaps):
                 "source": dataset_name,
                 "first_unresolved_timestamp": gap.get("first_unresolved_timestamp"),
                 "missing_count": gap.get("missing_count"),
+                "affected_hours": gap.get("affected_hours", []),
             },
         )
 
@@ -542,15 +543,15 @@ def _skip_derived_rebuild(
     mode: str,
     complete_watermark_advanced: bool,
     new_rows_ingested: int,
-    generation_cells_repaired: int,
-    generation_cells_revised: int = 0,
+    source_cells_repaired: int,
+    source_cells_revised: int = 0,
 ) -> bool:
     return (
         mode == "incremental"
         and not complete_watermark_advanced
         and new_rows_ingested == 0
-        and generation_cells_repaired == 0
-        and generation_cells_revised == 0
+        and source_cells_repaired == 0
+        and source_cells_revised == 0
     )
 
 
@@ -605,13 +606,19 @@ def powerflow_entsoe_pipeline(
             run_id, "ENTSO-E ingestion", entsoe_ingestion_task,
             mode, start_date, end_date,
         )
-        generation_cells_repaired = int(entsoe_metadata.get("repaired_cells", 0))
-        generation_cells_revised = int(entsoe_metadata.get("revised_cells", 0))
-        storage_state["generation_cells_repaired"] = generation_cells_repaired
-        storage_state["generation_cells_revised"] = generation_cells_revised
         generation_metadata = entsoe_metadata.get("datasets", {}).get(
             "generation by type", {}
         )
+        source_cells_repaired = int(entsoe_metadata.get("repaired_cells", 0))
+        source_cells_revised = int(entsoe_metadata.get("revised_cells", 0))
+        generation_cells_repaired = int(
+            generation_metadata.get("repaired_cells", 0)
+        )
+        generation_cells_revised = int(
+            generation_metadata.get("revised_cells", 0)
+        )
+        storage_state["generation_cells_repaired"] = generation_cells_repaired
+        storage_state["generation_cells_revised"] = generation_cells_revised
         storage_state["generation_repaired_by_column"] = generation_metadata.get(
             "repaired_by_column", {}
         )
@@ -671,7 +678,7 @@ def powerflow_entsoe_pipeline(
         )
         if _skip_derived_rebuild(
             mode, complete_watermark_advanced,
-            new_rows_ingested, generation_cells_repaired, generation_cells_revised,
+            new_rows_ingested, source_cells_repaired, source_cells_revised,
         ):
             stage_name = "Next24h release and forecast processing"
             _run_next24h_stages(storage_sync, storage_state, run_id)

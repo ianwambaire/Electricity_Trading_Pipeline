@@ -49,6 +49,8 @@ PRODUCTION_MODULES = (
     "models.next24h_production",
     "models.next24h_monitoring",
     "models.prediction_visualization",
+    "operational_recovery",
+    "presentation_snapshot",
     "processing.build_gold_dataset",
     "processing.build_silver_dataset",
     "scheduled_pipeline",

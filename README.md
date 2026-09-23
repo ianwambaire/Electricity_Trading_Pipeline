@@ -514,6 +514,27 @@ recent errors with `journalctl -p warning --since boot` and the three PowerFlow
 service logs. Source-continuity warnings are expected operational warnings; do
 not fill missing upstream intervals or force a run by changing the data.
 
+### Production backup, recovery, and presentation evidence
+
+The operational backup/restore procedure, read-only S3 recovery checks, service
+verification commands, and presentation fallback process are documented in
+[`docs/production_recovery_runbook.md`](docs/production_recovery_runbook.md).
+
+From the repository root, create and validate a consistent SQLite backup and
+capture an approved presentation evidence bundle with:
+
+```bash
+python scripts/backup_operational_state.py
+python scripts/validate_operational_backup.py \
+  backups/operational/YYYYMMDDTHHMMSS.ffffffZ
+python scripts/check_s3_recovery_readiness.py
+python scripts/create_presentation_snapshot.py
+```
+
+Generated backup and presentation directories are ignored by Git. PowerFlow
+preserves the most recent valid production forecast and clearly identifies stale
+or unavailable forecasts rather than fabricating replacement market data.
+
 ### Docker services
 
 ```bash

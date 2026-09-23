@@ -110,6 +110,8 @@ data/external/
 # Backups
 
 data/backups/
+backups/
+presentation_snapshots/
 
 # Reports
 

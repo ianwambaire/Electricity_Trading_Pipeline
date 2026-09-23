@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import sqlite3
 from contextlib import closing
@@ -7,6 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+
+from powerflow_secrets import secret_is_configured
 
 
 PIPELINE_HISTORY_COLUMNS = [
@@ -320,9 +321,8 @@ def derive_system_health(
 
 def alert_configuration_status(environment=None) -> str | None:
     """Return only a non-secret configuration state for failure email alerts."""
-    environment = os.environ if environment is None else environment
     configured = all(
-        str(environment.get(key, "")).strip()
+        secret_is_configured(key, environment=environment)
         for key in ALERT_ENVIRONMENT_KEYS
     )
     return "Configured" if configured else "Not configured"

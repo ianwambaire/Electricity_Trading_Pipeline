@@ -183,6 +183,8 @@ Then replace the placeholders locally. Never commit `.env`.
 
 | Variable | Purpose |
 |---|---|
+| `POWERFLOW_SECRETS_BACKEND` | Secret source: `env` (default), `ssm`, or `secretsmanager` |
+| `POWERFLOW_SECRETS_PREFIX` | Optional AWS secret identifier prefix; defaults to `/powerflow/production` |
 | `ENTSOE_API_KEY` | Required by the primary ENTSO-E ingestion stage |
 | `POWERFLOW_HISTORY_START_DATE` | Optional inclusive history start; defaults to `2019-01-01` |
 | `POWERFLOW_HISTORY_END_DATE` | Optional inclusive history end; defaults to `2025-09-30` |
@@ -197,6 +199,12 @@ Then replace the placeholders locally. Never commit `.env`.
 | `ALERT_EMAIL_RECEIVER` | Optional failure-notification recipient |
 
 If the email variables are absent, the existing notification function skips sending email.
+
+For production migration, AWS backends use one encrypted value per secret name
+and authenticate only through the EC2 IAM role. They never silently fall back
+to `.env`. Run `python scripts/check_secret_configuration.py` to see only each
+name's `configured`/`missing` state. The complete IAM, migration, and rollback
+procedure is in `docs/production_recovery_runbook.md`.
 
 AWS credentials are never stored in PowerFlow configuration. S3 mode uses boto3's
 standard credential provider chain, so local runs can use an AWS profile or environment,

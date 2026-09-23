@@ -1,5 +1,5 @@
 import argparse
-import os
+import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from xml.etree import ElementTree
@@ -10,6 +10,7 @@ from entsoe import EntsoePandasClient, EntsoeRawClient
 from entsoe.exceptions import NoMatchingDataError
 
 if __package__:
+    from powerflow_secrets import get_secret
     from .historical_range import (
         get_historical_date_range,
         iter_time_chunks,
@@ -26,6 +27,8 @@ if __package__:
         normalize_utc_timestamps,
     )
 else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from powerflow_secrets import get_secret
     from historical_range import get_historical_date_range, iter_time_chunks, iter_utc_chunks
     from incremental_utils import (
         append_csv_safely,
@@ -771,9 +774,7 @@ def fetch_entsoe_data(
         raise ValueError("start_date/end_date are supported only in historical mode.")
     if client is None:
         load_dotenv()
-        api_key = os.getenv("ENTSOE_API_KEY")
-        if not api_key:
-            raise ValueError("ENTSOE_API_KEY not found. Check your .env file.")
+        api_key = get_secret("ENTSOE_API_KEY")
         client = EntsoePandasClient(api_key=api_key)
     RAW_ENTSOE_DIR.mkdir(parents=True, exist_ok=True)
 

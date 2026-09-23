@@ -51,6 +51,7 @@ PRODUCTION_MODULES = (
     "models.prediction_visualization",
     "operational_recovery",
     "presentation_snapshot",
+    "powerflow_secrets",
     "processing.build_gold_dataset",
     "processing.build_silver_dataset",
     "scheduled_pipeline",

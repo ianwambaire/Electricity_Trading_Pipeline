@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -17,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ingestion.fetch_entsoe_data import repair_generation_interval  # noqa: E402
+from powerflow_secrets import SecretConfigurationError, get_secret  # noqa: E402
 
 
 def main() -> None:
@@ -31,9 +31,10 @@ def main() -> None:
     )
     args = parser.parse_args()
     load_dotenv(PROJECT_ROOT / ".env")
-    token = os.getenv("ENTSOE_API_KEY")
-    if not token:
-        parser.error("ENTSOE_API_KEY is not configured.")
+    try:
+        token = get_secret("ENTSOE_API_KEY")
+    except SecretConfigurationError as error:
+        parser.error(str(error))
     client = EntsoePandasClient(api_key=token)
     result = repair_generation_interval(
         client,

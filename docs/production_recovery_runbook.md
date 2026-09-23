@@ -59,6 +59,79 @@ The dashboard should display stale or unavailable status when freshness checks
 fail. Do not increase the three-hour next24h freshness threshold to make a
 presentation appear current.
 
+## Production secrets migration
+
+PowerFlow defaults to `POWERFLOW_SECRETS_BACKEND=env`, preserving the current
+local and EC2 behavior until an operator explicitly enables an AWS backend.
+Supported values are `env`, `ssm`, and `secretsmanager`. When an AWS backend is
+selected, PowerFlow requires boto3 to resolve credentials from the EC2 instance
+metadata role (`iam-role`). It never passes or stores static AWS access keys and never
+falls back to same-named environment secrets after an AWS lookup fails.
+AWS secret lookup is refused if `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+or `AWS_SESSION_TOKEN` is present in the process environment.
+
+Recommended one-secret-per-value locations are:
+
+| PowerFlow secret name | Parameter Store | Secrets Manager |
+| --- | --- | --- |
+| `ENTSOE_API_KEY` | `/powerflow/production/ENTSOE_API_KEY` | `powerflow/production/ENTSOE_API_KEY` |
+| `ALERT_EMAIL_SENDER` | `/powerflow/production/ALERT_EMAIL_SENDER` | `powerflow/production/ALERT_EMAIL_SENDER` |
+| `ALERT_EMAIL_PASSWORD` | `/powerflow/production/ALERT_EMAIL_PASSWORD` | `powerflow/production/ALERT_EMAIL_PASSWORD` |
+| `ALERT_EMAIL_RECEIVER` | `/powerflow/production/ALERT_EMAIL_RECEIVER` | `powerflow/production/ALERT_EMAIL_RECEIVER` |
+
+Use SSM `SecureString` parameters, or Secrets Manager secret strings. The
+default prefix can be changed with `POWERFLOW_SECRETS_PREFIX`; a specific
+identifier can be changed with `POWERFLOW_SECRET_ID_<SECRET_NAME>`. Identifier
+overrides contain locations only, never secret values.
+
+The EC2 role needs only one backend's read permissions. Parameter Store:
+
+- `ssm:GetParameter` on `arn:aws:ssm:REGION:ACCOUNT_ID:parameter/powerflow/production/*`
+- `kms:Decrypt` only when the SecureString uses a customer-managed KMS key
+
+Secrets Manager:
+
+- `secretsmanager:GetSecretValue` on
+  `arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:powerflow/production/*`
+- `kms:Decrypt` only when the secret uses a customer-managed KMS key
+
+Do not grant create, update, delete, or list permissions to the runtime role.
+The repository does not create secrets or change IAM policies.
+
+Migration procedure:
+
+1. Create the four values at the recommended locations through an approved
+   administrator workflow. Do not paste values into shell history or logs.
+2. Attach the applicable read-only policy to the EC2 instance role.
+3. Test the selected backend without printing values:
+
+   ```bash
+   cd /home/ec2-user/Electricity_Trading_Pipeline
+   source .venv-prod/bin/activate
+   POWERFLOW_SECRETS_BACKEND=ssm python scripts/check_secret_configuration.py
+   # or: POWERFLOW_SECRETS_BACKEND=secretsmanager python scripts/check_secret_configuration.py
+   ```
+
+4. Confirm each required entry reports only `configured`, then set the chosen
+   `POWERFLOW_SECRETS_BACKEND` and prefix in the protected `.env` file.
+5. Remove `ENTSOE_API_KEY` and the three `ALERT_EMAIL_*` values from `.env` only
+   after the AWS diagnostic succeeds. Retain a protected rollback copy outside
+   the repository according to the project's credential-handling policy.
+6. Restart the worker and dashboard, then repeat the diagnostic and run one
+   controlled incremental pipeline verification.
+
+Rollback procedure:
+
+1. Set `POWERFLOW_SECRETS_BACKEND=env`.
+2. Restore the previous values into the protected `.env` file from the approved
+   rollback copy, never from Git or service logs.
+3. Restart `powerflow-prefect-worker.service` and
+   `powerflow-streamlit.service`, then run the diagnostic again.
+
+The diagnostic prints only backend, secret name, and `configured`/`missing`.
+Do not validate secrets with `echo`, shell tracing (`set -x`), or AWS commands
+that print decrypted values.
+
 ## Back up operational SQLite
 
 Create a consistent SQLite backup using SQLite's online backup API:

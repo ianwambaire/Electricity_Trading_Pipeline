@@ -1,14 +1,16 @@
-import os
+import sys
+from pathlib import Path
+
 import pandas as pd
 from dotenv import load_dotenv
 from entsoe import EntsoePandasClient
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from powerflow_secrets import get_secret  # noqa: E402
+
 load_dotenv()
 
-api_key = os.getenv("ENTSOE_API_KEY")
-
-if not api_key:
-    raise ValueError("ENTSOE_API_KEY not found. Check your .env file.")
+api_key = get_secret("ENTSOE_API_KEY")
 
 client = EntsoePandasClient(api_key=api_key)
 

@@ -7,6 +7,7 @@ import smtplib
 from email.message import EmailMessage
 
 from dotenv import load_dotenv
+from powerflow_secrets import get_secret
 
 
 load_dotenv()
@@ -70,9 +71,9 @@ def failure_fingerprint(component: str, category: str, message: str) -> str:
 
 
 def send_failure_alert(subject: str, message: str) -> str:
-    sender = os.getenv("ALERT_EMAIL_SENDER")
-    password = os.getenv("ALERT_EMAIL_PASSWORD")
-    receiver = os.getenv("ALERT_EMAIL_RECEIVER")
+    sender = get_secret("ALERT_EMAIL_SENDER", required=False)
+    password = get_secret("ALERT_EMAIL_PASSWORD", required=False)
+    receiver = get_secret("ALERT_EMAIL_RECEIVER", required=False)
 
     if not sender or not password or not receiver:
         print("Email alert settings missing. Skipping notification.")

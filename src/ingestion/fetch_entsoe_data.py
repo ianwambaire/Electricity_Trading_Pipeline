@@ -324,21 +324,29 @@ def _append_generation_safely(
     generation: pd.DataFrame,
     *,
     revision_window: tuple[pd.Timestamp, pd.Timestamp] | None = None,
+    retain_protected_conflicts: bool = False,
 ):
     incoming = normalize_utc_timestamps(_flatten_generation_frame(generation))
     if path.exists():
         existing = _read_stored_generation(path)
         merged = merge_generation_rows(
-            existing, incoming, revision_window=revision_window
+            existing,
+            incoming,
+            revision_window=revision_window,
+            retain_protected_conflicts=retain_protected_conflicts,
         )
         combined, new_rows = merged.data, merged.new_rows
         repaired_by_column = merged.repaired_by_column
         revised_by_column = merged.revised_by_column
+        protected_conflicts_by_column = merged.protected_conflicts_by_column
+        protected_conflict_timestamps = merged.protected_conflict_timestamps
     else:
         combined = incoming
         new_rows = len(incoming)
         repaired_by_column = {}
         revised_by_column = {}
+        protected_conflicts_by_column = {}
+        protected_conflict_timestamps = ()
     latest = combined["timestamp"].iloc[-1] if not combined.empty else None
     if new_rows or repaired_by_column or revised_by_column:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -348,7 +356,14 @@ def _append_generation_safely(
             temporary_path.replace(path)
         finally:
             temporary_path.unlink(missing_ok=True)
-    return new_rows, latest, repaired_by_column, revised_by_column
+    return (
+        new_rows,
+        latest,
+        repaired_by_column,
+        revised_by_column,
+        protected_conflicts_by_column,
+        protected_conflict_timestamps,
+    )
 
 
 def repair_generation_interval(
@@ -558,6 +573,8 @@ def _incremental_dataset(
         latest_timestamp = latest
         repaired_by_column = {}
         revised_by_column = {}
+        protected_conflicts_by_column = {}
+        protected_conflict_timestamps = ()
     elif allow_column_union and value_name is None:
         # The retry may cover old backlog. Only the last 48 operational hours
         # may revise existing non-null values; older conflicts remain protected.
@@ -565,9 +582,19 @@ def _incremental_dataset(
             max(start_utc, end_utc_exclusive - GENERATION_REQUERY_OVERLAP),
             end_utc_exclusive,
         )
-        new_rows, latest_timestamp, repaired_by_column, revised_by_column = (
+        (
+            new_rows,
+            latest_timestamp,
+            repaired_by_column,
+            revised_by_column,
+            protected_conflicts_by_column,
+            protected_conflict_timestamps,
+        ) = (
             _append_generation_safely(
-                output_path, observed_values, revision_window=revision_window
+                output_path,
+                observed_values,
+                revision_window=revision_window,
+                retain_protected_conflicts=True,
             )
         )
     else:
@@ -580,11 +607,21 @@ def _incremental_dataset(
         latest_timestamp = result.latest_timestamp
         repaired_by_column = {}
         revised_by_column = {}
+        protected_conflicts_by_column = {}
+        protected_conflict_timestamps = ()
+    protected_conflicts = sum(protected_conflicts_by_column.values())
+    if protected_conflicts:
+        print(
+            f"Ignored {protected_conflicts} protected historical ENTSO-E "
+            "revision(s) outside the permitted revision window; stored value retained."
+        )
     print(
         f"Incremental {dataset_name}: appended {new_rows} rows; "
         f"repaired {sum(repaired_by_column.values())} missing cells; "
         f"accepted {sum(revised_by_column.values())} recent source revisions "
         f"{revised_by_column}; "
+        f"protected {protected_conflicts} historical conflicts "
+        f"{protected_conflicts_by_column}; "
         f"latest timestamp={latest_timestamp}."
     )
     metadata = {
@@ -595,6 +632,16 @@ def _incremental_dataset(
         "repaired_cells": sum(repaired_by_column.values()),
         "revised_by_column": revised_by_column,
         "revised_cells": sum(revised_by_column.values()),
+        "protected_conflicts_by_column": protected_conflicts_by_column,
+        "protected_conflicts": protected_conflicts,
+        "protected_conflict_first_timestamp": (
+            protected_conflict_timestamps[0].isoformat()
+            if protected_conflict_timestamps else None
+        ),
+        "protected_conflict_last_timestamp": (
+            protected_conflict_timestamps[-1].isoformat()
+            if protected_conflict_timestamps else None
+        ),
     }
     if is_price:
         metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
@@ -673,6 +720,9 @@ def fetch_entsoe_data(
             "new_rows": sum(item["new_rows"] for item in datasets.values()),
             "repaired_cells": sum(item.get("repaired_cells", 0) for item in datasets.values()),
             "revised_cells": sum(item.get("revised_cells", 0) for item in datasets.values()),
+            "protected_conflicts": sum(
+                item.get("protected_conflicts", 0) for item in datasets.values()
+            ),
             "datasets": datasets,
         }
         if metadata["new_rows"] == 0:

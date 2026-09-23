@@ -6,6 +6,7 @@ import pytest
 import streamlit as st
 
 import store_data
+from notifications.email_alert import alert_cooldown_hours, failure_fingerprint
 from dashboard_data import prediction_count_metrics, summarize_next24h_forecast
 from dashboard_health import (
     age_label,
@@ -19,7 +20,7 @@ from dashboard_health import (
     summarize_pipeline_timings,
 )
 from models.next24h_monitoring import summarize_realized_performance
-from scheduled_pipeline import _timed_stage
+from scheduled_pipeline import _record_protected_generation_conflicts, _timed_stage
 
 
 NOW = pd.Timestamp("2026-09-21T20:30:00Z")
@@ -144,6 +145,132 @@ def test_identical_incident_is_recorded_after_dedupe_window(temporary_database):
         assert connection.execute(
             "SELECT COUNT(*) FROM operational_incidents"
         ).fetchone()[0] == 2
+
+
+def test_failure_alert_cooldown_new_duplicate_expired_and_distinct(
+    temporary_database, monkeypatch,
+):
+    import scheduled_pipeline as pipeline
+
+    sent = []
+    monkeypatch.setenv("POWERFLOW_ALERT_COOLDOWN_HOURS", "12")
+    monkeypatch.setattr(
+        pipeline,
+        "send_failure_alert",
+        lambda subject, message: sent.append((subject, message)) or "SENT",
+    )
+    common = {
+        "component": "pipeline",
+        "category": "ingestion_failed:RuntimeError",
+        "subject": "PowerFlow failed",
+        "message": "ENTSO-E request failed token=do-not-store",
+    }
+    assert pipeline._send_incident_failure_alert(**common) == "SENT"
+    assert pipeline._send_incident_failure_alert(**common) == "SUPPRESSED"
+    assert len(sent) == 1
+
+    with sqlite3.connect(temporary_database) as connection:
+        old = (datetime.now(timezone.utc) - timedelta(hours=13)).isoformat()
+        connection.execute(
+            """
+            UPDATE operational_incidents SET timestamp_utc = ?
+            WHERE event_type = 'failure_alert_sent'
+            """,
+            (old,),
+        )
+    assert pipeline._send_incident_failure_alert(**common) == "SENT"
+    distinct = {**common, "category": "model_verification_failed:ValueError"}
+    assert pipeline._send_incident_failure_alert(**distinct) == "SENT"
+    assert len(sent) == 3
+
+    with sqlite3.connect(temporary_database) as connection:
+        rows = connection.execute(
+            "SELECT event_type, message, details_json FROM operational_incidents"
+        ).fetchall()
+    assert sum(row[0] == "failure_alert_suppressed" for row in rows) == 1
+    assert "do-not-store" not in str(rows)
+    assert all("do-not-store" not in message for _, message in sent)
+
+
+def test_email_delivery_failure_records_once_without_recursive_alert(
+    temporary_database, monkeypatch,
+):
+    import scheduled_pipeline as pipeline
+
+    attempts = []
+    monkeypatch.setattr(
+        pipeline,
+        "send_failure_alert",
+        lambda *args, **kwargs: attempts.append((args, kwargs)) or "FAILED",
+    )
+    result = pipeline._send_incident_failure_alert(
+        component="pipeline",
+        category="RuntimeError",
+        subject="PowerFlow failed",
+        message="Source unavailable",
+    )
+    assert result == "FAILED"
+    assert len(attempts) == 1
+    with sqlite3.connect(temporary_database) as connection:
+        event_types = [row[0] for row in connection.execute(
+            "SELECT event_type FROM operational_incidents"
+        )]
+    assert event_types == ["email_alert_failed"]
+
+
+@pytest.mark.parametrize("value", ["0", "169", "nan", "invalid"])
+def test_alert_cooldown_configuration_validation(value):
+    with pytest.raises(ValueError, match="POWERFLOW_ALERT_COOLDOWN_HOURS"):
+        alert_cooldown_hours({"POWERFLOW_ALERT_COOLDOWN_HOURS": value})
+    assert alert_cooldown_hours({}) == 12
+    assert alert_cooldown_hours({"POWERFLOW_ALERT_COOLDOWN_HOURS": "1"}) == 1
+    assert alert_cooldown_hours({"POWERFLOW_ALERT_COOLDOWN_HOURS": "168"}) == 168
+
+
+def test_failure_fingerprint_is_stable_and_contains_no_secrets():
+    first = failure_fingerprint(
+        "pipeline", "RuntimeError",
+        "Failed at 2026-09-21T10:00:00+00:00 token=first-secret",
+    )
+    second = failure_fingerprint(
+        "pipeline", "RuntimeError",
+        "Failed at 2026-09-22T11:00:00+00:00 token=second-secret",
+    )
+    assert first == second
+    assert len(first) == 64
+    assert "secret" not in first
+
+
+def test_protected_generation_conflict_records_safe_warning(monkeypatch):
+    import scheduled_pipeline as pipeline
+
+    incidents = []
+    monkeypatch.setattr(
+        pipeline,
+        "_record_incident",
+        lambda *args, **kwargs: incidents.append((args, kwargs)) or True,
+    )
+    state = {"warnings": []}
+    metadata = {
+        "protected_conflicts": 2,
+        "protected_conflicts_by_column": {"Fossil Gas": 1, "Solar": 1},
+        "protected_conflict_first_timestamp": "2026-09-18T01:00:00+00:00",
+        "protected_conflict_last_timestamp": "2026-09-18T02:00:00+00:00",
+    }
+    assert _record_protected_generation_conflicts(metadata, state) == 2
+    assert state["generation_protected_conflicts"] == 2
+    assert "stored value retained" in state["warnings"][0]
+    args, _ = incidents[0]
+    assert args[:4] == (
+        "WARNING", "ENTSO-E generation", "protected_historical_revision", "ACTIVE"
+    )
+    assert args[5] == {
+        "count": 2,
+        "affected_columns": ["Fossil Gas", "Solar"],
+        "by_column": {"Fossil Gas": 1, "Solar": 1},
+        "first_timestamp": "2026-09-18T01:00:00+00:00",
+        "last_timestamp": "2026-09-18T02:00:00+00:00",
+    }
 
 
 def test_stage_timing_records_success_failure_and_total(temporary_database, monkeypatch):

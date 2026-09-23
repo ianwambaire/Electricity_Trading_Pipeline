@@ -266,7 +266,7 @@ def test_atomic_revision_failure_preserves_original_file(tmp_path, monkeypatch):
     assert not path.with_suffix(".csv.tmp").exists()
 
 
-def test_incremental_old_overlap_conflict_stays_strict(tmp_path):
+def test_incremental_old_overlap_conflict_is_protected_without_change(tmp_path):
     path = tmp_path / "generation.csv"
     start = END - pd.Timedelta(hours=50)
     existing = generation_hours()
@@ -276,14 +276,21 @@ def test_incremental_old_overlap_conflict_stays_strict(tmp_path):
     incoming.loc[0, "Fossil Gas"] = 31.0
     client = GenerationClient(incoming)
     before = path.read_bytes()
-    with pytest.raises(ValueError, match="Conflicting non-null generation"):
-        _incremental_dataset(
-            client, client.query_generation,
-            dataset_name="generation by type", output_path=path,
-            default_interval="15min", end_utc_exclusive=END,
-            allow_column_union=True,
-        )
+    result = _incremental_dataset(
+        client, client.query_generation,
+        dataset_name="generation by type", output_path=path,
+        default_interval="15min", end_utc_exclusive=END,
+        allow_column_union=True,
+    )
+    assert result["protected_conflicts"] == 1
+    assert result["protected_conflicts_by_column"] == {"Fossil Gas": 1}
+    assert result["protected_conflict_first_timestamp"] == start.isoformat()
+    assert result["protected_conflict_last_timestamp"] == start.isoformat()
+    assert result["new_rows"] == 0
+    assert result["repaired_cells"] == 0
+    assert result["revised_cells"] == 0
     assert path.read_bytes() == before
+    assert pd.read_csv(path).loc[0, "Fossil Gas"] == 30.0
 
 
 def test_cell_repair_forces_derived_rebuild_without_new_rows_or_watermark():

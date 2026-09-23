@@ -23,8 +23,15 @@ from models.next24h_production import (
     run_next24h_forecast,
 )
 from models.prediction_visualization import run_prediction_report
-from notifications.email_alert import send_failure_alert
+from notifications.email_alert import (
+    DEFAULT_ALERT_COOLDOWN_HOURS,
+    alert_cooldown_hours,
+    failure_fingerprint,
+    sanitize_failure_message,
+    send_failure_alert,
+)
 from store_data import (
+    failure_alert_cooldown_active,
     incident_is_active,
     initialize_database,
     log_data_quality_result,
@@ -58,6 +65,67 @@ def _record_incident(*args, **kwargs) -> bool:
     except Exception:
         logger.exception("Unable to record PowerFlow operational incident.")
         return False
+
+
+def _send_incident_failure_alert(
+    *,
+    component: str,
+    category: str,
+    subject: str,
+    message: str,
+    fingerprint_message: str | None = None,
+) -> str:
+    """Send a new/expired incident alert without hiding repeated occurrences."""
+    safe_message = sanitize_failure_message(message)
+    fingerprint = failure_fingerprint(
+        component,
+        category,
+        fingerprint_message if fingerprint_message is not None else safe_message,
+    )
+    try:
+        cooldown = alert_cooldown_hours()
+    except ValueError:
+        cooldown = DEFAULT_ALERT_COOLDOWN_HOURS
+        logger.warning(
+            "Invalid POWERFLOW_ALERT_COOLDOWN_HOURS; using %.0f hours.",
+            cooldown,
+        )
+    try:
+        initialize_database()
+        cooldown_active = failure_alert_cooldown_active(fingerprint, cooldown)
+    except Exception:
+        logger.exception("Unable to evaluate failure-alert cooldown; alert will be attempted.")
+        cooldown_active = False
+    if cooldown_active:
+        logger.info("Duplicate failure alert suppressed; cooldown active")
+        _record_incident(
+            "INFO",
+            "email alerts",
+            "failure_alert_suppressed",
+            "RECORDED",
+            "Duplicate failure alert suppressed; cooldown active.",
+            {"fingerprint": fingerprint, "cooldown_hours": cooldown},
+            dedupe_minutes=0,
+        )
+        return "SUPPRESSED"
+
+    result = send_failure_alert(subject, safe_message)
+    if result == "SENT":
+        logger.info("Failure alert sent")
+        _record_incident(
+            "INFO", "email alerts", "failure_alert_sent", "RECORDED",
+            "Failure alert sent.",
+            {"fingerprint": fingerprint, "cooldown_hours": cooldown},
+            dedupe_minutes=0,
+        )
+    elif result == "FAILED":
+        _record_incident(
+            "ERROR", "email alerts", "email_alert_failed", "ACTIVE",
+            "Failure alert email could not be delivered.",
+            {"fingerprint": fingerprint},
+            dedupe_minutes=0,
+        )
+    return result
 
 
 def _timed_stage(run_id: str | None, stage_name: str, operation, *args, **kwargs):
@@ -289,6 +357,41 @@ def _record_gap_warnings(unresolved_gaps):
         )
 
 
+def _record_protected_generation_conflicts(generation_metadata, storage_state) -> int:
+    count = int(generation_metadata.get("protected_conflicts", 0))
+    by_column = generation_metadata.get("protected_conflicts_by_column", {})
+    storage_state["generation_protected_conflicts"] = count
+    storage_state["generation_protected_conflicts_by_column"] = by_column
+    if not count:
+        return 0
+    details = {
+        "count": count,
+        "affected_columns": sorted(by_column),
+        "by_column": by_column,
+        "first_timestamp": generation_metadata.get(
+            "protected_conflict_first_timestamp"
+        ),
+        "last_timestamp": generation_metadata.get(
+            "protected_conflict_last_timestamp"
+        ),
+    }
+    warning = (
+        f"Ignored {count} protected historical ENTSO-E revision(s) outside "
+        "the permitted revision window; stored value retained."
+    )
+    logger.warning(warning)
+    storage_state["warnings"].append(warning)
+    _record_incident(
+        "WARNING",
+        "ENTSO-E generation",
+        "protected_historical_revision",
+        "ACTIVE",
+        warning,
+        details,
+    )
+    return count
+
+
 def _sync_storage_group(synchronizer, storage_state, group, stage_name):
     try:
         result = synchronizer.sync_group(group)
@@ -327,22 +430,23 @@ def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
             run_id, "Next24h forecast generation", next24h_forecast_task
         )
     except ForecastUnavailableError as error:
-        warning = f"Next24h forecast unavailable: {error}"
+        warning = sanitize_failure_message(f"Next24h forecast unavailable: {error}")
         storage_state["next24h_forecast_status"] = "UNAVAILABLE"
         storage_state["warnings"].append(warning)
         initialize_database()
         log_data_quality_result("next24h_forecast_freshness", "WARNING", warning)
-        recorded = _record_incident(
+        _record_incident(
             "WARNING", "next24h forecast", "forecast_withheld", "ACTIVE",
             warning,
+            {"run_id": run_id},
+            dedupe_minutes=0,
         )
-        if recorded:
-            alert_result = send_failure_alert("PowerFlow next24h forecast withheld", warning)
-            if alert_result == "FAILED":
-                _record_incident(
-                    "ERROR", "email alerts", "email_alert_failed", "ACTIVE",
-                    "Forecast withholding email alert could not be delivered.",
-                )
+        _send_incident_failure_alert(
+            component="next24h forecast",
+            category=type(error).__name__,
+            subject="PowerFlow next24h forecast withheld",
+            message=warning,
+        )
     else:
         storage_state["next24h_forecast_status"] = (
             "GENERATED" if changed else "UNCHANGED"
@@ -514,6 +618,7 @@ def powerflow_entsoe_pipeline(
         storage_state["generation_revised_by_column"] = generation_metadata.get(
             "revised_by_column", {}
         )
+        _record_protected_generation_conflicts(generation_metadata, storage_state)
         for event_type, count, by_column in (
             ("generation_repair", generation_cells_repaired,
              storage_state["generation_repaired_by_column"]),
@@ -679,8 +784,9 @@ def powerflow_entsoe_pipeline(
                 logger.exception(
                     "Unable to calculate raw-row changes for the failed run."
                 )
-        message = (
-            f"PowerFlow ENTSO-E pipeline failed during '{stage_name}': {error}"
+        safe_error = sanitize_failure_message(str(error))
+        message = sanitize_failure_message(
+            f"PowerFlow ENTSO-E pipeline failed during '{stage_name}': {safe_error}"
         )
         logger.exception(message)
 
@@ -717,21 +823,18 @@ def powerflow_entsoe_pipeline(
         except Exception:
             logger.exception("Unable to record the failed pipeline run in SQLite.")
 
-        alert_result = send_failure_alert(
+        _send_incident_failure_alert(
+            component="pipeline",
+            category=f"{failure_type}:{type(error).__name__}",
             subject="PowerFlow ENTSO-E Pipeline Failed",
             message=(
                 f"Failed stage: {stage_name}\n\n"
-                f"Error details:\n{error}\n\n"
+                f"Error details:\n{safe_error}\n\n"
                 f"Records processed before failure: {records_processed}\n\n"
                 "Check logs/pipeline.log and Prefect for details."
             ),
+            fingerprint_message=f"{stage_name}: {safe_error}",
         )
-        if alert_result == "FAILED":
-            _record_incident(
-                "ERROR", "email alerts", "email_alert_failed", "ACTIVE",
-                "Pipeline failure email alert could not be delivered.",
-                {"run_id": run_id},
-            )
         raise
     finally:
         try:

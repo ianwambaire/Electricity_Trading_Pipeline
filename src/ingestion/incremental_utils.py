@@ -23,6 +23,8 @@ class GenerationMergeResult:
     new_rows: int
     repaired_by_column: dict[str, int]
     revised_by_column: dict[str, int]
+    protected_conflicts_by_column: dict[str, int]
+    protected_conflict_timestamps: tuple[pd.Timestamp, ...]
 
     @property
     def repaired_cells(self) -> int:
@@ -31,6 +33,10 @@ class GenerationMergeResult:
     @property
     def revised_cells(self) -> int:
         return sum(self.revised_by_column.values())
+
+    @property
+    def protected_conflicts(self) -> int:
+        return sum(self.protected_conflicts_by_column.values())
 
 
 @dataclass(frozen=True)
@@ -352,8 +358,14 @@ def merge_generation_rows(
     incoming: pd.DataFrame,
     *,
     revision_window: tuple[pd.Timestamp, pd.Timestamp] | None = None,
+    retain_protected_conflicts: bool = False,
 ) -> GenerationMergeResult:
-    """Enrich null cells; accept source revisions only inside an explicit UTC window."""
+    """Merge source values under an explicit recent-revision policy.
+
+    Strict mode remains the default. Routine incremental ingestion may retain
+    stored values for conflicts outside ``revision_window`` and report them via
+    ``protected_conflicts_by_column`` without changing historical data.
+    """
     if revision_window is not None:
         revision_start, revision_end = map(pd.Timestamp, revision_window)
         if revision_start.tzinfo is None or revision_end.tzinfo is None:
@@ -372,6 +384,8 @@ def merge_generation_rows(
     overlap = stored.index.intersection(fetched.index)
     repaired_by_column = {}
     revised_by_column = {}
+    protected_conflicts_by_column = {}
+    protected_conflict_timestamps = set()
     for column in columns:
         if column == TIMESTAMP_COLUMN or overlap.empty:
             continue
@@ -396,12 +410,17 @@ def merge_generation_rows(
                     | (conflict_timestamps >= revision_end)
                 ]
             if len(unapproved):
-                raise ValueError(
-                    "Conflicting non-null generation value at "
-                    f"{unapproved[0].isoformat()} in {column}; no values were replaced."
-                )
-            stored.loc[conflict_timestamps, column] = new.loc[conflicts].to_numpy()
-            revised_by_column[column] = len(conflict_timestamps)
+                if not retain_protected_conflicts:
+                    raise ValueError(
+                        "Conflicting non-null generation value at "
+                        f"{unapproved[0].isoformat()} in {column}; no values were replaced."
+                    )
+                protected_conflicts_by_column[column] = len(unapproved)
+                protected_conflict_timestamps.update(unapproved)
+            approved = conflict_timestamps.difference(unapproved)
+            if len(approved):
+                stored.loc[approved, column] = new.loc[approved].to_numpy()
+                revised_by_column[column] = len(approved)
         fill = old.isna() & new.notna()
         if fill.any():
             stored.loc[fill[fill].index, column] = new.loc[fill].to_numpy()
@@ -409,7 +428,12 @@ def merge_generation_rows(
     added = fetched.loc[~fetched.index.isin(stored.index)]
     combined = pd.concat([stored, added]).sort_index().reset_index()
     return GenerationMergeResult(
-        combined, len(added), repaired_by_column, revised_by_column
+        combined,
+        len(added),
+        repaired_by_column,
+        revised_by_column,
+        protected_conflicts_by_column,
+        tuple(sorted(protected_conflict_timestamps)),
     )
 
 

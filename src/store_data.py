@@ -161,6 +161,38 @@ def incident_is_active(component: str, event_type: str) -> bool:
     return bool(row and row[0] == "ACTIVE")
 
 
+def failure_alert_cooldown_active(
+    fingerprint: str,
+    cooldown_hours: float,
+    *,
+    now: datetime | None = None,
+) -> bool:
+    """Check the last successfully sent email for a safe failure fingerprint."""
+    current = datetime.now(timezone.utc) if now is None else now
+    if current.tzinfo is None:
+        raise ValueError("Alert cooldown time must be timezone-aware.")
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        rows = connection.execute(
+            """
+            SELECT timestamp_utc, details_json
+            FROM operational_incidents
+            WHERE component = 'email alerts'
+              AND event_type = 'failure_alert_sent'
+              AND status = 'RECORDED'
+            ORDER BY id DESC
+            """
+        ).fetchall()
+    for timestamp_utc, details_json in rows:
+        try:
+            details = json.loads(details_json or "{}")
+            sent_at = datetime.fromisoformat(timestamp_utc)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if details.get("fingerprint") == fingerprint:
+            return current - sent_at < timedelta(hours=cooldown_hours)
+    return False
+
+
 def log_stage_timing(
     run_id: str,
     stage_name: str,

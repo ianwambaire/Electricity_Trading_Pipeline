@@ -132,6 +132,109 @@ The diagnostic prints only backend, secret name, and `configured`/`missing`.
 Do not validate secrets with `echo`, shell tracing (`set -x`), or AWS commands
 that print decrypted values.
 
+## Dashboard authentication and role migration
+
+PowerFlow dashboard authentication uses the existing secret backend. Production
+should store one SSM `SecureString` named:
+
+```text
+/powerflow/production/POWERFLOW_AUTH_USERS_JSON
+```
+
+The EC2 role requires only `ssm:GetParameter` for that parameter (already
+covered when the recommended `/powerflow/production/*` read policy is used),
+plus `kms:Decrypt` only if the SecureString uses a customer-managed KMS key. Do
+not grant the runtime role permission to create, update, list, or delete users
+or parameters.
+
+Generate each user's password hash on a trusted terminal. The prompts do not
+echo the password and the script prints only the salted PBKDF2 representation:
+
+```bash
+cd /home/ec2-user/Electricity_Trading_Pipeline
+source .venv-prod/bin/activate
+python scripts/generate_auth_password_hash.py
+```
+
+Build a JSON object in a protected administrator workspace, using only the
+generated hashes. Supported roles are `analyst` and `admin`:
+
+```json
+{
+  "ADMIN_USERNAME": {
+    "password_hash": "pbkdf2_sha256$ITERATIONS$SALT$DIGEST",
+    "role": "admin",
+    "display_name": "Administrator"
+  },
+  "ANALYST_USERNAME": {
+    "password_hash": "pbkdf2_sha256$ITERATIONS$SALT$DIGEST",
+    "role": "analyst",
+    "display_name": "Analyst"
+  }
+}
+```
+
+Do not place this JSON, its hashes, or plaintext passwords in Git, `.env`, shell
+history, tickets, or logs. Store the JSON as the SecureString value through an
+approved AWS administrator workflow, such as the AWS console or an AWS CLI
+`put-parameter` call whose `--value` is read from a protected file rather than
+typed on the command line. The repository does not create the parameter or
+change IAM automatically.
+
+After the parameter and read-only IAM permission are ready, keep `.env` limited
+to non-secret policy settings:
+
+```dotenv
+POWERFLOW_SECRETS_BACKEND=ssm
+POWERFLOW_SECRETS_PREFIX=/powerflow/production
+POWERFLOW_AUTH_ENABLED=true
+POWERFLOW_SESSION_TIMEOUT_MINUTES=60
+POWERFLOW_MAX_LOGIN_ATTEMPTS=5
+POWERFLOW_LOGIN_LOCKOUT_MINUTES=10
+```
+
+Validate without displaying usernames, password hashes, salts, or secret
+values, then restart Streamlit:
+
+```bash
+python scripts/check_auth_configuration.py
+sudo systemctl restart powerflow-streamlit.service
+sudo systemctl status powerflow-streamlit.service
+sudo journalctl -u powerflow-streamlit.service --since "10 minutes ago"
+```
+
+The diagnostic must report authentication enabled, the configuration readable,
+the intended user count and role counts, and the configured timeout/lockout
+policy. It never prints usernames or password hashes.
+
+Verify through separate browser sessions:
+
+1. An unauthenticated session shows only the login screen.
+2. A wrong or unknown account receives the same generic failure message.
+3. An analyst can use Forecasting, operational health, model monitoring, and
+   data-quality views, but cannot navigate to Model Insights or see technical
+   pipeline, incident, timing, dataset-path, or release/provenance sections.
+4. An admin sees the complete existing dashboard.
+5. Logout immediately returns to the login screen, and an idle session requires
+   authentication again after the configured timeout.
+
+Rollback is explicit:
+
+```bash
+# In the protected .env file:
+POWERFLOW_AUTH_ENABLED=false
+sudo systemctl restart powerflow-streamlit.service
+```
+
+Disabling authentication restores the previous full-access dashboard behavior;
+do this only as a controlled rollback while port 8501 remains restricted to the
+intended operator network. Re-enable authentication after correcting the user
+secret or IAM permission.
+
+This mechanism is application-level authentication with session-scoped login
+rate limiting. It does not replace TLS termination, an EC2 security group,
+centralized identity, enterprise SSO, a WAF, or network-level rate limiting.
+
 ## Back up operational SQLite
 
 Create a consistent SQLite backup using SQLite's online backup API:

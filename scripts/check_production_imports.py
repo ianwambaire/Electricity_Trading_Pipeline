@@ -39,6 +39,7 @@ REQUIRED_DISTRIBUTIONS = (
     "streamlit",
 )
 PRODUCTION_MODULES = (
+    "auth",
     "dashboard_data",
     "dashboard_health",
     "ingestion.fetch_entsoe_data",

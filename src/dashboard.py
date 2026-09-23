@@ -8,6 +8,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from auth import (
+    allowed_pages_for_role,
+    can_access_section,
+    render_authenticated_user,
+    require_authentication,
+    require_page_access,
+)
 from dashboard_data import (
     MODEL_INPUT_CONTEXT_NOTE,
     build_market_context,
@@ -453,6 +460,106 @@ def page_title(eyebrow, title, subtitle=None):
     )
 
 
+def render_data_quality_history(quality_history):
+    section_header("Recent Data-Quality Check History")
+    if quality_history.empty:
+        st.info("No data-quality check history is available.")
+    else:
+        st.dataframe(
+            prepare_data_quality_history(quality_history),
+            width="stretch",
+            hide_index=True,
+        )
+
+
+def render_data_source_health(
+    source_summaries,
+    incident_history,
+    operational_metadata,
+    forecast_status,
+    forecast_issue,
+    current_forecast,
+    current_forecast_error,
+):
+    section_header("Data-Source Health")
+    issue_by_source = {}
+    for incident in incident_history.to_dict(orient="records"):
+        if incident.get("severity") not in {"WARNING", "ERROR"}:
+            continue
+        component = str(incident.get("component", ""))
+        message = str(incident.get("message", ""))
+        for source_name in (
+            *source_summaries,
+            "Open-Meteo operational weather",
+            "next24h forecast",
+        ):
+            if source_name not in issue_by_source and (
+                source_name.lower() in component.lower()
+                or source_name.lower() in message.lower()
+            ):
+                issue_by_source[source_name] = message
+    source_rows = []
+    for name, summary in source_summaries.items():
+        timestamp = summary["latest_timestamp"]
+        kind = (
+            "historical_weather"
+            if name == "Open-Meteo historical weather"
+            else name.lower()
+            if name in {"Silver", "Gold"}
+            else "market"
+        )
+        source_rows.append(
+            {
+                "Source": name,
+                "Status": source_freshness_state(timestamp, source_kind=kind),
+                "Latest UTC": fmt_timestamp(timestamp),
+                "Age": age_label(timestamp),
+                "Rows": summary["row_count"] if summary["available"] else None,
+                "Last Known Issue": issue_by_source.get(name, ""),
+            }
+        )
+    operational_weather_time = (
+        operational_metadata.get("next24h_weather_acquired_at_utc")
+        if isinstance(operational_metadata, dict)
+        else None
+    )
+    source_rows.extend(
+        [
+            {
+                "Source": "Open-Meteo operational weather",
+                "Status": source_freshness_state(
+                    operational_weather_time, source_kind="market"
+                ),
+                "Latest UTC": fmt_timestamp(operational_weather_time),
+                "Age": age_label(operational_weather_time),
+                "Rows": None,
+                "Last Known Issue": issue_by_source.get(
+                    "Open-Meteo operational weather", ""
+                ),
+            },
+            {
+                "Source": "next24h forecast",
+                "Status": forecast_status,
+                "Latest UTC": fmt_timestamp(forecast_issue),
+                "Age": age_label(forecast_issue),
+                "Rows": (
+                    len(current_forecast)
+                    if current_forecast_error is None
+                    else None
+                ),
+                "Last Known Issue": issue_by_source.get("next24h forecast", ""),
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(source_rows), width="stretch", hide_index=True)
+    st.caption(
+        "Historical weather and Silver/Gold are archive-aligned; operational "
+        "weather is an in-memory issue-hour input, so its acquisition time—not "
+        "an archive watermark—is shown."
+    )
+
+
+authenticated_user = require_authentication(st)
 silver_summary = load_csv_summary(SILVER_DATA)
 latest_pipeline_run, pipeline_run_error = load_latest_pipeline_run(PIPELINE_DATABASE)
 latest_timestamp = silver_summary["latest_timestamp"]
@@ -470,20 +577,16 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
+    render_authenticated_user(st, authenticated_user)
+
     st.markdown('<div class="nav-section-label">Navigation</div>', unsafe_allow_html=True)
 
     page = st.radio(
         label="Dashboard page",
-        options=[
-            "Executive Overview",
-            "Market Intelligence",
-            "Forecasting",
-            "Anomaly Detection",
-            "Model Insights",
-            "Pipeline Summary",
-        ],
+        options=allowed_pages_for_role(authenticated_user.role),
         label_visibility="collapsed",
     )
+    require_page_access(authenticated_user, page)
 
     st.markdown(
         f"""
@@ -1361,6 +1464,9 @@ elif page == "Pipeline Summary":
     )
     email_alert_status = alert_configuration_status()
     page_title("Pipeline Summary", "Automated DataOps Workflow")
+    admin_access = can_access_section(
+        authenticated_user, "pipeline_run_details"
+    )
 
     section_header("System Health / Data Quality")
     health_message = f"{health['label']}. {health['reason']}"
@@ -1422,13 +1528,26 @@ elif page == "Pipeline Summary":
         f"Latest next24h issue: {fmt_timestamp(forecast_issue)} "
         f"({age_label(forecast_issue)})"
     )
-    st.caption(
-        f"Market: DE-LU · Storage: "
-        f"{operational_metadata.get('storage_backend', 'Unavailable') if isinstance(operational_metadata, dict) else 'Unavailable'} "
-        f"· One-hour model: {final_release['model_name'] if final_release else 'Unavailable'} "
-        f"· Next24h release: {next24h_release or 'Unavailable'} "
-        f"· Failure email alerts: {email_alert_status}"
-    )
+    if admin_access:
+        st.caption(
+            f"Market: DE-LU · Storage: "
+            f"{operational_metadata.get('storage_backend', 'Unavailable') if isinstance(operational_metadata, dict) else 'Unavailable'} "
+            f"· One-hour model: {final_release['model_name'] if final_release else 'Unavailable'} "
+            f"· Next24h release: {next24h_release or 'Unavailable'} "
+            f"· Failure email alerts: {email_alert_status}"
+        )
+    else:
+        render_data_quality_history(quality_history)
+        render_data_source_health(
+            source_summaries,
+            incident_history,
+            operational_metadata,
+            forecast_status,
+            forecast_issue,
+            current_forecast,
+            current_forecast_error,
+        )
+        st.stop()
 
     section_header("Latest Pipeline Run")
     if latest_pipeline_run is None:
@@ -1551,69 +1670,16 @@ elif page == "Pipeline Summary":
             hide_index=True,
         )
 
-    section_header("Recent Data-Quality Check History")
-    if quality_history.empty:
-        st.info("No data-quality check history is available.")
-    else:
-        st.dataframe(
-            prepare_data_quality_history(quality_history),
-            width="stretch",
-            hide_index=True,
-        )
-
-    section_header("Data-Source Health")
-    issue_by_source = {}
-    for incident in incident_history.to_dict(orient="records"):
-        if incident.get("severity") not in {"WARNING", "ERROR"}:
-            continue
-        component = str(incident.get("component", ""))
-        message = str(incident.get("message", ""))
-        for source_name in (*source_summaries, "Open-Meteo operational weather", "next24h forecast"):
-            if source_name not in issue_by_source and (
-                source_name.lower() in component.lower()
-                or source_name.lower() in message.lower()
-            ):
-                issue_by_source[source_name] = message
-    source_rows = []
-    for name, summary in source_summaries.items():
-        timestamp = summary["latest_timestamp"]
-        kind = (
-            "historical_weather" if name == "Open-Meteo historical weather"
-            else name.lower() if name in {"Silver", "Gold"}
-            else "market"
-        )
-        source_rows.append({
-            "Source": name,
-            "Status": source_freshness_state(timestamp, source_kind=kind),
-            "Latest UTC": fmt_timestamp(timestamp),
-            "Age": age_label(timestamp),
-            "Rows": summary["row_count"] if summary["available"] else None,
-            "Last Known Issue": issue_by_source.get(name, ""),
-        })
-    operational_weather_time = (
-        operational_metadata.get("next24h_weather_acquired_at_utc")
-        if isinstance(operational_metadata, dict) else None
+    render_data_quality_history(quality_history)
+    render_data_source_health(
+        source_summaries,
+        incident_history,
+        operational_metadata,
+        forecast_status,
+        forecast_issue,
+        current_forecast,
+        current_forecast_error,
     )
-    source_rows.extend([
-        {
-            "Source": "Open-Meteo operational weather",
-            "Status": source_freshness_state(operational_weather_time, source_kind="market"),
-            "Latest UTC": fmt_timestamp(operational_weather_time),
-            "Age": age_label(operational_weather_time),
-            "Rows": None,
-            "Last Known Issue": issue_by_source.get("Open-Meteo operational weather", ""),
-        },
-        {
-            "Source": "next24h forecast",
-            "Status": forecast_status,
-            "Latest UTC": fmt_timestamp(forecast_issue),
-            "Age": age_label(forecast_issue),
-            "Rows": len(current_forecast) if current_forecast_error is None else None,
-            "Last Known Issue": issue_by_source.get("next24h forecast", ""),
-        },
-    ])
-    st.dataframe(pd.DataFrame(source_rows), width="stretch", hide_index=True)
-    st.caption("Historical weather and Silver/Gold are archive-aligned; operational weather is an in-memory issue-hour input, so its acquisition time—not an archive watermark—is shown.")
 
     section_header("Recent Operational Incidents")
     if incident_history.empty:

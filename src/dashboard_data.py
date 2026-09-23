@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from processing.build_silver_dataset import aggregate_hourly_prices
+
 
 EMPTY_DATASET_SUMMARY = {
     "available": False,
@@ -75,6 +77,72 @@ def _exact_hourly_stat(
     return _finite_number(result)
 
 
+def market_data_age(
+    timestamp,
+    *,
+    now: pd.Timestamp | None = None,
+) -> dict:
+    """Return a UTC-safe persisted-data age without treating future dates as current."""
+    value = _utc_timestamp(timestamp)
+    current = _utc_timestamp(pd.Timestamp.now(tz="UTC") if now is None else now)
+    if value is None or current is None or value > current:
+        return {"hours": None, "label": "N/A"}
+    hours = (current - value).total_seconds() / 3600
+    if hours < 1:
+        label = f"{hours * 60:.0f} min"
+    elif hours < 48:
+        label = f"{hours:.1f} hours"
+    else:
+        label = f"{hours / 24:.1f} days"
+    return {"hours": hours, "label": label}
+
+
+def summarize_clean_price_history(prices: pd.DataFrame) -> dict:
+    """Summarize genuine complete hourly prices independently of joined Silver."""
+    empty = {
+        "latest_timestamp": None,
+        "latest_price": None,
+        "previous_24h_average": None,
+        "seven_day_average": None,
+    }
+    if prices.empty or not {"timestamp", "price_eur_mwh"}.issubset(prices):
+        return empty
+    prepared = prices.copy()
+    prepared["timestamp"] = pd.to_datetime(
+        prepared["timestamp"], errors="coerce", utc=True
+    )
+    prepared = prepared.dropna(subset=["timestamp"])
+    if prepared.empty or prepared["timestamp"].duplicated().any():
+        return empty
+    try:
+        hourly = aggregate_hourly_prices(prepared.set_index("timestamp"))
+    except (TypeError, ValueError):
+        return empty
+    if hourly.empty:
+        return empty
+    latest_timestamp = hourly.index[-1]
+    return {
+        "latest_timestamp": latest_timestamp,
+        "latest_price": _finite_number(hourly["price_eur_mwh"].iloc[-1]),
+        "previous_24h_average": _exact_hourly_stat(
+            hourly, "price_eur_mwh", latest_timestamp, 24
+        ),
+        "seven_day_average": _exact_hourly_stat(
+            hourly, "price_eur_mwh", latest_timestamp, 168
+        ),
+    }
+
+
+def pipeline_run_display_status(status) -> str:
+    """Describe orchestration completion without implying all outputs succeeded."""
+    normalized = str(status or "").strip().upper()
+    if normalized == "SUCCESS":
+        return "Completed"
+    if normalized in {"FAILED", "FAILURE", "ERROR"}:
+        return "Failed"
+    return normalized.title() if normalized else "N/A"
+
+
 def _renewable_metrics(row: pd.Series) -> tuple[float | None, float | None]:
     renewable_columns = ("solar_mw", "wind_total_mw", "biomass_mw", "hydro_mw")
     conventional_columns = ("lignite_mw", "gas_mw", "hard_coal_mw")
@@ -128,13 +196,14 @@ def build_market_context(
         "renewable_generation_mw": None,
         "renewable_share": None,
         "temperature_2m": None,
-        "previous_24h_price_average": None,
-        "seven_day_price_average": None,
+        "market_data_age_hours": None,
+        "market_data_age_label": "N/A",
     }
     if not observed_data.empty:
         row = observed_data.iloc[-1]
         timestamp = observed_data.index[-1]
         renewable_generation, renewable_share = _renewable_metrics(row)
+        age = market_data_age(timestamp, now=now)
         observed.update({
             "timestamp": timestamp,
             "price_eur_mwh": _finite_number(row.get("price_eur_mwh")),
@@ -144,12 +213,8 @@ def build_market_context(
             "renewable_generation_mw": renewable_generation,
             "renewable_share": renewable_share,
             "temperature_2m": _finite_number(row.get("temperature_2m")),
-            "previous_24h_price_average": _exact_hourly_stat(
-                observed_data, "price_eur_mwh", timestamp, 24
-            ),
-            "seven_day_price_average": _exact_hourly_stat(
-                observed_data, "price_eur_mwh", timestamp, 168
-            ),
+            "market_data_age_hours": age["hours"],
+            "market_data_age_label": age["label"],
         })
 
     summary = summarize_next24h_forecast(forecast, now=now)

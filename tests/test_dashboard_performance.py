@@ -140,6 +140,7 @@ def test_page_switches_only_request_their_full_csvs(tmp_path, monkeypatch):
     app.radio[0].set_value("Forecasting").run(timeout=30)
     assert loaded_files == [
         "silver_electricity_market_data.csv",
+        "prices.csv",
         "next24h_forecast.csv",
         "next24h_realized_errors.csv",
         "next24h_forecast_history.csv",

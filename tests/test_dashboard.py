@@ -74,6 +74,50 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
         "predicted_price_eur_mwh": [float(h) for h in range(1, 25)],
         "model_release": ["next24h-hgb-test"] * 24,
     }).to_csv(reports / "next24h_forecast.csv", index=False)
+    pd.DataFrame({
+        "forecast_issue_time": [issue],
+        "target_timestamp": [issue + pd.Timedelta(hours=1)],
+        "issued_at_utc": [issue + pd.Timedelta(hours=2)],
+    }).to_csv(reports / "next24h_forecast_history.csv", index=False)
+    raw_prices = tmp_path / "data/raw/entsoe"
+    raw_prices.mkdir(parents=True)
+    pd.DataFrame({
+        "timestamp": pd.date_range(end=issue, periods=168, freq="h", tz="UTC"),
+        "price_eur_mwh": range(1, 169),
+        "source_resolution": "PT60M",
+    }).to_csv(raw_prices / "prices.csv", index=False)
+    silver = tmp_path / "data/processed"
+    silver.mkdir(parents=True)
+    pd.DataFrame({
+        "timestamp": [issue],
+        "price_eur_mwh": [168.0],
+        "load_mw": [40_000.0],
+        "wind_total_mw": [5_000.0],
+        "solar_mw": [1_000.0],
+        "temperature_2m": [15.0],
+    }).to_csv(silver / "silver_electricity_market_data.csv", index=False)
+    database_path = tmp_path / "database/electricity_trading.db"
+    database_path.parent.mkdir(parents=True)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE pipeline_runs (
+                id INTEGER PRIMARY KEY,
+                run_time TEXT,
+                status TEXT,
+                records_processed INTEGER,
+                message TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO pipeline_runs
+                (run_time, status, records_processed, message)
+            VALUES (?, ?, ?, ?)
+            """,
+            (issue.isoformat(), "SUCCESS", 0, "{}"),
+        )
     monkeypatch.chdir(tmp_path)
     st.cache_data.clear()
 
@@ -86,8 +130,15 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert metrics["Highest Predicted Price"] == "24.00 EUR/MWh"
     assert metrics["Lowest Predicted Price"] == "1.00 EUR/MWh"
     assert metrics["Forecast Freshness"] == "Stale"
+    assert metrics["Pipeline Run"] == "Completed"
     assert metrics["Forecast Rows"] == "24"
     assert metrics["Forecast Average"] == "12.50 EUR/MWh"
+    assert metrics["Latest Persisted Price"] == "168.00 EUR/MWh"
+    assert metrics["Latest Persisted Load"] == "40,000.00 MW"
+    assert metrics["Latest Persisted Wind"] == "5,000.00 MW"
+    assert metrics["Previous 24h Observed Average"] == "156.50 EUR/MWh"
+    assert metrics["7-Day Observed Average"] == "84.50 EUR/MWh"
+    assert metrics["Market Data Age"] != "N/A"
     assert metrics["Hours ≥ 200 EUR/MWh"] == "0"
     assert metrics["Negative-Price Hours"] == "0"
     assert any("forecast is stale" in warning.value for warning in app.warning)
@@ -100,6 +151,14 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert any("Insufficient realized forecasts" in item.value for item in app.info)
     assert any(
         "not causal explanations" in caption.value
+        for caption in app.caption
+    )
+    assert any(
+        "Forecast generated at:" in caption.value
+        for caption in app.caption
+    )
+    assert not any(
+        "Forecast issued:" in caption.value
         for caption in app.caption
     )
 

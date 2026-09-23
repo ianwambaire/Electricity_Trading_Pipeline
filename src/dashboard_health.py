@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from powerflow_secrets import secret_is_configured
+from models.next24h_monitoring import HORIZON_MIN_PAIRS, MONITORING_MIN_PAIRS
 
 
 PIPELINE_HISTORY_COLUMNS = [
@@ -567,12 +568,58 @@ def assess_operational_health(
     return {"label": "Healthy", "level": "success", "reason": "The hourly pipeline, core market inputs, and production forecast are current."}
 
 
+MODEL_HEALTH_MIN_PAIRS = 100
+MODEL_HEALTH_MIN_TARGET_DATES = 7
+
+
+def monitoring_coverage_explanation(summary: dict) -> str:
+    """Explain existing monitoring coverage gates without changing them."""
+    overall = summary.get("overall", {})
+    seven_day = summary.get("windows", {}).get("7d", {})
+    reasons = []
+    if overall.get("pair_count", 0) < MODEL_HEALTH_MIN_PAIRS:
+        reasons.append(
+            f"{overall.get('pair_count', 0)} matched pairs are available; "
+            f"the health assessment requires {MODEL_HEALTH_MIN_PAIRS}"
+        )
+    if summary.get("target_dates", 0) < MODEL_HEALTH_MIN_TARGET_DATES:
+        reasons.append(
+            f"coverage spans {summary.get('target_dates', 0)} distinct target dates; "
+            f"the health assessment requires {MODEL_HEALTH_MIN_TARGET_DATES}"
+        )
+    if seven_day.get("status") != "Available":
+        reasons.append(
+            f"the 7-day window has {seven_day.get('pair_count', 0)} matched pairs; "
+            f"window metrics require {MONITORING_MIN_PAIRS}"
+        )
+
+    horizons = summary.get("horizons")
+    if isinstance(horizons, pd.DataFrame) and not horizons.empty:
+        eligible = int(horizons["status"].eq("Available").sum())
+        horizon_detail = (
+            f"Per-horizon coverage: {eligible} of 24 horizons meet the minimum "
+            f"{HORIZON_MIN_PAIRS} realized forecasts."
+        )
+    else:
+        horizon_detail = "Per-horizon coverage is unavailable."
+    if not reasons:
+        return horizon_detail
+    return "; ".join(reasons).capitalize() + ". " + horizon_detail
+
+
 def model_performance_state(summary: dict, manifest: dict | None) -> dict[str, str]:
     """Conservative operational review heuristic, never an automatic retrain."""
     overall = summary.get("overall", {})
     seven_day = summary.get("windows", {}).get("7d", {})
-    if overall.get("pair_count", 0) < 100 or summary.get("target_dates", 0) < 7 or seven_day.get("status") != "Available":
-        return {"label": "Insufficient data", "reason": "Insufficient realized forecasts for production performance assessment."}
+    if (
+        overall.get("pair_count", 0) < MODEL_HEALTH_MIN_PAIRS
+        or summary.get("target_dates", 0) < MODEL_HEALTH_MIN_TARGET_DATES
+        or seven_day.get("status") != "Available"
+    ):
+        return {
+            "label": "Insufficient data",
+            "reason": monitoring_coverage_explanation(summary),
+        }
     baseline = (manifest or {}).get("test_metrics", {})
     persistence = (manifest or {}).get("persistence_test_metrics", {})
     try:

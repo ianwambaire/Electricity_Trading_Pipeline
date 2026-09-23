@@ -5,6 +5,9 @@ from dashboard_data import (
     MODEL_INPUT_CONTEXT_NOTE,
     build_market_context,
     build_model_input_context,
+    market_data_age,
+    pipeline_run_display_status,
+    summarize_clean_price_history,
 )
 
 
@@ -71,30 +74,85 @@ def test_market_context_separates_observed_and_forecast_metrics():
     assert forecast["forward_looking_rows"] == 22
 
 
-def test_market_context_exact_observed_averages_and_utc_conversion():
+def test_market_context_timestamp_and_age_are_utc_safe():
     silver = _silver()
     silver["timestamp"] = silver["timestamp"].dt.tz_convert("Europe/Berlin")
     issue = pd.Timestamp(silver["timestamp"].iloc[-1]).tz_convert("UTC")
 
-    context = build_market_context(silver, _forecast(issue), now=issue)
+    context = build_market_context(
+        silver,
+        _forecast(issue),
+        now=issue + pd.Timedelta(hours=5, minutes=30),
+    )
 
     assert context["observed"]["timestamp"].tzname() == "UTC"
-    assert context["observed"]["previous_24h_price_average"] == pytest.approx(
-        silver["price_eur_mwh"].tail(24).mean()
+    assert context["observed"]["market_data_age_hours"] == pytest.approx(5.5)
+    assert context["observed"]["market_data_age_label"] == "5.5 hours"
+
+
+def _hourly_prices(periods=168):
+    timestamps = pd.date_range("2026-09-01", periods=periods, freq="h", tz="UTC")
+    return pd.DataFrame({
+        "timestamp": timestamps,
+        "price_eur_mwh": range(periods),
+        "source_resolution": "PT60M",
+    })
+
+
+def test_clean_price_history_supplies_exact_24h_and_seven_day_averages():
+    prices = _hourly_prices()
+    context = summarize_clean_price_history(prices)
+
+    assert context["latest_timestamp"] == prices["timestamp"].iloc[-1]
+    assert context["latest_price"] == 167
+    assert context["previous_24h_average"] == pytest.approx(
+        prices["price_eur_mwh"].tail(24).mean()
     )
-    assert context["observed"]["seven_day_price_average"] == pytest.approx(
-        silver["price_eur_mwh"].mean()
+    assert context["seven_day_average"] == pytest.approx(
+        prices["price_eur_mwh"].mean()
     )
 
 
-def test_market_context_does_not_average_across_missing_hour():
-    silver = _silver().drop(index=100).reset_index(drop=True)
-    issue = silver["timestamp"].iloc[-1]
+def test_clean_price_history_gap_returns_na_for_affected_window():
+    prices = _hourly_prices().drop(index=160).reset_index(drop=True)
+    context = summarize_clean_price_history(prices)
 
-    context = build_market_context(silver, _forecast(issue), now=issue)
+    assert context["previous_24h_average"] is None
+    assert context["seven_day_average"] is None
 
-    assert context["observed"]["previous_24h_price_average"] is not None
-    assert context["observed"]["seven_day_price_average"] is None
+
+def test_load_or_generation_gap_does_not_invalidate_price_only_averages():
+    prices = _hourly_prices()
+    silver = _silver()
+    silver.loc[silver.index[-1], ["load_mw", "wind_total_mw"]] = float("nan")
+
+    price_context = summarize_clean_price_history(prices)
+    market_context = build_market_context(
+        silver,
+        _forecast(prices["timestamp"].iloc[-1]),
+        now=prices["timestamp"].iloc[-1],
+    )
+
+    assert price_context["previous_24h_average"] is not None
+    assert price_context["seven_day_average"] is not None
+    assert market_context["observed"]["load_mw"] is None
+    assert market_context["observed"]["renewable_generation_mw"] is None
+
+
+def test_market_data_age_handles_missing_and_future_timestamps():
+    now = pd.Timestamp("2026-09-23T12:00:00Z")
+    assert market_data_age(None, now=now) == {"hours": None, "label": "N/A"}
+    assert market_data_age(now + pd.Timedelta(hours=1), now=now) == {
+        "hours": None,
+        "label": "N/A",
+    }
+    assert market_data_age(now - pd.Timedelta(days=3), now=now)["label"] == "3.0 days"
+
+
+def test_pipeline_run_status_uses_completion_semantics():
+    assert pipeline_run_display_status("SUCCESS") == "Completed"
+    assert pipeline_run_display_status("FAILED") == "Failed"
+    assert pipeline_run_display_status(None) == "N/A"
 
 
 def test_market_context_empty_and_missing_values_are_safe():

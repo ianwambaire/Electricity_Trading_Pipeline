@@ -16,10 +16,15 @@ from dashboard_health import (
     load_recent_incidents,
     load_recent_stage_timings,
     model_performance_state,
+    monitoring_coverage_explanation,
     source_freshness_state,
     summarize_pipeline_timings,
 )
-from models.next24h_monitoring import summarize_realized_performance
+from models.next24h_monitoring import (
+    HORIZON_MIN_PAIRS,
+    MONITORING_MIN_PAIRS,
+    summarize_realized_performance,
+)
 from scheduled_pipeline import _record_protected_generation_conflicts, _timed_stage
 
 
@@ -404,6 +409,32 @@ def test_model_review_rule_is_conservative():
     summary["target_dates"] = 7
     summary["windows"]["7d"]["rmse"] = 70.0
     assert model_performance_state(summary, manifest)["label"] == "Monitoring"
+
+
+def test_monitoring_explanation_reports_per_horizon_and_date_coverage():
+    horizons = pd.DataFrame({
+        "horizon_hours": range(1, 25),
+        "pair_count": [5] * 10 + [4] * 14,
+        "status": ["Available"] * 10 + ["Insufficient data"] * 14,
+    })
+    summary = {
+        "overall": {"pair_count": 240},
+        "target_dates": 2,
+        "windows": {"7d": {"status": "Available", "pair_count": 240}},
+        "horizons": horizons,
+    }
+
+    state = model_performance_state(summary, {})
+
+    assert state["label"] == "Insufficient data"
+    assert "2 distinct target dates" in state["reason"]
+    assert "10 of 24 horizons meet the minimum 5" in state["reason"]
+    assert monitoring_coverage_explanation(summary) == state["reason"]
+
+
+def test_monitoring_minimum_sample_rules_are_unchanged():
+    assert MONITORING_MIN_PAIRS == 20
+    assert HORIZON_MIN_PAIRS == 5
 
 
 def _forecast_frame(issue=NOW.floor("h")):

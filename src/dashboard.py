@@ -18,7 +18,9 @@ from dashboard_data import (
     load_dashboard_csv,
     load_final_release_metadata,
     load_next24h_forecast_report,
+    pipeline_run_display_status,
     prediction_count_metrics,
+    summarize_clean_price_history,
     summarize_next24h_forecast,
 )
 from dashboard_health import (
@@ -46,6 +48,7 @@ from models.next24h_monitoring import summarize_realized_performance
 
 
 SILVER_DATA = Path("data/processed/silver_electricity_market_data.csv")
+RAW_PRICE_DATA = Path("data/raw/entsoe/prices.csv")
 GOLD_DATA = Path("data/features/gold_model_features.csv")
 PREDICTIONS_DATA = Path("data/reports/actual_vs_predicted.csv")
 ANOMALIES_DATA = Path("data/reports/detected_anomalies.csv")
@@ -718,6 +721,11 @@ elif page == "Forecasting":
         timestamp_columns=("timestamp",),
         sort_by="timestamp",
     )
+    raw_price_data = load_dashboard_csv(
+        RAW_PRICE_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
     next24h_forecast, next24h_error = load_next24h_forecast_report(
         NEXT24H_FORECAST_DATA
     )
@@ -759,6 +767,7 @@ elif page == "Forecasting":
     )
     observed_context = market_context["observed"]
     forecast_context = market_context["forecast"]
+    price_comparison = summarize_clean_price_history(raw_price_data)
     forecast_quality_history = load_recent_data_quality_history(
         PIPELINE_DATABASE, limit=20
     )
@@ -807,9 +816,10 @@ elif page == "Forecasting":
     summary_metrics = [
         ("Market", "DE-LU"),
         (
-            "Latest Pipeline",
-            str(latest_pipeline_run["status"]).title()
-            if latest_pipeline_run else "N/A",
+            "Pipeline Run",
+            pipeline_run_display_status(
+                latest_pipeline_run["status"] if latest_pipeline_run else None
+            ),
         ),
         ("Forecast Freshness", forecast_context["status"]),
         (
@@ -831,22 +841,23 @@ elif page == "Forecasting":
 
     section_header("Market Context")
     st.caption(
-        "Observed/current market values from the latest persisted Silver hour. "
+        "Persisted market values from the latest available Silver hour. "
         "Forecast values are shown separately below. All timestamps are UTC."
     )
     observed_metrics = [
-        ("Observed Hour (UTC)", fmt_timestamp(observed_context["timestamp"])),
-        ("Latest Price", f"{fmt(observed_context['price_eur_mwh'])} EUR/MWh"),
-        ("Latest Load", f"{fmt(observed_context['load_mw'])} MW"),
-        ("Wind Total", f"{fmt(observed_context['wind_total_mw'])} MW"),
-        ("Solar", f"{fmt(observed_context['solar_mw'])} MW"),
-        ("Renewable Generation", f"{fmt(observed_context['renewable_generation_mw'])} MW"),
+        ("Persisted Hour (UTC)", fmt_timestamp(observed_context["timestamp"])),
+        ("Market Data Age", observed_context["market_data_age_label"]),
+        ("Latest Persisted Price", f"{fmt(observed_context['price_eur_mwh'])} EUR/MWh"),
+        ("Latest Persisted Load", f"{fmt(observed_context['load_mw'])} MW"),
+        ("Latest Persisted Wind", f"{fmt(observed_context['wind_total_mw'])} MW"),
+        ("Latest Persisted Solar", f"{fmt(observed_context['solar_mw'])} MW"),
+        ("Persisted Renewable Generation", f"{fmt(observed_context['renewable_generation_mw'])} MW"),
         (
-            "Renewable Share",
+            "Persisted Renewable Share",
             f"{observed_context['renewable_share'] * 100:.1f}%"
             if observed_context["renewable_share"] is not None else "N/A",
         ),
-        ("Temperature", f"{fmt(observed_context['temperature_2m'])} °C"),
+        ("Latest Persisted Temperature", f"{fmt(observed_context['temperature_2m'])} °C"),
     ]
     for offset in range(0, len(observed_metrics), 4):
         columns = st.columns(4)
@@ -875,9 +886,9 @@ elif page == "Forecasting":
     section_header("Forecast Comparison")
     comparison_metrics = [
         ("Next24h Forecast Average", f"{fmt(forecast_context['average'])} EUR/MWh"),
-        ("Previous 24h Observed Average", f"{fmt(observed_context['previous_24h_price_average'])} EUR/MWh"),
-        ("7-Day Observed Average", f"{fmt(observed_context['seven_day_price_average'])} EUR/MWh"),
-        ("Latest Observed Price", f"{fmt(observed_context['price_eur_mwh'])} EUR/MWh"),
+        ("Previous 24h Observed Average", f"{fmt(price_comparison['previous_24h_average'])} EUR/MWh"),
+        ("7-Day Observed Average", f"{fmt(price_comparison['seven_day_average'])} EUR/MWh"),
+        ("Latest Persisted Price", f"{fmt(observed_context['price_eur_mwh'])} EUR/MWh"),
     ]
     columns = st.columns(4)
     for column, (label, value) in zip(columns, comparison_metrics):
@@ -888,6 +899,7 @@ elif page == "Forecasting":
     )
     st.caption(
         "Display-only comparison; it does not change model evaluation. "
+        f"Clean observed price history through: {fmt_timestamp(price_comparison['latest_timestamp'])}. "
         f"Approved persistence baseline test RMSE: {fmt(persistence_rmse)} EUR/MWh."
     )
 
@@ -952,7 +964,7 @@ elif page == "Forecasting":
         )
         issued_at = issued_rows["issued_at_utc"].min() if not issued_rows.empty else None
         st.caption(
-            f"Forecast issued: {fmt_timestamp(issued_at)} · "
+            f"Forecast generated at: {fmt_timestamp(issued_at)} · "
             f"Freshness: {age_label(issue_time, now=display_now)} · "
             f"Model: Histogram Gradient Boosting · Release: {forecast_summary['release_id']}"
         )
@@ -1011,7 +1023,7 @@ elif page == "Forecasting":
                 y=latest_observed_price,
                 line_dash="dot",
                 line_color="#2E9D68",
-                annotation_text="Latest observed price",
+                annotation_text="Latest persisted price",
                 annotation_position="bottom right",
             )
         figure.add_vline(

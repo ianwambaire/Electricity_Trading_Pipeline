@@ -86,10 +86,26 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert metrics["Highest Predicted Price"] == "24.00 EUR/MWh"
     assert metrics["Lowest Predicted Price"] == "1.00 EUR/MWh"
     assert any("forecast is stale" in warning.value for warning in app.warning)
+    assert any("target hours have already passed" in warning.value for warning in app.warning)
+    assert any(
+        "24 predictions generated" in caption.value
+        and "still forward-looking" in caption.value
+        for caption in app.caption
+    )
     assert any("Insufficient realized forecasts" in item.value for item in app.info)
 
 
 def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatch):
+    reports = tmp_path / "data" / "reports"
+    reports.mkdir(parents=True)
+    issue = pd.Timestamp.now(tz="UTC").floor("h")
+    pd.DataFrame({
+        "forecast_issue_time": [issue] * 24,
+        "target_timestamp": [issue + pd.Timedelta(hours=h) for h in range(1, 25)],
+        "horizon_hours": range(1, 25),
+        "predicted_price_eur_mwh": [float(h) for h in range(1, 25)],
+        "model_release": ["next24h-hgb-test"] * 24,
+    }).to_csv(reports / "next24h_forecast.csv", index=False)
     database_path = tmp_path / "database" / "electricity_trading.db"
     database_path.parent.mkdir(parents=True)
     metadata = {
@@ -173,6 +189,8 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
     )
     assert metrics["Latest Run Time"] == "2026-09-19 12:32"
     assert metrics["New Rows Ingested"] == "3"
+    assert metrics["New One-Hour Predictions"] == "0"
+    assert metrics["Next24h Forecast Rows"] == "24"
     assert metrics["Latest Complete Price Hour (UTC)"] == "2026-09-12 21:00"
     assert any("No complete aligned raw hour advanced" in item.value for item in app.info)
     assert any("Degraded" in item.value for item in app.error)

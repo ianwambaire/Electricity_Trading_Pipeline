@@ -6,7 +6,7 @@ import pytest
 import streamlit as st
 
 import store_data
-from dashboard_data import summarize_next24h_forecast
+from dashboard_data import prediction_count_metrics, summarize_next24h_forecast
 from dashboard_health import (
     age_label,
     assess_operational_health,
@@ -216,24 +216,49 @@ def test_model_review_rule_is_conservative():
     assert model_performance_state(summary, manifest)["label"] == "Monitoring"
 
 
-def test_forecast_analyst_summary_and_empty_state():
-    issue = NOW.floor("h")
+def _forecast_frame(issue=NOW.floor("h")):
     values = [-10.0, *([100.0] * 21), 200.0, 250.0]
-    frame = pd.DataFrame({
+    return pd.DataFrame({
         "forecast_issue_time": [issue] * 24,
         "target_timestamp": [issue + pd.Timedelta(hours=h) for h in range(1, 25)],
         "horizon_hours": range(1, 25),
         "predicted_price_eur_mwh": values,
         "model_release": ["approved-v1"] * 24,
     })
-    result = summarize_next24h_forecast(frame)
+
+
+def test_forecast_analyst_summary_and_forward_looking_counts():
+    issue = NOW.floor("h")
+    frame = _forecast_frame(issue)
+    result = summarize_next24h_forecast(frame, now=issue + pd.Timedelta(hours=2))
     assert result["rows"] == 24
+    assert result["forward_looking_rows"] == 22
     assert result["minimum"] == -10
     assert result["maximum"] == 250
     assert result["negative_hours"] == 1
     assert result["elevated_hours"] == 2
     assert result["first_to_last_change"] == 260
-    assert summarize_next24h_forecast(pd.DataFrame()) is None
+
+
+def test_forecast_forward_looking_count_boundaries_and_missing_report():
+    issue = NOW.floor("h")
+    frame = _forecast_frame(issue)
+    assert summarize_next24h_forecast(frame, now=issue)["forward_looking_rows"] == 24
+    assert summarize_next24h_forecast(
+        frame, now=issue + pd.Timedelta(hours=24)
+    )["forward_looking_rows"] == 0
+    assert summarize_next24h_forecast(pd.DataFrame(), now=issue) is None
+
+
+def test_prediction_count_labels_distinguish_one_hour_and_next24h():
+    metrics = prediction_count_metrics(7, _forecast_frame())
+    assert metrics == (
+        ("New One-Hour Predictions", 7),
+        ("Next24h Forecast Rows", 24),
+    )
+    assert prediction_count_metrics(0, pd.DataFrame())[1] == (
+        "Next24h Forecast Rows", 0
+    )
 
 
 def test_withheld_forecast_records_once_and_alerts_without_changing_prior_report(

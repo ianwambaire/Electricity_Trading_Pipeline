@@ -162,7 +162,11 @@ def load_next24h_forecast_report(path: Path) -> tuple[pd.DataFrame, str | None]:
     return data.loc[:, required], None
 
 
-def summarize_next24h_forecast(forecast: pd.DataFrame) -> dict | None:
+def summarize_next24h_forecast(
+    forecast: pd.DataFrame,
+    *,
+    now: pd.Timestamp | None = None,
+) -> dict | None:
     """Summarize an already validated 24-row forecast without changing it."""
     if forecast.empty or len(forecast) != 24:
         return None
@@ -171,10 +175,16 @@ def summarize_next24h_forecast(forecast: pd.DataFrame) -> dict | None:
         return None
     low = forecast.loc[prices.idxmin()]
     high = forecast.loc[prices.idxmax()]
+    current = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    current = current.tz_localize("UTC") if current.tzinfo is None else current.tz_convert("UTC")
+    targets = pd.to_datetime(forecast["target_timestamp"], errors="coerce", utc=True)
+    if targets.isna().any():
+        return None
     return {
         "issue_time": forecast["forecast_issue_time"].iloc[0],
         "release_id": forecast["model_release"].iloc[0],
         "rows": len(forecast),
+        "forward_looking_rows": int(targets.gt(current).sum()),
         "minimum": float(prices.min()),
         "minimum_time": low["target_timestamp"],
         "maximum": float(prices.max()),
@@ -185,6 +195,18 @@ def summarize_next24h_forecast(forecast: pd.DataFrame) -> dict | None:
         "negative_hours": int(prices.lt(0).sum()),
         "elevated_hours": int(prices.ge(200).sum()),
     }
+
+
+def prediction_count_metrics(
+    one_hour_predictions,
+    next24h_forecast: pd.DataFrame,
+) -> tuple[tuple[str, object], tuple[str, int]]:
+    """Keep one-hour report rows distinct from the validated next24h report."""
+    next24h_rows = len(next24h_forecast) if len(next24h_forecast) == 24 else 0
+    return (
+        ("New One-Hour Predictions", one_hour_predictions),
+        ("Next24h Forecast Rows", next24h_rows),
+    )
 
 
 def downsample_time_series(

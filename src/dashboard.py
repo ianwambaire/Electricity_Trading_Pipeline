@@ -15,6 +15,7 @@ from dashboard_data import (
     load_dashboard_csv,
     load_final_release_metadata,
     load_next24h_forecast_report,
+    prediction_count_metrics,
     summarize_next24h_forecast,
 )
 from dashboard_health import (
@@ -741,14 +742,17 @@ elif page == "Forecasting":
         st.warning(next24h_error)
     else:
         issue_time = next24h_forecast["forecast_issue_time"].iloc[0]
-        forecast_summary = summarize_next24h_forecast(next24h_forecast)
+        display_now = pd.Timestamp.now(tz="UTC")
+        forecast_summary = summarize_next24h_forecast(
+            next24h_forecast,
+            now=display_now,
+        )
         try:
             provenance = json.loads(NEXT24H_PROVENANCE_DATA.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             provenance = {}
         if not isinstance(provenance, dict) or provenance.get("forecast_issue_time") != issue_time.isoformat():
             provenance = {}
-        display_now = pd.Timestamp.now(tz="UTC")
         freshness_hours = (display_now - issue_time).total_seconds() / 3600
         try:
             maximum_age = float(os.getenv("POWERFLOW_NEXT24H_MAX_AGE_HOURS", "3"))
@@ -762,7 +766,7 @@ elif page == "Forecasting":
                 f"hours old (limit {maximum_age:g} hours). It is retained for reference, "
                 "not presented as a current forecast."
             )
-        elif next24h_forecast["target_timestamp"].iloc[0] <= display_now:
+        if next24h_forecast["target_timestamp"].iloc[0] <= display_now:
             st.warning(
                 "Some forecast target hours have already passed. Review the "
                 "issue time before using this as a forward-looking forecast."
@@ -803,6 +807,10 @@ elif page == "Forecasting":
             f"Forecast issued: {fmt_timestamp(issued_at)} · "
             f"Freshness: {age_label(issue_time, now=display_now)} · "
             f"Model: Histogram Gradient Boosting · Release: {forecast_summary['release_id']}"
+        )
+        st.caption(
+            f"{forecast_summary['rows']} predictions generated · "
+            f"{forecast_summary['forward_looking_rows']} still forward-looking"
         )
         analyst_metrics = [
             ("24h Average", f"{forecast_summary['average']:.2f} EUR/MWh"),
@@ -1213,7 +1221,6 @@ elif page == "Pipeline Summary":
                 ("storage_backend", "Storage Backend"),
                 ("s3_sync_status", "S3 Sync Status"),
                 ("new_rows_ingested", "New Rows Ingested"),
-                ("predictions_generated", "Predictions Generated"),
                 (
                     "latest_complete_price_hour",
                     "Latest Complete Price Hour (UTC)",
@@ -1224,6 +1231,21 @@ elif page == "Pipeline Summary":
                 for key, label in summary_fields
                 if operational_metadata.get(key) is not None
             ]
+            one_hour_count = operational_metadata.get("predictions_generated")
+            if one_hour_count is not None:
+                available_fields.extend(
+                    ("prediction_count", label, value)
+                    for label, value in prediction_count_metrics(
+                        one_hour_count,
+                        current_forecast if current_forecast_error is None else pd.DataFrame(),
+                    )
+                )
+            else:
+                available_fields.append((
+                    "prediction_count",
+                    "Next24h Forecast Rows",
+                    len(current_forecast) if current_forecast_error is None else 0,
+                ))
 
             if available_fields:
                 section_header("Operational Summary")
@@ -1233,7 +1255,7 @@ elif page == "Pipeline Summary":
                         columns,
                         available_fields[field_start : field_start + 3],
                     ):
-                        if key in {"new_rows_ingested", "predictions_generated"}:
+                        if key in {"new_rows_ingested", "prediction_count"}:
                             try:
                                 value = fmt_int(value)
                             except (TypeError, ValueError):

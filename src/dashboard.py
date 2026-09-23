@@ -9,6 +9,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard_data import (
+    MODEL_INPUT_CONTEXT_NOTE,
+    build_market_context,
+    build_model_input_context,
     csv_has_rows,
     downsample_time_series,
     load_csv_summary,
@@ -710,6 +713,11 @@ elif page == "Market Intelligence":
 
 
 elif page == "Forecasting":
+    silver_data = load_dashboard_csv(
+        SILVER_DATA,
+        timestamp_columns=("timestamp",),
+        sort_by="timestamp",
+    )
     next24h_forecast, next24h_error = load_next24h_forecast_report(
         NEXT24H_FORECAST_DATA
     )
@@ -736,13 +744,159 @@ elif page == "Forecasting":
     )
     page_title("Forecasting", "Electricity Price Forecasts")
 
+    display_now = pd.Timestamp.now(tz="UTC")
+    try:
+        maximum_age = float(os.getenv("POWERFLOW_NEXT24H_MAX_AGE_HOURS", "3"))
+    except ValueError:
+        maximum_age = 3.0
+    if not math.isfinite(maximum_age) or not 0 < maximum_age <= 24:
+        maximum_age = 3.0
+    market_context = build_market_context(
+        silver_data,
+        next24h_forecast,
+        now=display_now,
+        maximum_age_hours=maximum_age,
+    )
+    observed_context = market_context["observed"]
+    forecast_context = market_context["forecast"]
+    forecast_quality_history = load_recent_data_quality_history(
+        PIPELINE_DATABASE, limit=20
+    )
+    latest_successful_run_time = load_latest_successful_run_time(PIPELINE_DATABASE)
+    operational_metadata = parse_operational_metadata(
+        latest_pipeline_run["message"] if latest_pipeline_run else None
+    )
+    unresolved_gaps = (
+        operational_metadata.get("unresolved_source_gaps", {})
+        if isinstance(operational_metadata, dict) else {}
+    )
+    if not isinstance(unresolved_gaps, dict):
+        unresolved_gaps = {}
+    forecast_withheld = (
+        isinstance(operational_metadata, dict)
+        and operational_metadata.get("next24h_forecast_status") == "UNAVAILABLE"
+    )
+    operational_health = assess_operational_health(
+        latest_run_status=latest_pipeline_run["status"] if latest_pipeline_run else None,
+        latest_success_time=latest_successful_run_time,
+        core_source_timestamps={
+            name: load_csv_summary(path)["latest_timestamp"]
+            for name, path in {
+                "prices": Path("data/raw/entsoe/prices.csv"),
+                "load": Path("data/raw/entsoe/load.csv"),
+                "generation": Path("data/raw/entsoe/generation.csv"),
+            }.items()
+        },
+        forecast_issue_time=forecast_context["issue_time"],
+        forecast_withheld=forecast_withheld,
+        quality_state=latest_quality_state(forecast_quality_history),
+        unresolved_gap_count=len(unresolved_gaps),
+        required_artifacts_available=(
+            final_release is not None
+            and all(path.is_file() for path in (
+                NEXT24H_RELEASE_MANIFEST,
+                NEXT24H_RELEASE_MODEL,
+                NEXT24H_RELEASE_CONTRACT,
+            ))
+        ),
+        now=display_now,
+        forecast_max_age_hours=maximum_age,
+    )
+
+    section_header("Presentation Summary")
+    summary_metrics = [
+        ("Market", "DE-LU"),
+        (
+            "Latest Pipeline",
+            str(latest_pipeline_run["status"]).title()
+            if latest_pipeline_run else "N/A",
+        ),
+        ("Forecast Freshness", forecast_context["status"]),
+        (
+            "Next24h Release",
+            str(forecast_context.get("release_id") or (
+                next24h_forecast["model_release"].iloc[0]
+                if not next24h_forecast.empty else "N/A"
+            )),
+        ),
+        ("Forecast Rows", fmt_int(forecast_context["rows"])),
+        ("Forward-Looking", fmt_int(forecast_context["forward_looking_rows"])),
+        ("System Health", operational_health["label"]),
+    ]
+    for offset in range(0, len(summary_metrics), 4):
+        columns = st.columns(4)
+        for column, (label, value) in zip(columns, summary_metrics[offset:offset + 4]):
+            column.metric(label, value)
+    st.caption(operational_health["reason"])
+
+    section_header("Market Context")
+    st.caption(
+        "Observed/current market values from the latest persisted Silver hour. "
+        "Forecast values are shown separately below. All timestamps are UTC."
+    )
+    observed_metrics = [
+        ("Observed Hour (UTC)", fmt_timestamp(observed_context["timestamp"])),
+        ("Latest Price", f"{fmt(observed_context['price_eur_mwh'])} EUR/MWh"),
+        ("Latest Load", f"{fmt(observed_context['load_mw'])} MW"),
+        ("Wind Total", f"{fmt(observed_context['wind_total_mw'])} MW"),
+        ("Solar", f"{fmt(observed_context['solar_mw'])} MW"),
+        ("Renewable Generation", f"{fmt(observed_context['renewable_generation_mw'])} MW"),
+        (
+            "Renewable Share",
+            f"{observed_context['renewable_share'] * 100:.1f}%"
+            if observed_context["renewable_share"] is not None else "N/A",
+        ),
+        ("Temperature", f"{fmt(observed_context['temperature_2m'])} °C"),
+    ]
+    for offset in range(0, len(observed_metrics), 4):
+        columns = st.columns(4)
+        for column, (label, value) in zip(columns, observed_metrics[offset:offset + 4]):
+            column.metric(label, value)
+
+    st.caption(
+        f"Forecast context · Status: {forecast_context['status']} · "
+        f"Freshness limit: {maximum_age:g} hours"
+    )
+    forecast_metrics = [
+        ("Forecast Issue (UTC)", fmt_timestamp(forecast_context["issue_time"])),
+        ("Forecast Average", f"{fmt(forecast_context['average'])} EUR/MWh"),
+        ("Forecast Minimum", f"{fmt(forecast_context['minimum'])} EUR/MWh"),
+        ("Minimum Time (UTC)", fmt_timestamp(forecast_context["minimum_time"])),
+        ("Forecast Maximum", f"{fmt(forecast_context['maximum'])} EUR/MWh"),
+        ("Maximum Time (UTC)", fmt_timestamp(forecast_context["maximum_time"])),
+        ("Hours ≥ 200 EUR/MWh", fmt_int(forecast_context["elevated_hours"])),
+        ("Negative-Price Hours", fmt_int(forecast_context["negative_hours"])),
+    ]
+    for offset in range(0, len(forecast_metrics), 4):
+        columns = st.columns(4)
+        for column, (label, value) in zip(columns, forecast_metrics[offset:offset + 4]):
+            column.metric(label, value)
+
+    section_header("Forecast Comparison")
+    comparison_metrics = [
+        ("Next24h Forecast Average", f"{fmt(forecast_context['average'])} EUR/MWh"),
+        ("Previous 24h Observed Average", f"{fmt(observed_context['previous_24h_price_average'])} EUR/MWh"),
+        ("7-Day Observed Average", f"{fmt(observed_context['seven_day_price_average'])} EUR/MWh"),
+        ("Latest Observed Price", f"{fmt(observed_context['price_eur_mwh'])} EUR/MWh"),
+    ]
+    columns = st.columns(4)
+    for column, (label, value) in zip(columns, comparison_metrics):
+        column.metric(label, value)
+    persistence_rmse = (
+        next24h_manifest.get("persistence_test_metrics", {}).get("rmse")
+        if isinstance(next24h_manifest, dict) else None
+    )
+    st.caption(
+        "Display-only comparison; it does not change model evaluation. "
+        f"Approved persistence baseline test RMSE: {fmt(persistence_rmse)} EUR/MWh."
+    )
+
     section_header("Rolling Next 24-Hour Production Forecast")
     st.caption("Histogram Gradient Boosting · 24 direct hourly predictions · not trading signals.")
     if next24h_error:
         st.warning(next24h_error)
     else:
         issue_time = next24h_forecast["forecast_issue_time"].iloc[0]
-        display_now = pd.Timestamp.now(tz="UTC")
         forecast_summary = summarize_next24h_forecast(
             next24h_forecast,
             now=display_now,
@@ -754,12 +908,6 @@ elif page == "Forecasting":
         if not isinstance(provenance, dict) or provenance.get("forecast_issue_time") != issue_time.isoformat():
             provenance = {}
         freshness_hours = (display_now - issue_time).total_seconds() / 3600
-        try:
-            maximum_age = float(os.getenv("POWERFLOW_NEXT24H_MAX_AGE_HOURS", "3"))
-        except ValueError:
-            maximum_age = 3.0
-        if not math.isfinite(maximum_age) or not 0 < maximum_age <= 24:
-            maximum_age = 3.0
         if freshness_hours < 0 or freshness_hours > maximum_age:
             st.warning(
                 f"This forecast is stale: its issue hour is {freshness_hours:.1f} "
@@ -833,14 +981,52 @@ elif page == "Forecasting":
                 f"Elevated price conditions are forecast for {forecast_summary['elevated_hours']} hour(s)."
             )
         figure = go.Figure()
-        figure.add_trace(go.Scatter(
-            x=next24h_forecast["target_timestamp"],
-            y=next24h_forecast["predicted_price_eur_mwh"],
-            mode="lines+markers", line=dict(color="#0B6FFB", width=2),
-            name="Predicted Price (EUR/MWh)",
-        ))
+        passed_targets = next24h_forecast.loc[
+            next24h_forecast["target_timestamp"] <= display_now
+        ]
+        future_targets = next24h_forecast.loc[
+            next24h_forecast["target_timestamp"] > display_now
+        ]
+        if not passed_targets.empty:
+            figure.add_trace(go.Scatter(
+                x=passed_targets["target_timestamp"],
+                y=passed_targets["predicted_price_eur_mwh"],
+                mode="lines+markers",
+                line=dict(color="#98A2B3", width=1.7),
+                marker=dict(size=6),
+                name="Passed Target Hours",
+            ))
+        if not future_targets.empty:
+            figure.add_trace(go.Scatter(
+                x=future_targets["target_timestamp"],
+                y=future_targets["predicted_price_eur_mwh"],
+                mode="lines+markers",
+                line=dict(color="#0B6FFB", width=2),
+                marker=dict(size=7),
+                name="Still Forward-Looking",
+            ))
+        latest_observed_price = observed_context["price_eur_mwh"]
+        if latest_observed_price is not None:
+            figure.add_hline(
+                y=latest_observed_price,
+                line_dash="dot",
+                line_color="#2E9D68",
+                annotation_text="Latest observed price",
+                annotation_position="bottom right",
+            )
+        figure.add_vline(
+            x=issue_time.timestamp() * 1000,
+            line_dash="dash",
+            line_color="#667085",
+            annotation_text="Forecast issue (UTC)",
+            annotation_position="top left",
+        )
         apply_chart_theme(figure)
-        figure.update_layout(yaxis_title="EUR/MWh")
+        figure.update_layout(
+            xaxis_title="Target Hour (UTC)",
+            yaxis_title="Predicted Price (EUR/MWh)",
+        )
+        figure.update_xaxes(tickformat="%d %b\n%H:%M UTC")
         st.plotly_chart(figure, width="stretch")
         with st.expander("View all 24 forecast hours"):
             st.dataframe(next24h_forecast, width="stretch", hide_index=True)
@@ -850,6 +1036,46 @@ elif page == "Forecasting":
             file_name=f"powerflow_next24h_{issue_time:%Y%m%d_%H00}_UTC.csv",
             mime="text/csv",
         )
+
+    section_header("Model Input Context")
+    st.caption(MODEL_INPUT_CONTEXT_NOTE)
+    issue_for_context = forecast_context["issue_time"]
+    model_input_context = build_model_input_context(
+        silver_data,
+        issue_for_context,
+    )
+    if not model_input_context["available"]:
+        st.info(
+            "Persisted Silver data does not contain the exact forecast issue hour, "
+            "so issue-hour input values are shown as unavailable rather than being "
+            "substituted from another timestamp."
+        )
+    input_metrics = [
+        ("Issue Hour (UTC)", fmt_timestamp(model_input_context["issue_time"])),
+        ("Load", f"{fmt(model_input_context['load_mw'])} MW"),
+        ("Wind Total", f"{fmt(model_input_context['wind_total_mw'])} MW"),
+        ("Solar", f"{fmt(model_input_context['solar_mw'])} MW"),
+        (
+            "Renewable Share",
+            f"{model_input_context['renewable_share'] * 100:.1f}%"
+            if model_input_context["renewable_share"] is not None else "N/A",
+        ),
+        ("Recent Price", f"{fmt(model_input_context['price_eur_mwh'])} EUR/MWh"),
+        ("24h Price Mean", f"{fmt(model_input_context['price_rolling_mean_24h'])} EUR/MWh"),
+        ("24h Price Volatility", f"{fmt(model_input_context['price_rolling_std_24h'])} EUR/MWh"),
+        ("Temperature", f"{fmt(model_input_context['temperature_2m'])} °C"),
+        ("Humidity", f"{fmt(model_input_context['relative_humidity_2m'])}%"),
+        ("Weather Wind Speed", f"{fmt(model_input_context['wind_speed_10m'])} km/h"),
+        ("Cloud Cover", f"{fmt(model_input_context['cloud_cover'])}%"),
+    ]
+    for offset in range(0, len(input_metrics), 4):
+        columns = st.columns(4)
+        for column, (label, value) in zip(columns, input_metrics[offset:offset + 4]):
+            column.metric(label, value)
+    st.caption(
+        f"Shortwave radiation: {fmt(model_input_context['shortwave_radiation'])} W/m² · "
+        f"Exact continuous 7-day price average: {fmt(model_input_context['price_average_7d'])} EUR/MWh"
+    )
 
     section_header("Realized Next24h Performance")
     required_errors = {

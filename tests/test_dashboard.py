@@ -85,6 +85,11 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert not app.exception
     assert metrics["Highest Predicted Price"] == "24.00 EUR/MWh"
     assert metrics["Lowest Predicted Price"] == "1.00 EUR/MWh"
+    assert metrics["Forecast Freshness"] == "Stale"
+    assert metrics["Forecast Rows"] == "24"
+    assert metrics["Forecast Average"] == "12.50 EUR/MWh"
+    assert metrics["Hours ≥ 200 EUR/MWh"] == "0"
+    assert metrics["Negative-Price Hours"] == "0"
     assert any("forecast is stale" in warning.value for warning in app.warning)
     assert any("target hours have already passed" in warning.value for warning in app.warning)
     assert any(
@@ -93,6 +98,10 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
         for caption in app.caption
     )
     assert any("Insufficient realized forecasts" in item.value for item in app.info)
+    assert any(
+        "not causal explanations" in caption.value
+        for caption in app.caption
+    )
 
 
 def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatch):

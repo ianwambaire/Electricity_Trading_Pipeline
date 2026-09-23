@@ -14,6 +14,222 @@ EMPTY_DATASET_SUMMARY = {
     "columns": (),
 }
 
+MODEL_INPUT_CONTEXT_NOTE = (
+    "Observed conditions associated with this forecast. These are model "
+    "inputs and context, not causal explanations."
+)
+
+
+def _utc_timestamp(value) -> pd.Timestamp | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        timestamp = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return None
+    return (
+        timestamp.tz_localize("UTC")
+        if timestamp.tzinfo is None
+        else timestamp.tz_convert("UTC")
+    )
+
+
+def _finite_number(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _prepare_observed_market(data: pd.DataFrame) -> pd.DataFrame:
+    """Return a UTC-indexed, read-only view of trusted observed market rows."""
+    if data.empty or "timestamp" not in data:
+        return pd.DataFrame()
+    prepared = data.copy()
+    prepared["timestamp"] = pd.to_datetime(
+        prepared["timestamp"], errors="coerce", utc=True
+    )
+    return (
+        prepared.dropna(subset=["timestamp"])
+        .sort_values("timestamp", kind="stable")
+        .drop_duplicates("timestamp", keep="last")
+        .set_index("timestamp", drop=False)
+    )
+
+
+def _exact_hourly_stat(
+    data: pd.DataFrame,
+    column: str,
+    end: pd.Timestamp | None,
+    hours: int,
+    statistic: str = "mean",
+) -> float | None:
+    if data.empty or column not in data or end is None:
+        return None
+    required = pd.date_range(end=end, periods=hours, freq="h", tz="UTC")
+    values = pd.to_numeric(data[column], errors="coerce").reindex(required)
+    if values.isna().any():
+        return None
+    result = values.mean() if statistic == "mean" else values.std()
+    return _finite_number(result)
+
+
+def _renewable_metrics(row: pd.Series) -> tuple[float | None, float | None]:
+    renewable_columns = ("solar_mw", "wind_total_mw", "biomass_mw", "hydro_mw")
+    conventional_columns = ("lignite_mw", "gas_mw", "hard_coal_mw")
+    renewables = [_finite_number(row.get(column)) for column in renewable_columns]
+    conventional = [_finite_number(row.get(column)) for column in conventional_columns]
+    if any(value is None for value in renewables + conventional):
+        return None, None
+    renewable_generation = sum(renewables)
+    nuclear = _finite_number(row.get("nuclear_mw")) or 0.0
+    denominator = renewable_generation + sum(conventional) + nuclear
+    share = renewable_generation / denominator if denominator > 0 else None
+    return renewable_generation, share
+
+
+def forecast_freshness(
+    forecast: pd.DataFrame,
+    *,
+    now: pd.Timestamp | None = None,
+    maximum_age_hours: float = 3.0,
+) -> dict:
+    """Classify a validated forecast without hiding retained stale values."""
+    summary = summarize_next24h_forecast(forecast, now=now)
+    if summary is None:
+        return {"status": "Unavailable", "age_hours": None, "is_stale": False}
+    current = _utc_timestamp(pd.Timestamp.now(tz="UTC") if now is None else now)
+    issue = _utc_timestamp(summary["issue_time"])
+    age_hours = (current - issue).total_seconds() / 3600
+    is_stale = age_hours < 0 or age_hours > maximum_age_hours
+    return {
+        "status": "Stale" if is_stale else "Fresh",
+        "age_hours": age_hours,
+        "is_stale": is_stale,
+    }
+
+
+def build_market_context(
+    silver: pd.DataFrame,
+    forecast: pd.DataFrame,
+    *,
+    now: pd.Timestamp | None = None,
+    maximum_age_hours: float = 3.0,
+) -> dict:
+    """Build separate observed and forecast market context from existing data."""
+    observed_data = _prepare_observed_market(silver)
+    observed = {
+        "timestamp": None,
+        "price_eur_mwh": None,
+        "load_mw": None,
+        "wind_total_mw": None,
+        "solar_mw": None,
+        "renewable_generation_mw": None,
+        "renewable_share": None,
+        "temperature_2m": None,
+        "previous_24h_price_average": None,
+        "seven_day_price_average": None,
+    }
+    if not observed_data.empty:
+        row = observed_data.iloc[-1]
+        timestamp = observed_data.index[-1]
+        renewable_generation, renewable_share = _renewable_metrics(row)
+        observed.update({
+            "timestamp": timestamp,
+            "price_eur_mwh": _finite_number(row.get("price_eur_mwh")),
+            "load_mw": _finite_number(row.get("load_mw")),
+            "wind_total_mw": _finite_number(row.get("wind_total_mw")),
+            "solar_mw": _finite_number(row.get("solar_mw")),
+            "renewable_generation_mw": renewable_generation,
+            "renewable_share": renewable_share,
+            "temperature_2m": _finite_number(row.get("temperature_2m")),
+            "previous_24h_price_average": _exact_hourly_stat(
+                observed_data, "price_eur_mwh", timestamp, 24
+            ),
+            "seven_day_price_average": _exact_hourly_stat(
+                observed_data, "price_eur_mwh", timestamp, 168
+            ),
+        })
+
+    summary = summarize_next24h_forecast(forecast, now=now)
+    freshness = forecast_freshness(
+        forecast, now=now, maximum_age_hours=maximum_age_hours
+    )
+    forecast_context = {
+        "issue_time": None,
+        "average": None,
+        "minimum": None,
+        "minimum_time": None,
+        "maximum": None,
+        "maximum_time": None,
+        "negative_hours": None,
+        "elevated_hours": None,
+        "rows": 0,
+        "forward_looking_rows": 0,
+        **freshness,
+    }
+    if summary:
+        forecast_context.update({key: summary[key] for key in (
+            "issue_time", "average", "minimum", "minimum_time", "maximum",
+            "maximum_time", "negative_hours", "elevated_hours", "rows",
+            "forward_looking_rows",
+        )})
+    return {"observed": observed, "forecast": forecast_context}
+
+
+def build_model_input_context(
+    silver: pd.DataFrame,
+    issue_time,
+) -> dict:
+    """Describe persisted issue-hour inputs; never substitute a different hour."""
+    data = _prepare_observed_market(silver)
+    issue = _utc_timestamp(issue_time)
+    empty = {
+        "available": False,
+        "issue_time": issue,
+        "load_mw": None,
+        "wind_total_mw": None,
+        "solar_mw": None,
+        "renewable_share": None,
+        "price_eur_mwh": None,
+        "price_rolling_mean_24h": None,
+        "price_rolling_std_24h": None,
+        "price_average_7d": None,
+        "temperature_2m": None,
+        "relative_humidity_2m": None,
+        "wind_speed_10m": None,
+        "cloud_cover": None,
+        "shortwave_radiation": None,
+    }
+    if data.empty or issue is None or issue not in data.index:
+        return empty
+    row = data.loc[issue]
+    if isinstance(row, pd.DataFrame):
+        row = row.iloc[-1]
+    _, renewable_share = _renewable_metrics(row)
+    values = {
+        "available": True,
+        "issue_time": issue,
+        "renewable_share": renewable_share,
+        "price_rolling_mean_24h": _exact_hourly_stat(
+            data, "price_eur_mwh", issue, 24
+        ),
+        "price_rolling_std_24h": _exact_hourly_stat(
+            data, "price_eur_mwh", issue, 24, statistic="std"
+        ),
+        "price_average_7d": _exact_hourly_stat(
+            data, "price_eur_mwh", issue, 168
+        ),
+    }
+    for column in (
+        "load_mw", "wind_total_mw", "solar_mw", "price_eur_mwh",
+        "temperature_2m", "relative_humidity_2m", "wind_speed_10m",
+        "cloud_cover", "shortwave_radiation",
+    ):
+        values[column] = _finite_number(row.get(column))
+    return {**empty, **values}
+
 
 def file_mtime_ns(path: Path) -> int | None:
     """Return a stable cache version for a file without raising on missing paths."""

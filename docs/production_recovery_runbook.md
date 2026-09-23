@@ -119,6 +119,38 @@ python scripts/check_s3_recovery_readiness.py
 
 This performs only `HeadBucket`, versioning, encryption, lifecycle, and
 single-object prefix reads. It makes no S3 writes or configuration changes.
+Each result is reported independently as `configured`, `not_configured`,
+`permission_unavailable`, or `error`; an unavailable permission is never
+interpreted as evidence that the bucket feature is disabled.
+
+Complete read-only recovery inspection requires these IAM actions:
+
+- `s3:GetBucketVersioning`
+- `s3:GetEncryptionConfiguration`
+- `s3:GetLifecycleConfiguration`
+- `s3:ListBucket`
+
+An administrator may grant the following bucket-scoped policy to the EC2 role
+after review. The repository does not apply this policy automatically:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PowerFlowRecoveryReadOnlyInspection",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an"
+    }
+  ]
+}
+```
 
 Recommended production controls:
 

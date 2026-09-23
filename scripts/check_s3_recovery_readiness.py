@@ -20,11 +20,42 @@ STATIC_CREDENTIAL_VARIABLES = (
     "AWS_SECRET_ACCESS_KEY",
     "AWS_SESSION_TOKEN",
 )
+ACCESS_DENIED_CODES = {"AccessDenied", "AllAccessDisabled", "403"}
+PERMISSIONS = {
+    "bucket_access": "s3:ListBucket",
+    "versioning": "s3:GetBucketVersioning",
+    "encryption": "s3:GetEncryptionConfiguration",
+    "lifecycle": "s3:GetLifecycleConfiguration",
+    "prefix_listing": "s3:ListBucket",
+}
 
 
 def _no_such_configuration(error: ClientError) -> bool:
     code = str(error.response.get("Error", {}).get("Code", ""))
-    return code in {"NoSuchLifecycleConfiguration", "NoSuchConfiguration", "404"}
+    return code in {
+        "NoSuchLifecycleConfiguration",
+        "NoSuchConfiguration",
+        "ServerSideEncryptionConfigurationNotFoundError",
+        "404",
+    }
+
+
+def _error_result(error: ClientError, permission: str) -> dict:
+    code = str(error.response.get("Error", {}).get("Code", "Unknown"))
+    if code in ACCESS_DENIED_CODES:
+        return {
+            "status": "permission_unavailable",
+            "required_permission": permission,
+        }
+    return {"status": "error", "error_code": code}
+
+
+def _overall_status(results: list[dict]) -> str:
+    statuses = {result.get("status") for result in results}
+    for status in ("error", "permission_unavailable", "not_configured"):
+        if status in statuses:
+            return status
+    return "configured"
 
 
 def check_s3_recovery_readiness(bucket: str, region: str, *, client=None) -> dict:
@@ -33,48 +64,86 @@ def check_s3_recovery_readiness(bucket: str, region: str, *, client=None) -> dic
         raise ValueError("An S3 bucket name is required.")
     if client is None:
         client = boto3.client("s3", region_name=region)
-    client.head_bucket(Bucket=bucket)
-    versioning = client.get_bucket_versioning(Bucket=bucket)
+
     try:
-        encryption = client.get_bucket_encryption(Bucket=bucket)
+        client.head_bucket(Bucket=bucket)
+        bucket_access = {"status": "configured", "accessible": True}
+    except ClientError as error:
+        bucket_access = _error_result(error, PERMISSIONS["bucket_access"])
+
+    try:
+        response = client.get_bucket_versioning(Bucket=bucket)
+        versioning_value = response.get("Status")
+        versioning = {
+            "status": "configured" if versioning_value == "Enabled" else "not_configured",
+            "value": versioning_value or "Disabled",
+            "mfa_delete": response.get("MFADelete"),
+        }
+    except ClientError as error:
+        versioning = _error_result(error, PERMISSIONS["versioning"])
+
+    try:
+        response = client.get_bucket_encryption(Bucket=bucket)
         encryption_rules = [
             rule.get("ApplyServerSideEncryptionByDefault", {}).get("SSEAlgorithm")
-            for rule in encryption.get("ServerSideEncryptionConfiguration", {}).get(
+            for rule in response.get("ServerSideEncryptionConfiguration", {}).get(
                 "Rules", []
             )
         ]
         encryption_rules = [value for value in encryption_rules if value]
+        encryption = {
+            "status": "configured" if encryption_rules else "not_configured",
+            "algorithms": encryption_rules,
+        }
     except ClientError as error:
-        if not _no_such_configuration(error):
-            raise
-        encryption_rules = []
+        encryption = (
+            {"status": "not_configured", "algorithms": []}
+            if _no_such_configuration(error)
+            else _error_result(error, PERMISSIONS["encryption"])
+        )
+
     try:
-        lifecycle = client.get_bucket_lifecycle_configuration(Bucket=bucket)
+        response = client.get_bucket_lifecycle_configuration(Bucket=bucket)
         lifecycle_rules = [
             {"id": rule.get("ID"), "status": rule.get("Status")}
-            for rule in lifecycle.get("Rules", [])
+            for rule in response.get("Rules", [])
         ]
+        lifecycle = {
+            "status": "configured" if lifecycle_rules else "not_configured",
+            "rules": lifecycle_rules,
+        }
     except ClientError as error:
-        if not _no_such_configuration(error):
-            raise
-        lifecycle_rules = []
+        lifecycle = (
+            {"status": "not_configured", "rules": []}
+            if _no_such_configuration(error)
+            else _error_result(error, PERMISSIONS["lifecycle"])
+        )
+
     prefixes = {}
     for prefix in PRODUCTION_PREFIXES:
-        response = client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=1)
-        prefixes[prefix] = {
-            "present": bool(response.get("KeyCount", 0)),
-            "sample_key": response.get("Contents", [{}])[0].get("Key")
-            if response.get("Contents")
-            else None,
-        }
+        try:
+            response = client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=1)
+            present = bool(response.get("KeyCount", 0))
+            prefixes[prefix] = {
+                "status": "configured" if present else "not_configured",
+                "present": present,
+                "sample_key": response.get("Contents", [{}])[0].get("Key")
+                if response.get("Contents")
+                else None,
+            }
+        except ClientError as error:
+            prefixes[prefix] = _error_result(
+                error, PERMISSIONS["prefix_listing"]
+            )
+    capability_results = [bucket_access, versioning, encryption, lifecycle, *prefixes.values()]
     return {
         "bucket": bucket,
         "region": region,
-        "bucket_accessible": True,
-        "versioning_status": versioning.get("Status", "Disabled"),
-        "mfa_delete": versioning.get("MFADelete"),
-        "encryption_algorithms": encryption_rules,
-        "lifecycle_rules": lifecycle_rules,
+        "overall_status": _overall_status(capability_results),
+        "bucket_access": bucket_access,
+        "versioning": versioning,
+        "encryption": encryption,
+        "lifecycle": lifecycle,
         "prefixes": prefixes,
         "read_only": True,
     }

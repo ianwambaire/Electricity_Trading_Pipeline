@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from botocore.exceptions import ClientError
 
 from operational_recovery import (
     backup_operational_database,
@@ -21,6 +22,46 @@ from presentation_snapshot import create_presentation_snapshot, operational_summ
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = (PROJECT_ROOT / "database/schema.sql").read_text(encoding="utf-8")
+
+
+class FakeReadOnlyS3:
+    def __init__(self, denied=()):
+        self.calls = []
+        self.denied = set(denied)
+
+    def _record(self, operation, kwargs):
+        self.calls.append((operation, kwargs))
+        if operation in self.denied:
+            raise ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "Denied"}},
+                operation,
+            )
+
+    def head_bucket(self, **kwargs):
+        self._record("head_bucket", kwargs)
+        return {}
+
+    def get_bucket_versioning(self, **kwargs):
+        self._record("get_bucket_versioning", kwargs)
+        return {"Status": "Enabled"}
+
+    def get_bucket_encryption(self, **kwargs):
+        self._record("get_bucket_encryption", kwargs)
+        return {
+            "ServerSideEncryptionConfiguration": {
+                "Rules": [
+                    {"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
+                ]
+            }
+        }
+
+    def get_bucket_lifecycle_configuration(self, **kwargs):
+        self._record("get_bucket_lifecycle_configuration", kwargs)
+        return {"Rules": [{"ID": "retain", "Status": "Enabled"}]}
+
+    def list_objects_v2(self, **kwargs):
+        self._record("list_objects_v2", kwargs)
+        return {"KeyCount": 1, "Contents": [{"Key": kwargs["Prefix"] + "item"}]}
 
 
 def make_operational_db(path: Path) -> Path:
@@ -225,40 +266,13 @@ def test_s3_readiness_checker_is_read_only(monkeypatch):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    class ReadOnlyS3:
-        def __init__(self):
-            self.calls = []
-
-        def head_bucket(self, **kwargs):
-            self.calls.append(("head_bucket", kwargs))
-            return {}
-
-        def get_bucket_versioning(self, **kwargs):
-            self.calls.append(("get_bucket_versioning", kwargs))
-            return {"Status": "Enabled"}
-
-        def get_bucket_encryption(self, **kwargs):
-            self.calls.append(("get_bucket_encryption", kwargs))
-            return {
-                "ServerSideEncryptionConfiguration": {
-                    "Rules": [
-                        {"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
-                    ]
-                }
-            }
-
-        def get_bucket_lifecycle_configuration(self, **kwargs):
-            self.calls.append(("get_bucket_lifecycle_configuration", kwargs))
-            return {"Rules": [{"ID": "retain", "Status": "Enabled"}]}
-
-        def list_objects_v2(self, **kwargs):
-            self.calls.append(("list_objects_v2", kwargs))
-            return {"KeyCount": 1, "Contents": [{"Key": kwargs["Prefix"] + "item"}]}
-
-    client = ReadOnlyS3()
+    client = FakeReadOnlyS3()
     result = module.check_s3_recovery_readiness("bucket", "us-east-1", client=client)
     assert result["read_only"] is True
-    assert result["versioning_status"] == "Enabled"
+    assert result["overall_status"] == "configured"
+    assert result["versioning"] == {
+        "status": "configured", "value": "Enabled", "mfa_delete": None,
+    }
     assert set(result["prefixes"]) == set(module.PRODUCTION_PREFIXES)
     assert {name for name, _ in client.calls} <= {
         "head_bucket",
@@ -267,3 +281,131 @@ def test_s3_readiness_checker_is_read_only(monkeypatch):
         "get_bucket_lifecycle_configuration",
         "list_objects_v2",
     }
+
+
+@pytest.mark.parametrize(
+    ("denied_operation", "result_key", "required_permission"),
+    [
+        ("get_bucket_versioning", "versioning", "s3:GetBucketVersioning"),
+        ("get_bucket_encryption", "encryption", "s3:GetEncryptionConfiguration"),
+        ("get_bucket_lifecycle_configuration", "lifecycle", "s3:GetLifecycleConfiguration"),
+    ],
+)
+def test_s3_access_denied_is_structured_and_other_checks_continue(
+    denied_operation, result_key, required_permission,
+):
+    script = PROJECT_ROOT / "scripts/check_s3_recovery_readiness.py"
+    spec = importlib.util.spec_from_file_location(
+        f"s3_readiness_{result_key}", script
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    client = FakeReadOnlyS3({denied_operation})
+
+    result = module.check_s3_recovery_readiness(
+        "bucket", "us-east-1", client=client
+    )
+
+    assert result[result_key] == {
+        "status": "permission_unavailable",
+        "required_permission": required_permission,
+    }
+    assert result["overall_status"] == "permission_unavailable"
+    assert result["versioning"]["status"] in {
+        "configured", "permission_unavailable",
+    }
+    assert result["encryption"]["status"] in {
+        "configured", "permission_unavailable",
+    }
+    assert result["lifecycle"]["status"] in {
+        "configured", "permission_unavailable",
+    }
+    assert all(item["status"] == "configured" for item in result["prefixes"].values())
+    assert {name for name, _ in client.calls} >= {
+        "get_bucket_versioning",
+        "get_bucket_encryption",
+        "get_bucket_lifecycle_configuration",
+        "list_objects_v2",
+    }
+
+
+def test_s3_prefix_access_denied_is_reported_per_prefix_without_traceback():
+    script = PROJECT_ROOT / "scripts/check_s3_recovery_readiness.py"
+    spec = importlib.util.spec_from_file_location("s3_readiness_prefix", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    result = module.check_s3_recovery_readiness(
+        "bucket", "us-east-1", client=FakeReadOnlyS3({"list_objects_v2"})
+    )
+    assert result["overall_status"] == "permission_unavailable"
+    assert all(
+        value == {
+            "status": "permission_unavailable",
+            "required_permission": "s3:ListBucket",
+        }
+        for value in result["prefixes"].values()
+    )
+
+
+def test_s3_not_configured_is_distinct_from_permission_unavailable():
+    script = PROJECT_ROOT / "scripts/check_s3_recovery_readiness.py"
+    spec = importlib.util.spec_from_file_location("s3_readiness_empty", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    class EmptyConfigurationS3(FakeReadOnlyS3):
+        def get_bucket_versioning(self, **kwargs):
+            self._record("get_bucket_versioning", kwargs)
+            return {}
+
+        def get_bucket_encryption(self, **kwargs):
+            self._record("get_bucket_encryption", kwargs)
+            raise ClientError(
+                {"Error": {"Code": "ServerSideEncryptionConfigurationNotFoundError"}},
+                "get_bucket_encryption",
+            )
+
+        def get_bucket_lifecycle_configuration(self, **kwargs):
+            self._record("get_bucket_lifecycle_configuration", kwargs)
+            raise ClientError(
+                {"Error": {"Code": "NoSuchLifecycleConfiguration"}},
+                "get_bucket_lifecycle_configuration",
+            )
+
+        def list_objects_v2(self, **kwargs):
+            self._record("list_objects_v2", kwargs)
+            return {"KeyCount": 0}
+
+    result = module.check_s3_recovery_readiness(
+        "bucket", "us-east-1", client=EmptyConfigurationS3()
+    )
+    assert result["overall_status"] == "not_configured"
+    assert result["versioning"]["status"] == "not_configured"
+    assert result["encryption"]["status"] == "not_configured"
+    assert result["lifecycle"]["status"] == "not_configured"
+
+
+def test_s3_unexpected_client_error_is_structured_and_checks_continue():
+    script = PROJECT_ROOT / "scripts/check_s3_recovery_readiness.py"
+    spec = importlib.util.spec_from_file_location("s3_readiness_error", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    class EncryptionErrorS3(FakeReadOnlyS3):
+        def get_bucket_encryption(self, **kwargs):
+            self._record("get_bucket_encryption", kwargs)
+            raise ClientError(
+                {"Error": {"Code": "InternalError", "Message": "temporary"}},
+                "get_bucket_encryption",
+            )
+
+    client = EncryptionErrorS3()
+    result = module.check_s3_recovery_readiness(
+        "bucket", "us-east-1", client=client
+    )
+    assert result["overall_status"] == "error"
+    assert result["encryption"] == {
+        "status": "error", "error_code": "InternalError",
+    }
+    assert result["lifecycle"]["status"] == "configured"
+    assert all(value["status"] == "configured" for value in result["prefixes"].values())

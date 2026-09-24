@@ -420,8 +420,9 @@ def has_columns(data: pd.DataFrame, columns) -> bool:
 
 
 def show_data_warning(label: str, path: Path):
+    location = f" at `{path}`" if show_dataset_paths else ""
     st.warning(
-        f"{label} is unavailable or unreadable at `{path}`. "
+        f"{label} is unavailable or unreadable{location}. "
         "Run the ENTSO-E pipeline to regenerate it."
     )
 
@@ -480,6 +481,8 @@ def render_data_source_health(
     forecast_issue,
     current_forecast,
     current_forecast_error,
+    *,
+    include_incident_details,
 ):
     section_header("Data-Source Health")
     issue_by_source = {}
@@ -551,7 +554,10 @@ def render_data_source_health(
             },
         ]
     )
-    st.dataframe(pd.DataFrame(source_rows), width="stretch", hide_index=True)
+    source_health = pd.DataFrame(source_rows)
+    if not include_incident_details:
+        source_health = source_health.drop(columns="Last Known Issue")
+    st.dataframe(source_health, width="stretch", hide_index=True)
     st.caption(
         "Historical weather and Silver/Gold are archive-aligned; operational "
         "weather is an in-memory issue-hour input, so its acquisition time—not "
@@ -560,6 +566,7 @@ def render_data_source_health(
 
 
 authenticated_user = require_authentication(st)
+show_dataset_paths = can_access_section(authenticated_user, "dataset_paths")
 silver_summary = load_csv_summary(SILVER_DATA)
 latest_pipeline_run, pipeline_run_error = load_latest_pipeline_run(PIPELINE_DATABASE)
 latest_timestamp = silver_summary["latest_timestamp"]
@@ -819,6 +826,12 @@ elif page == "Market Intelligence":
 
 
 elif page == "Forecasting":
+    show_release_metadata = can_access_section(
+        authenticated_user, "forecast_release_metadata"
+    )
+    show_provenance_metadata = can_access_section(
+        authenticated_user, "forecast_provenance_metadata"
+    )
     silver_data = load_dashboard_csv(
         SILVER_DATA,
         timestamp_columns=("timestamp",),
@@ -916,6 +929,17 @@ elif page == "Forecasting":
     )
 
     section_header("Presentation Summary")
+    forecast_identity_metric = (
+        (
+            "Next24h Release",
+            str(forecast_context.get("release_id") or (
+                next24h_forecast["model_release"].iloc[0]
+                if not next24h_forecast.empty else "N/A"
+            )),
+        )
+        if show_release_metadata
+        else ("Forecast Model", "Histogram Gradient Boosting")
+    )
     summary_metrics = [
         ("Market", "DE-LU"),
         (
@@ -925,13 +949,7 @@ elif page == "Forecasting":
             ),
         ),
         ("Forecast Freshness", forecast_context["status"]),
-        (
-            "Next24h Release",
-            str(forecast_context.get("release_id") or (
-                next24h_forecast["model_release"].iloc[0]
-                if not next24h_forecast.empty else "N/A"
-            )),
-        ),
+        forecast_identity_metric,
         ("Forecast Rows", fmt_int(forecast_context["rows"])),
         ("Forward-Looking", fmt_int(forecast_context["forward_looking_rows"])),
         ("System Health", operational_health["label"]),
@@ -1049,28 +1067,41 @@ elif page == "Forecasting":
         )
         col3.metric("Highest Predicted Price", f"{high['predicted_price_eur_mwh']:.2f} EUR/MWh")
         col4.metric("Lowest Predicted Price", f"{low['predicted_price_eur_mwh']:.2f} EUR/MWh")
-        st.caption(
-            f"Release: {next24h_forecast['model_release'].iloc[0]} · "
+        forecast_extrema = (
             f"Peak: {high['target_timestamp']:%Y-%m-%d %H:%M} UTC · "
             f"Low: {low['target_timestamp']:%Y-%m-%d %H:%M} UTC"
         )
-        if provenance.get("weather_acquired_at_utc"):
+        if show_release_metadata:
             st.caption(
-                "Issue-hour weather: Open-Meteo operational model (not historical "
-                "observations or future-horizon weather) · Acquired: "
-                f"{provenance['weather_acquired_at_utc']}"
+                f"Release: {next24h_forecast['model_release'].iloc[0]} · "
+                f"{forecast_extrema}"
             )
+        else:
+            st.caption(forecast_extrema)
+        if provenance.get("weather_acquired_at_utc"):
+            weather_caption = (
+                "Issue-hour weather: Open-Meteo operational model (not historical "
+                "observations or future-horizon weather)"
+            )
+            if show_provenance_metadata:
+                weather_caption += (
+                    f" · Acquired: {provenance['weather_acquired_at_utc']}"
+                )
+            st.caption(weather_caption)
         issued_rows = (
             forecast_history.loc[forecast_history["forecast_issue_time"] == issue_time]
             if "forecast_issue_time" in forecast_history and "issued_at_utc" in forecast_history
             else pd.DataFrame()
         )
         issued_at = issued_rows["issued_at_utc"].min() if not issued_rows.empty else None
-        st.caption(
+        generated_caption = (
             f"Forecast generated at: {fmt_timestamp(issued_at)} · "
             f"Freshness: {age_label(issue_time, now=display_now)} · "
-            f"Model: Histogram Gradient Boosting · Release: {forecast_summary['release_id']}"
+            "Model: Histogram Gradient Boosting"
         )
+        if show_release_metadata:
+            generated_caption += f" · Release: {forecast_summary['release_id']}"
+        st.caption(generated_caption)
         st.caption(
             f"{forecast_summary['rows']} predictions generated · "
             f"{forecast_summary['forward_looking_rows']} still forward-looking"
@@ -1143,11 +1174,22 @@ elif page == "Forecasting":
         )
         figure.update_xaxes(tickformat="%d %b\n%H:%M UTC")
         st.plotly_chart(figure, width="stretch")
+        analyst_forecast_columns = [
+            "forecast_issue_time",
+            "target_timestamp",
+            "horizon_hours",
+            "predicted_price_eur_mwh",
+        ]
+        visible_forecast = (
+            next24h_forecast
+            if show_release_metadata
+            else next24h_forecast.loc[:, analyst_forecast_columns]
+        )
         with st.expander("View all 24 forecast hours"):
-            st.dataframe(next24h_forecast, width="stretch", hide_index=True)
+            st.dataframe(visible_forecast, width="stretch", hide_index=True)
         st.download_button(
             "Download current 24-hour forecast (CSV)",
-            data=next24h_forecast.to_csv(index=False),
+            data=visible_forecast.to_csv(index=False),
             file_name=f"powerflow_next24h_{issue_time:%Y%m%d_%H00}_UTC.csv",
             mime="text/csv",
         )
@@ -1230,7 +1272,11 @@ elif page == "Forecasting":
     section_header("Frozen One-Hour Model Evaluation")
     st.caption("Ordinary Linear Regression · historical final holdout evaluation, not live next24h performance.")
     if final_release is None:
-        st.warning(final_release_error)
+        st.warning(
+            final_release_error
+            if show_release_metadata
+            else "Final holdout metrics are unavailable."
+        )
     else:
         section_header("Final Holdout Metrics")
         col1, col2, col3, col4 = st.columns(4)
@@ -1546,6 +1592,7 @@ elif page == "Pipeline Summary":
             forecast_issue,
             current_forecast,
             current_forecast_error,
+            include_incident_details=False,
         )
         st.stop()
 
@@ -1679,6 +1726,7 @@ elif page == "Pipeline Summary":
         forecast_issue,
         current_forecast,
         current_forecast_error,
+        include_incident_details=True,
     )
 
     section_header("Recent Operational Incidents")

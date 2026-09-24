@@ -37,6 +37,9 @@ ROLE_PAGE_ACCESS = {
     "admin": ALL_DASHBOARD_PAGES,
 }
 ADMIN_ONLY_SECTIONS = {
+    "dataset_paths",
+    "forecast_release_metadata",
+    "forecast_provenance_metadata",
     "pipeline_run_details",
     "pipeline_execution_history",
     "operational_incidents",

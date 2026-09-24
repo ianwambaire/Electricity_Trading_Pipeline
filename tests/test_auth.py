@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta, timezone
 
+import pandas as pd
 import pytest
 from streamlit.testing.v1 import AppTest
 
@@ -51,6 +52,92 @@ def _users(role="admin"):
     return auth.load_user_registry(
         _environment(POWERFLOW_AUTH_USERS_JSON=_users_payload(role))
     )
+
+
+def _configure_role(monkeypatch, role):
+    for name, value in _environment(
+        POWERFLOW_AUTH_USERS_JSON=_users_payload(role)
+    ).items():
+        monkeypatch.setenv(name, value)
+
+
+def _login(app):
+    app.text_input[0].set_value("ian_admin")
+    app.text_input[1].set_value(PASSWORD)
+    app.button[0].click().run(timeout=30)
+    return app
+
+
+def _write_forecasting_fixture(tmp_path):
+    issue = pd.Timestamp.now(tz="UTC").floor("h") - pd.Timedelta(hours=1)
+    reports = tmp_path / "data/reports"
+    reports.mkdir(parents=True)
+    release_id = "next24h-hgb-internal-release"
+    acquisition_time = (issue + pd.Timedelta(minutes=17)).isoformat()
+    pd.DataFrame(
+        {
+            "forecast_issue_time": [issue] * 24,
+            "target_timestamp": [
+                issue + pd.Timedelta(hours=h) for h in range(1, 25)
+            ],
+            "horizon_hours": range(1, 25),
+            "predicted_price_eur_mwh": [float(h) for h in range(1, 25)],
+            "model_release": [release_id] * 24,
+        }
+    ).to_csv(reports / "next24h_forecast.csv", index=False)
+    pd.DataFrame(
+        {
+            "forecast_issue_time": [issue],
+            "target_timestamp": [issue + pd.Timedelta(hours=1)],
+            "issued_at_utc": [issue + pd.Timedelta(minutes=20)],
+        }
+    ).to_csv(reports / "next24h_forecast_history.csv", index=False)
+    (reports / "next24h_forecast_provenance.json").write_text(
+        json.dumps(
+            {
+                "forecast_issue_time": issue.isoformat(),
+                "market_latest_complete_hour": issue.isoformat(),
+                "weather_acquired_at_utc": acquisition_time,
+                "source_candidate_path": "/internal/release/candidate/path",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    raw = tmp_path / "data/raw/entsoe"
+    raw.mkdir(parents=True)
+    pd.DataFrame(
+        {
+            "timestamp": pd.date_range(end=issue, periods=168, freq="h", tz="UTC"),
+            "price_eur_mwh": range(1, 169),
+            "source_resolution": "PT60M",
+        }
+    ).to_csv(raw / "prices.csv", index=False)
+    silver = tmp_path / "data/processed"
+    silver.mkdir(parents=True)
+    pd.DataFrame(
+        {
+            "timestamp": [issue],
+            "price_eur_mwh": [168.0],
+            "load_mw": [40_000.0],
+            "wind_total_mw": [5_000.0],
+            "solar_mw": [1_000.0],
+            "temperature_2m": [15.0],
+        }
+    ).to_csv(silver / "silver_electricity_market_data.csv", index=False)
+    return release_id, acquisition_time
+
+
+def _rendered_text(app):
+    values = []
+    for collection in (app.markdown, app.caption, app.info, app.warning, app.error):
+        values.extend(str(element.value) for element in collection)
+    for metric in app.metric:
+        values.extend((str(metric.label), str(metric.value)))
+    for dataframe in app.dataframe:
+        values.append(" ".join(map(str, dataframe.value.columns)))
+        values.append(dataframe.value.to_string(index=False))
+    return "\n".join(values)
 
 
 def test_authentication_disabled_defaults_to_local_development_admin():
@@ -114,6 +201,13 @@ def test_analyst_and_admin_page_access_is_centralized():
     assert not auth.can_access_section(analyst, "operational_incidents")
     assert auth.can_access_section(admin, "operational_incidents")
     assert auth.can_access_section(analyst, "data_quality")
+    for page in auth.ALL_DASHBOARD_PAGES:
+        if page in auth.allowed_pages_for_role("analyst"):
+            auth.require_page_access(analyst, page)
+        else:
+            with pytest.raises(auth.AuthorizationError):
+                auth.require_page_access(analyst, page)
+        auth.require_page_access(admin, page)
 
 
 def test_logout_clears_all_authentication_state():
@@ -290,19 +384,14 @@ def test_streamlit_login_and_role_filtered_navigation(
     monkeypatch, tmp_path, role, model_insights_visible
 ):
     monkeypatch.chdir(tmp_path)
-    for name, value in _environment(
-        POWERFLOW_AUTH_USERS_JSON=_users_payload(role)
-    ).items():
-        monkeypatch.setenv(name, value)
+    _configure_role(monkeypatch, role)
 
     app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
     app.run(timeout=30)
     assert not app.radio
     assert [field.label for field in app.text_input] == ["Username", "Password"]
 
-    app.text_input[0].set_value("ian_admin")
-    app.text_input[1].set_value(PASSWORD)
-    app.button[0].click().run(timeout=30)
+    _login(app)
 
     assert not app.exception
     assert app.radio
@@ -313,14 +402,11 @@ def test_streamlit_login_and_role_filtered_navigation(
 
 def test_streamlit_logout_returns_to_login(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    for name, value in _environment().items():
-        monkeypatch.setenv(name, value)
+    _configure_role(monkeypatch, "admin")
 
     app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
     app.run(timeout=30)
-    app.text_input[0].set_value("ian_admin")
-    app.text_input[1].set_value(PASSWORD)
-    app.button[0].click().run(timeout=30)
+    _login(app)
     next(button for button in app.button if button.label == "Logout").click().run(timeout=30)
 
     assert not app.exception
@@ -330,16 +416,11 @@ def test_streamlit_logout_returns_to_login(monkeypatch, tmp_path):
 
 def test_analyst_pipeline_summary_omits_admin_only_sections(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    for name, value in _environment(
-        POWERFLOW_AUTH_USERS_JSON=_users_payload("analyst")
-    ).items():
-        monkeypatch.setenv(name, value)
+    _configure_role(monkeypatch, "analyst")
 
     app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
     app.run(timeout=30)
-    app.text_input[0].set_value("ian_admin")
-    app.text_input[1].set_value(PASSWORD)
-    app.button[0].click().run(timeout=30)
+    _login(app)
     app.radio[0].set_value("Pipeline Summary").run(timeout=30)
     rendered = "\n".join(markdown.value for markdown in app.markdown)
 
@@ -353,3 +434,102 @@ def test_analyst_pipeline_summary_omits_admin_only_sections(monkeypatch, tmp_pat
     assert "Pipeline Performance" not in rendered
     assert "Dataset Status" not in rendered
     assert "Available Data Products" not in rendered
+    assert all(
+        "Last Known Issue" not in dataframe.value.columns
+        for dataframe in app.dataframe
+    )
+    assert all("data/" not in warning.value for warning in app.warning)
+
+
+@pytest.mark.parametrize("role", ["analyst", "admin"])
+def test_forecasting_release_and_provenance_are_role_scoped(
+    monkeypatch, tmp_path, role
+):
+    release_id, acquisition_time = _write_forecasting_fixture(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    _configure_role(monkeypatch, role)
+
+    app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
+    app.run(timeout=30)
+    _login(app)
+    app.radio[0].set_value("Forecasting").run(timeout=30)
+    rendered = _rendered_text(app)
+    metric_labels = {metric.label for metric in app.metric}
+    dataframe_columns = [set(dataframe.value.columns) for dataframe in app.dataframe]
+
+    assert not app.exception
+    assert "Market" in metric_labels
+    assert "Forecast Freshness" in metric_labels
+    assert "Forecast Issue (UTC)" in metric_labels
+    assert "System Health" in metric_labels
+    assert "Rolling Next 24-Hour Production Forecast" in rendered
+    assert "Market Context" in rendered
+    assert "Model Input Context" in rendered
+    assert "Realized Next24h Performance" in rendered
+    assert "Forecast generated at:" in rendered
+    assert "Histogram Gradient Boosting" in rendered
+    assert app.get("download_button")
+
+    if role == "analyst":
+        assert "Forecast Model" in metric_labels
+        assert "Next24h Release" not in metric_labels
+        assert release_id not in rendered
+        assert acquisition_time not in rendered
+        assert "/internal/release/candidate/path" not in rendered
+        assert "data/" not in rendered
+        assert "artifacts/" not in rendered
+        assert all("model_release" not in columns for columns in dataframe_columns)
+    else:
+        assert "Next24h Release" in metric_labels
+        assert release_id in rendered
+        assert acquisition_time in rendered
+        assert any("model_release" in columns for columns in dataframe_columns)
+
+
+def test_admin_pipeline_summary_retains_technical_sections(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    _configure_role(monkeypatch, "admin")
+
+    app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
+    app.run(timeout=30)
+    _login(app)
+    app.radio[0].set_value("Pipeline Summary").run(timeout=30)
+    rendered = _rendered_text(app)
+
+    assert not app.exception
+    assert "Latest Pipeline Run" in rendered
+    assert "Recent Pipeline Execution History" in rendered
+    assert "Recent Operational Incidents" in rendered
+    assert "Pipeline Performance" in rendered
+    assert "Dataset Status" in rendered
+    assert "Available Data Products" in rendered
+    assert any(
+        "Last Known Issue" in dataframe.value.columns
+        for dataframe in app.dataframe
+    )
+    assert "data/processed/silver_electricity_market_data.csv" in rendered
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        "Executive Overview",
+        "Market Intelligence",
+        "Anomaly Detection",
+    ],
+)
+def test_analyst_pages_do_not_expose_missing_dataset_paths(
+    monkeypatch, tmp_path, page
+):
+    monkeypatch.chdir(tmp_path)
+    _configure_role(monkeypatch, "analyst")
+
+    app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
+    app.run(timeout=30)
+    _login(app)
+    app.radio[0].set_value(page).run(timeout=30)
+    rendered = _rendered_text(app)
+
+    assert not app.exception
+    assert "data/" not in rendered
+    assert "artifacts/" not in rendered

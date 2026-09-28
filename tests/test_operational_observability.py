@@ -227,7 +227,7 @@ def test_email_delivery_failure_records_once_without_recursive_alert(
     assert event_types == ["email_alert_failed"]
 
 
-def test_next24h_withholding_path_uses_incident_cooldown(
+def test_next24h_withholding_never_uses_failure_email_path(
     temporary_database, monkeypatch,
 ):
     import scheduled_pipeline as pipeline
@@ -241,7 +241,6 @@ def test_next24h_withholding_path_uses_incident_cooldown(
         def sync_group(self, group):
             return type("Result", (), {"uploaded": [], "unchanged": []})()
 
-    monkeypatch.setenv("POWERFLOW_ALERT_COOLDOWN_HOURS", "12")
     monkeypatch.setattr(pipeline, "verify_next24h_release_task", lambda: "release-v1")
     monkeypatch.setattr(
         pipeline,
@@ -264,30 +263,17 @@ def test_next24h_withholding_path_uses_incident_cooldown(
 
     run_once()
     run_once()
-    assert len(sent) == 1
-    with sqlite3.connect(temporary_database) as connection:
-        old = (datetime.now(timezone.utc) - timedelta(hours=13)).isoformat()
-        connection.execute(
-            """
-            UPDATE operational_incidents SET timestamp_utc = ?
-            WHERE event_type = 'failure_alert_sent'
-            """,
-            (old,),
-        )
-    run_once()
-    assert len(sent) == 2
     reason[0] = "operational weather unavailable"
     run_once()
-    assert len(sent) == 3
+    assert sent == []
 
     with sqlite3.connect(temporary_database) as connection:
         incidents = connection.execute(
             "SELECT event_type, message, details_json FROM operational_incidents"
         ).fetchall()
-    assert sum(row[0] == "forecast_withheld" for row in incidents) == 4
-    assert sum(row[0] == "failure_alert_suppressed" for row in incidents) == 1
+    assert sum(row[0] == "forecast_withheld" for row in incidents) == 3
+    assert not any(row[0].startswith("failure_alert_") for row in incidents)
     assert "withheld-secret" not in str(incidents)
-    assert all("withheld-secret" not in message for _, message in sent)
 
 
 @pytest.mark.parametrize("value", ["0", "169", "nan", "invalid"])
@@ -387,6 +373,11 @@ def test_partial_price_tail_records_warning_details_without_failure(monkeypatch)
 def test_stage_timing_records_success_failure_and_total(temporary_database, monkeypatch):
     monkeypatch.setattr("scheduled_pipeline.log_stage_timing", store_data.log_stage_timing)
     assert _timed_stage("run-1", "Silver build", lambda: 7) == 7
+    assert _timed_stage(
+        "run-1",
+        "Next24h forecast generation",
+        lambda: {"status": "WITHHELD", "generated": False},
+    )["status"] == "WITHHELD"
     with pytest.raises(RuntimeError, match="broken"):
         _timed_stage("run-1", "Gold validation", lambda: (_ for _ in ()).throw(RuntimeError("broken")))
     store_data.log_stage_timing(
@@ -395,8 +386,13 @@ def test_stage_timing_records_success_failure_and_total(temporary_database, monk
     )
     st.cache_data.clear()
     rows = load_recent_stage_timings(temporary_database)
-    assert rows["stage_name"].tolist() == ["Total pipeline", "Gold validation", "Silver build"]
-    assert rows["status"].tolist() == ["FAILED", "FAILED", "SUCCESS"]
+    assert rows["stage_name"].tolist() == [
+        "Total pipeline",
+        "Gold validation",
+        "Next24h forecast generation",
+        "Silver build",
+    ]
+    assert rows["status"].tolist() == ["FAILED", "FAILED", "WITHHELD", "SUCCESS"]
     assert rows["duration_seconds"].ge(0).all()
     assert rows.iloc[0]["duration_seconds"] == 8.0
     summary = summarize_pipeline_timings(rows)
@@ -525,7 +521,7 @@ def test_prediction_count_labels_distinguish_one_hour_and_next24h():
     )
 
 
-def test_withheld_forecast_records_once_and_alerts_without_changing_prior_report(
+def test_withheld_forecast_records_without_alert_and_keeps_prior_report(
     tmp_path, monkeypatch,
 ):
     import scheduled_pipeline as pipeline
@@ -555,7 +551,111 @@ def test_withheld_forecast_records_once_and_alerts_without_changing_prior_report
     state = {"warnings": [], "objects_uploaded": [], "objects_unchanged": [],
              "s3_sync_status": "NOT_REQUIRED"}
     pipeline._run_next24h_stages(LocalSync(), state)
-    assert state["next24h_forecast_status"] == "UNAVAILABLE"
+    assert state["next24h_forecast_status"] == "WITHHELD"
     assert any(item[0] == "incident" and item[1][3] == "ACTIVE" for item in calls)
-    assert any(item[0] == "alert" for item in calls)
+    assert not any(item[0] == "alert" for item in calls)
+    incident = next(item for item in calls if item[0] == "incident")[1]
+    assert incident[5]["reason"] == "required load history unavailable"
+    assert incident[5]["source"] == "load"
+    assert incident[5]["forecast_freshness_status"] == "WITHHELD"
+    assert set(incident[5]["latest_complete_hours"]) == {
+        "price", "load", "generation"
+    }
     assert latest.read_text(encoding="utf-8") == "prior issued forecast\n"
+
+
+def _configure_no_change_pipeline(monkeypatch, pipeline, tmp_path):
+    monkeypatch.setattr(pipeline, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(pipeline, "initialize_database", lambda: None)
+    monkeypatch.setattr(
+        pipeline,
+        "_raw_row_counts",
+        lambda: {"prices": 0, "load": 0, "generation": 0, "weather": 0},
+    )
+    monkeypatch.setattr(pipeline, "_raw_watermark", lambda: None)
+    monkeypatch.setattr(
+        pipeline,
+        "entsoe_ingestion_task",
+        lambda *args: {
+            "new_rows": 0,
+            "repaired_cells": 0,
+            "revised_cells": 0,
+            "datasets": {},
+            "changed": False,
+        },
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "weather_ingestion_task",
+        lambda *args: {"new_rows": 0, "changed": False},
+    )
+    monkeypatch.setattr(pipeline, "_sync_storage_group", lambda *args: None)
+    monkeypatch.setattr(pipeline, "log_stage_timing", lambda *args: None)
+    monkeypatch.setattr(pipeline, "_record_incident", lambda *args, **kwargs: True)
+
+
+def test_expected_withholding_leaves_overall_flow_completed(tmp_path, monkeypatch):
+    import scheduled_pipeline as pipeline
+
+    _configure_no_change_pipeline(monkeypatch, pipeline, tmp_path)
+    recorded_runs = []
+    alerts = []
+    monkeypatch.setattr(
+        pipeline,
+        "_run_next24h_stages",
+        lambda _sync, state, _run_id: state.update(
+            next24h_forecast_status="WITHHELD",
+            next24h_forecast_generated=False,
+            next24h_forecast_reason=pipeline.FORECAST_WITHHELD_MESSAGE,
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "log_pipeline_run",
+        lambda **kwargs: recorded_runs.append(kwargs),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_send_incident_failure_alert",
+        lambda **kwargs: alerts.append(kwargs),
+    )
+
+    result = pipeline.powerflow_entsoe_pipeline.fn(
+        mode="incremental", storage_backend="local"
+    )
+
+    assert result["status"] == "SUCCESS"
+    assert result["next24h_forecast_status"] == "WITHHELD"
+    assert recorded_runs[-1]["status"] == "SUCCESS"
+    assert alerts == []
+
+
+def test_unexpected_next24h_error_still_fails_flow_and_alerts(tmp_path, monkeypatch):
+    import scheduled_pipeline as pipeline
+
+    _configure_no_change_pipeline(monkeypatch, pipeline, tmp_path)
+    alerts = []
+    recorded_runs = []
+    monkeypatch.setattr(
+        pipeline,
+        "_run_next24h_stages",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("unexpected runtime bug")),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "log_pipeline_run",
+        lambda **kwargs: recorded_runs.append(kwargs),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_send_incident_failure_alert",
+        lambda **kwargs: alerts.append(kwargs) or "SENT",
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected runtime bug"):
+        pipeline.powerflow_entsoe_pipeline.fn(
+            mode="incremental", storage_backend="local"
+        )
+
+    assert recorded_runs[-1]["status"] == "FAILED"
+    assert alerts and alerts[-1]["subject"] == "PowerFlow ENTSO-E Pipeline Failed"

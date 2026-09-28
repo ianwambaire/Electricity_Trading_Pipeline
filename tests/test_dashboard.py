@@ -116,7 +116,20 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
                 (run_time, status, records_processed, message)
             VALUES (?, ?, ?, ?)
             """,
-            (issue.isoformat(), "SUCCESS", 0, "{}"),
+            (
+                issue.isoformat(),
+                "SUCCESS",
+                0,
+                json.dumps(
+                    {
+                        "next24h_forecast_status": "WITHHELD",
+                        "next24h_forecast_reason": (
+                            "Forecast withheld because required recent market "
+                            "history is incomplete."
+                        ),
+                    }
+                ),
+            ),
         )
     monkeypatch.chdir(tmp_path)
     st.cache_data.clear()
@@ -130,6 +143,7 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert metrics["Highest Predicted Price"] == "24.00 EUR/MWh"
     assert metrics["Lowest Predicted Price"] == "1.00 EUR/MWh"
     assert metrics["Forecast Freshness"] == "Stale"
+    assert metrics["Forecast Status"] == "Withheld — source/input problem"
     assert metrics["Pipeline Run"] == "Completed"
     assert metrics["Forecast Rows"] == "24"
     assert metrics["Forecast Average"] == "12.50 EUR/MWh"
@@ -142,6 +156,12 @@ def test_forecasting_page_renders_next24h_report_and_stale_warning(tmp_path, mon
     assert metrics["Hours ≥ 200 EUR/MWh"] == "0"
     assert metrics["Negative-Price Hours"] == "0"
     assert any("forecast is stale" in warning.value for warning in app.warning)
+    assert any(
+        "Forecast withheld because required recent market history is incomplete."
+        in warning.value
+        for warning in app.warning
+    )
+    assert any("stale/reference data" in caption.value for caption in app.caption)
     assert any("target hours have already passed" in warning.value for warning in app.warning)
     assert any(
         "24 predictions generated" in caption.value
@@ -182,6 +202,10 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
         "s3_sync_status": "SUCCESS",
         "new_rows_ingested": 3,
         "predictions_generated": 0,
+        "next24h_forecast_status": "WITHHELD",
+        "next24h_forecast_reason": (
+            "Forecast withheld because required recent market history is incomplete."
+        ),
         "latest_complete_price_hour": "2026-09-12T21:00:00+00:00",
         "message": (
             "No complete aligned raw hour advanced; derived datasets were left "
@@ -251,6 +275,7 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
     assert metrics["Quality Checks Passed"] == "0"
     assert metrics["Quality Checks Failed"] == "0"
     assert metrics["Continuity Warnings"] == "1"
+    assert metrics["Next24h Forecast"] == "Withheld — source/input problem"
     assert any(
         "Failure email alerts: Configured" in item.value
         for item in app.caption
@@ -263,6 +288,11 @@ def test_pipeline_summary_formats_json_operational_metadata(tmp_path, monkeypatc
     assert any("No complete aligned raw hour advanced" in item.value for item in app.info)
     assert any("Degraded" in item.value for item in app.error)
     assert any("1 source continuity warning detected" in item.value for item in app.warning)
+    assert any(
+        "Forecast withheld because required recent market history is incomplete."
+        in item.value
+        for item in app.warning
+    )
     rendered_tables = "\n".join(frame.value.to_string() for frame in app.dataframe)
     assert "day-ahead prices" in rendered_tables
     assert "missing_timestamps" not in rendered_tables

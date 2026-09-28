@@ -40,6 +40,7 @@ from store_data import (
     log_stage_timing,
 )
 from storage import StorageConfig, StorageSync
+from processing.build_silver_dataset import clean_generation, clean_load, clean_prices
 from utils.logger import get_logger
 from validate_data import (
     GOLD_DATA_PATH,
@@ -51,6 +52,9 @@ from validate_data import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 logger = get_logger(__name__)
+FORECAST_WITHHELD_MESSAGE = (
+    "Forecast withheld because required recent market history is incomplete."
+)
 
 
 def _utc_now() -> str:
@@ -135,7 +139,10 @@ def _timed_stage(run_id: str | None, stage_name: str, operation, *args, **kwargs
     started_clock = time.perf_counter()
     status = "SUCCESS"
     try:
-        return operation(*args, **kwargs)
+        result = operation(*args, **kwargs)
+        if isinstance(result, dict) and result.get("status") == "WITHHELD":
+            status = "WITHHELD"
+        return result
     except ForecastUnavailableError:
         status = "WITHHELD"
         raise
@@ -269,9 +276,19 @@ def verify_next24h_release_task() -> str:
 
 
 @task(name="Generate next24h production forecast")
-def next24h_forecast_task() -> tuple[str, bool, dict]:
-    forecast, changed = run_next24h_forecast()
-    return forecast["forecast_issue_time"].iloc[0], changed, forecast.attrs["provenance"]
+def next24h_forecast_task() -> dict:
+    """Return expected forecast withholding as a successful Prefect task result."""
+    try:
+        forecast, changed = run_next24h_forecast()
+    except ForecastUnavailableError as error:
+        return _withheld_forecast_result(error)
+    return {
+        "status": "GENERATED" if changed else "UNCHANGED",
+        "generated": True,
+        "issue_time": forecast["forecast_issue_time"].iloc[0],
+        "changed": changed,
+        "provenance": forecast.attrs["provenance"],
+    }
 
 
 @task(name="Monitor next24h realized forecast errors")
@@ -324,6 +341,99 @@ def _raw_watermark():
     ]
     available = [timestamp for timestamp in timestamps if timestamp is not None]
     return min(available) if available else None
+
+
+def _forecast_unavailable_source(reason: str) -> str | None:
+    normalized = str(reason).casefold()
+    for source, terms in (
+        ("price", ("price",)),
+        ("load", ("load",)),
+        ("generation", ("generation",)),
+        ("operational_weather", ("weather",)),
+        ("market_history", ("market history", "feature history", "silver")),
+    ):
+        if any(term in normalized for term in terms):
+            return source
+    return None
+
+
+def _latest_complete_market_hours() -> dict[str, str | None]:
+    """Read current complete source hours without weakening source validation."""
+    sources = {
+        "price": (clean_prices, PROJECT_ROOT / "data/raw/entsoe/prices.csv"),
+        "load": (clean_load, PROJECT_ROOT / "data/raw/entsoe/load.csv"),
+        "generation": (
+            clean_generation,
+            PROJECT_ROOT / "data/raw/entsoe/generation.csv",
+        ),
+    }
+    latest = {}
+    for source, (loader, path) in sources.items():
+        try:
+            complete = loader(path)
+            timestamp = complete.index.max() if not complete.empty else None
+        except (OSError, ValueError, KeyError):
+            timestamp = None
+        latest[source] = timestamp.isoformat() if timestamp is not None else None
+    return latest
+
+
+def _withheld_forecast_result(error: ForecastUnavailableError) -> dict:
+    return {
+        "status": "WITHHELD",
+        "generated": False,
+        "reason": sanitize_failure_message(str(error)),
+        "withheld_at_utc": _utc_now(),
+    }
+
+
+def _record_forecast_withholding(
+    result: dict,
+    storage_state: dict,
+    *,
+    run_id: str | None,
+) -> None:
+    technical_reason = sanitize_failure_message(
+        str(result.get("reason") or "Required forecast inputs are unavailable.")
+    )
+    withheld_at = str(result.get("withheld_at_utc") or _utc_now())
+    latest_hours = _latest_complete_market_hours()
+    storage_state.update(
+        {
+            "next24h_forecast_status": "WITHHELD",
+            "next24h_forecast_generated": False,
+            "next24h_forecast_reason": FORECAST_WITHHELD_MESSAGE,
+            "next24h_forecast_withheld_at_utc": withheld_at,
+            "next24h_forecast_freshness_status": "WITHHELD",
+            "next24h_latest_complete_market_hours": latest_hours,
+        }
+    )
+    storage_state["warnings"].append(FORECAST_WITHHELD_MESSAGE)
+    try:
+        initialize_database()
+        log_data_quality_result(
+            "next24h_forecast_freshness",
+            "WARNING",
+            FORECAST_WITHHELD_MESSAGE,
+        )
+    except Exception:
+        logger.exception("Unable to record next24h forecast withholding quality state.")
+    _record_incident(
+        "WARNING",
+        "next24h forecast",
+        "forecast_withheld",
+        "ACTIVE",
+        FORECAST_WITHHELD_MESSAGE,
+        {
+            "run_id": run_id,
+            "reason": technical_reason,
+            "timestamp": withheld_at,
+            "source": _forecast_unavailable_source(technical_reason),
+            "latest_complete_hours": latest_hours,
+            "forecast_freshness_status": "WITHHELD",
+        },
+        dedupe_minutes=0,
+    )
 
 
 def _entsoe_unresolved_gaps(entsoe_metadata):
@@ -429,31 +539,27 @@ def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
         storage_sync, storage_state, "next24h_release", "Next24h model release S3 synchronization"
     )
     try:
-        issue_time, changed, provenance = _timed_stage(
+        forecast_result = _timed_stage(
             run_id, "Next24h forecast generation", next24h_forecast_task
         )
     except ForecastUnavailableError as error:
-        warning = sanitize_failure_message(f"Next24h forecast unavailable: {error}")
-        storage_state["next24h_forecast_status"] = "UNAVAILABLE"
-        storage_state["warnings"].append(warning)
-        initialize_database()
-        log_data_quality_result("next24h_forecast_freshness", "WARNING", warning)
-        _record_incident(
-            "WARNING", "next24h forecast", "forecast_withheld", "ACTIVE",
-            warning,
-            {"run_id": run_id},
-            dedupe_minutes=0,
-        )
-        _send_incident_failure_alert(
-            component="next24h forecast",
-            category=type(error).__name__,
-            subject="PowerFlow next24h forecast withheld",
-            message=warning,
+        # Defensive compatibility for a direct replacement/mocked task. The
+        # production Prefect task converts this expected condition into a
+        # normal WITHHELD result before it can be marked failed.
+        forecast_result = _withheld_forecast_result(error)
+
+    if forecast_result.get("status") == "WITHHELD":
+        _record_forecast_withholding(
+            forecast_result,
+            storage_state,
+            run_id=run_id,
         )
     else:
-        storage_state["next24h_forecast_status"] = (
-            "GENERATED" if changed else "UNCHANGED"
-        )
+        issue_time = forecast_result["issue_time"]
+        changed = bool(forecast_result["changed"])
+        provenance = forecast_result["provenance"]
+        storage_state["next24h_forecast_status"] = forecast_result["status"]
+        storage_state["next24h_forecast_generated"] = True
         storage_state["next24h_forecast_issue_time"] = str(issue_time)
         storage_state["next24h_weather_source"] = provenance["weather_source"]
         storage_state["next24h_weather_acquired_at_utc"] = provenance["weather_acquired_at_utc"]

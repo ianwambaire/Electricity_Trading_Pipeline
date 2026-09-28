@@ -551,7 +551,11 @@ def test_prefect_stage_preserves_prior_forecast_on_unavailable_data(monkeypatch)
     monkeypatch.setattr(pipeline, "next24h_monitoring_task", lambda: (0, 0))
     monkeypatch.setattr(pipeline, "initialize_database", lambda: None)
     monkeypatch.setattr(pipeline, "_record_incident", lambda *args, **kwargs: False)
-    monkeypatch.setattr(pipeline, "send_failure_alert", lambda *args, **kwargs: "NOT_CONFIGURED")
+    monkeypatch.setattr(
+        pipeline,
+        "send_failure_alert",
+        lambda *args, **kwargs: calls.append("failure_alert") or "SENT",
+    )
     monkeypatch.setattr(
         pipeline, "log_data_quality_result",
         lambda *args: calls.append(args),
@@ -561,10 +565,44 @@ def test_prefect_stage_preserves_prior_forecast_on_unavailable_data(monkeypatch)
         "s3_sync_status": "NOT_REQUIRED",
     }
     pipeline._run_next24h_stages(LocalSync(), state)
-    assert state["next24h_forecast_status"] == "UNAVAILABLE"
+    assert state["next24h_forecast_status"] == "WITHHELD"
+    assert state["next24h_forecast_generated"] is False
+    assert state["next24h_forecast_reason"] == pipeline.FORECAST_WITHHELD_MESSAGE
     assert calls[0] == "next24h_release"
     assert "next24h_forecasts" not in calls
+    assert "failure_alert" not in calls
     assert any(isinstance(item, tuple) and item[0] == "next24h_forecast_freshness" for item in calls)
+
+
+def test_prefect_forecast_task_returns_withheld_instead_of_failing(monkeypatch):
+    import scheduled_pipeline as pipeline
+
+    monkeypatch.setattr(
+        pipeline,
+        "run_next24h_forecast",
+        lambda: (_ for _ in ()).throw(
+            ForecastUnavailableError("Required price history unavailable")
+        ),
+    )
+
+    result = pipeline.next24h_forecast_task.fn()
+
+    assert result["status"] == "WITHHELD"
+    assert result["generated"] is False
+    assert result["reason"] == "Required price history unavailable"
+
+
+def test_prefect_forecast_task_still_raises_unexpected_errors(monkeypatch):
+    import scheduled_pipeline as pipeline
+
+    monkeypatch.setattr(
+        pipeline,
+        "run_next24h_forecast",
+        lambda: (_ for _ in ()).throw(RuntimeError("unexpected coding error")),
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected coding error"):
+        pipeline.next24h_forecast_task.fn()
 
 
 def test_prefect_keeps_one_hour_stage_before_next24h_without_training():

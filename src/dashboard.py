@@ -899,7 +899,14 @@ elif page == "Forecasting":
         unresolved_gaps = {}
     forecast_withheld = (
         isinstance(operational_metadata, dict)
-        and operational_metadata.get("next24h_forecast_status") == "UNAVAILABLE"
+        and operational_metadata.get("next24h_forecast_status")
+        in {"WITHHELD", "UNAVAILABLE"}
+    )
+    forecast_operational_status = forecast_freshness_state(
+        forecast_context["issue_time"],
+        now=display_now,
+        maximum_age_hours=maximum_age,
+        withholding_known=forecast_withheld,
     )
     operational_health = assess_operational_health(
         latest_run_status=latest_pipeline_run["status"] if latest_pipeline_run else None,
@@ -948,6 +955,7 @@ elif page == "Forecasting":
                 latest_pipeline_run["status"] if latest_pipeline_run else None
             ),
         ),
+        ("Forecast Status", forecast_operational_status),
         ("Forecast Freshness", forecast_context["status"]),
         forecast_identity_metric,
         ("Forecast Rows", fmt_int(forecast_context["rows"])),
@@ -959,6 +967,16 @@ elif page == "Forecasting":
         for column, (label, value) in zip(columns, summary_metrics[offset:offset + 4]):
             column.metric(label, value)
     st.caption(operational_health["reason"])
+    if forecast_withheld:
+        withheld_reason = operational_metadata.get(
+            "next24h_forecast_reason",
+            "Forecast withheld because required recent market history is incomplete.",
+        )
+        st.warning(str(withheld_reason))
+        st.caption(
+            "The last valid forecast is retained below as stale/reference data; "
+            "no replacement forecast was fabricated."
+        )
 
     section_header("Market Context")
     st.caption(
@@ -1484,7 +1502,8 @@ elif page == "Pipeline Summary":
     )
     withheld = (
         isinstance(operational_metadata, dict)
-        and operational_metadata.get("next24h_forecast_status") == "UNAVAILABLE"
+        and operational_metadata.get("next24h_forecast_status")
+        in {"WITHHELD", "UNAVAILABLE"}
     )
     forecast_status = forecast_freshness_state(
         forecast_issue, withholding_known=withheld
@@ -1574,6 +1593,15 @@ elif page == "Pipeline Summary":
         f"Latest next24h issue: {fmt_timestamp(forecast_issue)} "
         f"({age_label(forecast_issue)})"
     )
+    if withheld:
+        st.warning(
+            str(
+                operational_metadata.get(
+                    "next24h_forecast_reason",
+                    "Forecast withheld because required recent market history is incomplete.",
+                )
+            )
+        )
     if admin_access:
         st.caption(
             f"Market: DE-LU · Storage: "

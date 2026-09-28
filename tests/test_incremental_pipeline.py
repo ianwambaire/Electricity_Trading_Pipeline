@@ -184,23 +184,31 @@ def test_price_continuity_stops_at_missing_pt60m_hour():
     assert result.missing_timestamps == (pd.Timestamp("2026-09-12T23:00Z"),)
 
 
-def test_incremental_price_transition_appends_without_duplicates(tmp_path):
+def test_incremental_price_transition_appends_without_duplicates(
+    tmp_path, monkeypatch
+):
+    import ingestion.fetch_entsoe_data as ingestion
+
+    monkeypatch.setattr(ingestion, "PRICE_REQUERY_OVERLAP", pd.Timedelta(hours=1))
     path = tmp_path / "prices.csv"
-    old_index = pd.date_range("2026-09-12T21:00Z", periods=4, freq="15min")
-    pd.DataFrame({"timestamp": old_index, "price_eur_mwh": [1, 2, 3, 4]}).to_csv(
+    old_index = pd.date_range("2026-09-12T20:00Z", periods=8, freq="15min")
+    pd.DataFrame({"timestamp": old_index, "price_eur_mwh": list(range(1, 5)) * 2}).to_csv(
         path, index=False
     )
     requests = []
+    returned = parse_price_observations(
+        price_xml(
+            [
+                ("2026-09-12T20:00Z", "2026-09-12T21:00Z", "PT15M", range(1, 5)),
+                ("2026-09-12T21:00Z", "2026-09-12T22:00Z", "PT15M", range(1, 5)),
+                ("2026-09-12T22:00Z", "2026-09-13T00:00Z", "PT60M", [1, 2]),
+            ]
+        )
+    )
 
     def query(_country_code, start, end):
         requests.append((start, end))
-        return parse_price_observations(
-            price_xml(
-                [
-                    ("2026-09-12T22:00Z", "2026-09-13T00:00Z", "PT60M", [1, 2])
-                ]
-            )
-        )
+        return returned.loc[(returned.index >= start) & (returned.index < end)]
 
     first = _incremental_dataset(
         None,
@@ -224,7 +232,8 @@ def test_incremental_price_transition_appends_without_duplicates(tmp_path):
     stored = pd.read_csv(path)
 
     assert requests == [
-        (pd.Timestamp("2026-09-12T22:00Z"), pd.Timestamp("2026-09-13T00:00Z"))
+        (pd.Timestamp("2026-09-12T20:00Z"), pd.Timestamp("2026-09-13T00:00Z")),
+        (pd.Timestamp("2026-09-12T22:00Z"), pd.Timestamp("2026-09-13T00:00Z")),
     ]
     assert first["new_rows"] == 2
     assert first["unresolved_gap"] is None
@@ -237,7 +246,7 @@ def test_incremental_price_transition_appends_without_duplicates(tmp_path):
         stored.assign(timestamp=pd.to_datetime(stored["timestamp"], utc=True))
         .set_index("timestamp")
     )
-    assert stored_hourly["price_eur_mwh"].tolist() == [2.5, 1.0, 2.0]
+    assert stored_hourly["price_eur_mwh"].tolist() == [2.5, 2.5, 1.0, 2.0]
 
 
 def test_historical_price_ingestion_preserves_resolution_and_later_rows_after_gap(
@@ -384,34 +393,63 @@ def test_recent_subhourly_transition_controls_next_request_timestamp(tmp_path):
     assert infer_stored_interval(path, "1h") == pd.Timedelta(minutes=15)
 
 
-def test_entsoe_incremental_request_starts_immediately_after_latest_row(tmp_path):
+def test_partial_pt15m_tail_requeries_from_aligned_overlap_and_self_heals(tmp_path):
     path = tmp_path / "prices.csv"
-    observations(["2025-01-01T00:00:00Z"], [10.0]).rename(
-        columns={"value": "price_eur_mwh"}
-    ).to_csv(path, index=False)
-    requested = {}
+    end = pd.Timestamp("2026-09-27T09:00:00Z")
+    safe_start = end - pd.Timedelta(hours=49)
+    stored_index = pd.date_range(
+        safe_start, end - pd.Timedelta(minutes=30), freq="15min"
+    )
+    pd.DataFrame({
+        "timestamp": stored_index,
+        "price_eur_mwh": 50.0,
+        "source_resolution": "PT15M",
+    }).to_csv(path, index=False)
+    before = path.read_bytes()
+    requested = []
+    include_final_quarter = [False]
 
-    def query(country_code, start, end):
-        requested["start"] = start
-        requested["end"] = end
-        return pd.Series(
-            [11.0, 12.0],
-            index=pd.date_range(start, periods=2, freq="h"),
-        )
+    def query(_country_code, start, end):
+        requested.append((start, end))
+        index = pd.date_range(start, end, freq="15min", inclusive="left")
+        if not include_final_quarter[0]:
+            index = index.difference(pd.DatetimeIndex([end - pd.Timedelta(minutes=15)]))
+        return pd.DataFrame({
+            "price_eur_mwh": 50.0,
+            "source_resolution": "PT15M",
+        }, index=index)
 
-    result = _incremental_dataset(
+    unresolved = _incremental_dataset(
         None,
         query,
         dataset_name="day-ahead prices",
         output_path=path,
-        default_interval="1h",
-        end_utc_exclusive=pd.Timestamp("2025-01-01T03:00:00Z"),
+        default_interval="15min",
+        end_utc_exclusive=end,
         value_name="price_eur_mwh",
     )
+    assert requested[0][0] == pd.Timestamp("2026-09-25T08:00:00Z")
+    assert requested[0][0] == requested[0][0].floor("h")
+    assert unresolved["changed"] is False
+    assert unresolved["latest_complete_hour"] == "2026-09-27T07:00:00+00:00"
+    assert unresolved["unresolved_gap"]["missing_timestamps"] == [
+        "2026-09-27T08:45:00+00:00"
+    ]
+    assert path.read_bytes() == before
 
-    assert requested["start"] == pd.Timestamp("2025-01-01T01:00:00Z")
-    assert requested["end"] == pd.Timestamp("2025-01-01T03:00:00Z")
-    assert result["new_rows"] == 2
+    include_final_quarter[0] = True
+    repaired = _incremental_dataset(
+        None, query, dataset_name="day-ahead prices", output_path=path,
+        default_interval="15min", end_utc_exclusive=end,
+        value_name="price_eur_mwh",
+    )
+    stored = pd.read_csv(path)
+    assert repaired["new_rows"] == 1
+    assert repaired["repaired_rows"] == 1
+    assert repaired["changed"] is True
+    assert repaired["unresolved_gap"] is None
+    assert repaired["latest_complete_hour"] == "2026-09-27T08:00:00+00:00"
+    assert pd.to_datetime(stored["timestamp"], utc=True).is_unique
 
 
 def test_real_quarter_hour_gap_returns_only_complete_contiguous_hours():
@@ -450,66 +488,35 @@ def test_real_quarter_hour_gap_returns_only_complete_contiguous_hours():
     assert set(result.data.index).issubset(set(returned.index))
 
 
-def test_gap_retains_later_raw_observations_without_duplicates(
-    tmp_path,
-):
+def test_recent_price_revision_is_accepted_and_old_conflict_is_protected(tmp_path):
     path = tmp_path / "prices.csv"
-    initial_index = pd.date_range(
-        "2026-09-12T19:00:00Z", periods=4, freq="15min"
-    )
-    pd.DataFrame(
-        {"timestamp": initial_index, "price_eur_mwh": [1.0, 2.0, 3.0, 4.0]}
-    ).to_csv(path, index=False)
-    starts = []
+    end = pd.Timestamp("2026-09-27T09:00:00Z")
+    index = pd.date_range(end - pd.Timedelta(hours=49), end, freq="15min", inclusive="left")
+    pd.DataFrame({"timestamp": index, "price_eur_mwh": 50.0,
+                  "source_resolution": "PT15M"}).to_csv(path, index=False)
+    old_conflict = end - pd.Timedelta(hours=49)
+    recent_revision = end - pd.Timedelta(hours=1)
 
-    def query(country_code, start, end):
-        starts.append(start)
-        index = pd.date_range(start, "2026-09-12T23:00:00Z", freq="15min")
-        index = index.difference(
-            pd.DatetimeIndex(
-                [
-                    "2026-09-12T22:15:00Z",
-                    "2026-09-12T22:30:00Z",
-                    "2026-09-12T22:45:00Z",
-                ]
-            )
-        )
-        return pd.Series(np.arange(len(index), dtype="float64"), index=index)
+    def query(_country_code, start, end):
+        returned = index[(index >= start) & (index < end)]
+        frame = pd.DataFrame({"price_eur_mwh": 50.0,
+                              "source_resolution": "PT15M"}, index=returned)
+        frame.loc[old_conflict, "price_eur_mwh"] = 60.0
+        frame.loc[recent_revision, "price_eur_mwh"] = 55.0
+        return frame
 
-    first = _incremental_dataset(
-        None,
-        query,
-        dataset_name="day-ahead prices",
-        output_path=path,
-        default_interval="15min",
-        end_utc_exclusive=pd.Timestamp("2026-09-12T23:15:00Z"),
-        value_name="price_eur_mwh",
-    )
-    first_bytes = path.read_bytes()
-    second = _incremental_dataset(
-        None,
-        query,
-        dataset_name="day-ahead prices",
-        output_path=path,
-        default_interval="15min",
-        end_utc_exclusive=pd.Timestamp("2026-09-12T23:15:00Z"),
-        value_name="price_eur_mwh",
+    result = _incremental_dataset(
+        None, query, dataset_name="day-ahead prices", output_path=path,
+        default_interval="15min", end_utc_exclusive=end, value_name="price_eur_mwh",
     )
     stored = pd.read_csv(path)
-    stored_timestamps = pd.to_datetime(stored["timestamp"], utc=True)
-
-    assert first["latest_timestamp"] == pd.Timestamp("2026-09-12T23:00:00Z")
-    assert first["latest_complete_hour"] == "2026-09-12T21:00:00+00:00"
-    assert first["unresolved_gap"]["later_observations_retained"] == 1
-    assert first["unresolved_gap"]["first_unresolved_timestamp"] == (
-        "2026-09-12T22:15:00+00:00"
-    )
-    assert second["new_rows"] == 0
-    assert starts == [pd.Timestamp("2026-09-12T20:00:00Z")]
-    assert path.read_bytes() == first_bytes
-    assert stored_timestamps.is_unique
-    assert pd.Timestamp("2026-09-12T22:00:00Z") in set(stored_timestamps)
-    assert pd.Timestamp("2026-09-12T23:00:00Z") in set(stored_timestamps)
+    stored["timestamp"] = pd.to_datetime(stored["timestamp"], utc=True)
+    assert result["revised_cells"] == 1
+    assert result["protected_conflicts"] == 1
+    assert result["changed"] is True
+    assert stored.loc[stored["timestamp"] == recent_revision, "price_eur_mwh"].iloc[0] == 55.0
+    assert stored.loc[stored["timestamp"] == old_conflict, "price_eur_mwh"].iloc[0] == 50.0
+    assert stored["timestamp"].is_unique
 
 
 def test_missing_load_quarter_hour_does_not_block_later_raw_hours(tmp_path):
@@ -785,19 +792,32 @@ def test_silver_rebuild_skips_incomplete_hour_and_keeps_later_hour(tmp_path, mon
     ]
 
 
-def test_entsoe_no_new_data_after_clean_catchup_does_not_query(tmp_path):
+def test_identical_price_overlap_does_not_rewrite_file(tmp_path, monkeypatch):
+    import ingestion.fetch_entsoe_data as ingestion
+
+    monkeypatch.setattr(ingestion, "PRICE_REQUERY_OVERLAP", pd.Timedelta(hours=1))
     path = tmp_path / "prices.csv"
-    index = pd.date_range("2026-09-12T00:00:00Z", periods=4, freq="15min")
+    index = pd.date_range("2026-09-11T23:00:00Z", periods=8, freq="15min")
     pd.DataFrame(
-        {"timestamp": index, "price_eur_mwh": [1.0, 2.0, 3.0, 4.0]}
+        {
+            "timestamp": index,
+            "price_eur_mwh": list(range(1, 5)) * 2,
+            "source_resolution": "PT15M",
+        }
     ).to_csv(path, index=False)
 
-    def forbidden_query(*args, **kwargs):
-        raise AssertionError("No API query should be made.")
+    before = path.read_bytes()
+
+    def identical_query(_country_code, start, end):
+        return pd.DataFrame(
+            {"price_eur_mwh": list(range(1, 5)) * 2,
+             "source_resolution": "PT15M"},
+            index=index,
+        ).loc[lambda frame: (frame.index >= start) & (frame.index < end)]
 
     result = _incremental_dataset(
         None,
-        forbidden_query,
+        identical_query,
         dataset_name="day-ahead prices",
         output_path=path,
         default_interval="15min",
@@ -807,6 +827,8 @@ def test_entsoe_no_new_data_after_clean_catchup_does_not_query(tmp_path):
 
     assert result["new_rows"] == 0
     assert result["unresolved_gap"] is None
+    assert result["changed"] is False
+    assert path.read_bytes() == before
 
 
 def _silver_frame(periods=201):

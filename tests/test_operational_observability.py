@@ -25,7 +25,11 @@ from models.next24h_monitoring import (
     MONITORING_MIN_PAIRS,
     summarize_realized_performance,
 )
-from scheduled_pipeline import _record_protected_generation_conflicts, _timed_stage
+from scheduled_pipeline import (
+    _record_gap_warnings,
+    _record_protected_generation_conflicts,
+    _timed_stage,
+)
 
 
 NOW = pd.Timestamp("2026-09-21T20:30:00Z")
@@ -338,6 +342,45 @@ def test_protected_generation_conflict_records_safe_warning(monkeypatch):
         "by_column": {"Fossil Gas": 1, "Solar": 1},
         "first_timestamp": "2026-09-18T01:00:00+00:00",
         "last_timestamp": "2026-09-18T02:00:00+00:00",
+    }
+
+
+def test_partial_price_tail_records_warning_details_without_failure(monkeypatch):
+    import scheduled_pipeline as pipeline
+
+    quality_results = []
+    incidents = []
+    monkeypatch.setattr(pipeline, "initialize_database", lambda: None)
+    monkeypatch.setattr(
+        pipeline,
+        "log_data_quality_result",
+        lambda **kwargs: quality_results.append(kwargs),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_record_incident",
+        lambda *args, **kwargs: incidents.append((args, kwargs)) or True,
+    )
+    gap = {
+        "first_unresolved_timestamp": "2026-09-27T08:45:00+00:00",
+        "missing_timestamps": ["2026-09-27T08:45:00+00:00"],
+        "missing_count": 1,
+        "affected_hours": ["2026-09-27T08:00:00+00:00"],
+        "last_complete_hour": "2026-09-27T07:00:00+00:00",
+    }
+
+    _record_gap_warnings({"day-ahead prices": gap})
+
+    assert quality_results[0]["status"] == "WARNING"
+    args, _ = incidents[0]
+    assert args[:4] == ("WARNING", "ENTSO-E", "source_gap", "ACTIVE")
+    assert args[5] == {
+        "source": "day-ahead prices",
+        "first_unresolved_timestamp": "2026-09-27T08:45:00+00:00",
+        "missing_count": 1,
+        "affected_hours": ["2026-09-27T08:00:00+00:00"],
+        "missing_timestamps": ["2026-09-27T08:45:00+00:00"],
+        "latest_complete_price_hour": "2026-09-27T07:00:00+00:00",
     }
 
 

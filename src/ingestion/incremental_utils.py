@@ -437,6 +437,62 @@ def merge_generation_rows(
     )
 
 
+def merge_price_rows(
+    existing: pd.DataFrame,
+    incoming: pd.DataFrame,
+    *,
+    revision_window: tuple[pd.Timestamp, pd.Timestamp],
+) -> GenerationMergeResult:
+    """Merge prices while permitting only bounded value revisions.
+
+    Resolution metadata defines the completeness contract and is therefore
+    never treated as a revisable market value. Legacy null resolution cells
+    may be enriched from a genuine source response, but conflicting non-null
+    resolution labels remain fatal.
+    """
+    stored = normalize_utc_timestamps(existing)
+    fetched = normalize_utc_timestamps(incoming)
+    if "source_resolution" in fetched and "source_resolution" not in stored:
+        stored["source_resolution"] = pd.Series(
+            pd.NA, index=stored.index, dtype="object"
+        )
+    for frame in (stored, fetched):
+        if "source_resolution" in frame:
+            frame["source_resolution"] = frame["source_resolution"].astype("object")
+            populated = frame["source_resolution"].dropna()
+            if not populated.isin({"PT15M", "PT60M"}).all():
+                raise ValueError("Price observations have an unknown source resolution.")
+
+    if "source_resolution" in stored and "source_resolution" in fetched:
+        overlap = stored[[TIMESTAMP_COLUMN, "source_resolution"]].merge(
+            fetched[[TIMESTAMP_COLUMN, "source_resolution"]],
+            on=TIMESTAMP_COLUMN,
+            suffixes=("_existing", "_incoming"),
+        )
+        different = (
+            overlap["source_resolution_existing"].astype("string").fillna("")
+            != overlap["source_resolution_incoming"].astype("string").fillna("")
+        )
+        conflicts = (
+            overlap["source_resolution_existing"].notna()
+            & overlap["source_resolution_incoming"].notna()
+            & different
+        )
+        if conflicts.any():
+            timestamp = overlap.loc[conflicts, TIMESTAMP_COLUMN].iloc[0]
+            raise ValueError(
+                "Conflicting ENTSO-E price source resolution at "
+                f"{timestamp.isoformat()}; stored metadata was not replaced."
+            )
+
+    return merge_generation_rows(
+        stored,
+        fetched,
+        revision_window=revision_window,
+        retain_protected_conflicts=True,
+    )
+
+
 def append_csv_safely(
     path: Path,
     incoming: pd.DataFrame,

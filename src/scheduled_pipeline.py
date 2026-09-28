@@ -354,6 +354,8 @@ def _record_gap_warnings(unresolved_gaps):
                 "first_unresolved_timestamp": gap.get("first_unresolved_timestamp"),
                 "missing_count": gap.get("missing_count"),
                 "affected_hours": gap.get("affected_hours", []),
+                "missing_timestamps": gap.get("missing_timestamps", []),
+                "latest_complete_price_hour": gap.get("last_complete_hour"),
             },
         )
 
@@ -609,6 +611,13 @@ def powerflow_entsoe_pipeline(
         generation_metadata = entsoe_metadata.get("datasets", {}).get(
             "generation by type", {}
         )
+        price_metadata = entsoe_metadata.get("datasets", {}).get(
+            "day-ahead prices", {}
+        )
+        if price_metadata.get("latest_complete_hour") is not None:
+            storage_state["latest_complete_price_hour"] = price_metadata[
+                "latest_complete_hour"
+            ]
         source_cells_repaired = int(entsoe_metadata.get("repaired_cells", 0))
         source_cells_revised = int(entsoe_metadata.get("revised_cells", 0))
         generation_cells_repaired = int(

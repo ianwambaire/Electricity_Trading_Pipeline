@@ -24,6 +24,7 @@ if __package__:
         infer_stored_interval,
         latest_stored_timestamp,
         merge_generation_rows,
+        merge_price_rows,
         normalize_utc_timestamps,
     )
 else:
@@ -38,6 +39,7 @@ else:
         infer_stored_interval,
         latest_stored_timestamp,
         merge_generation_rows,
+        merge_price_rows,
         normalize_utc_timestamps,
     )
 
@@ -47,6 +49,7 @@ RAW_ENTSOE_DIR = Path("data/raw/entsoe")
 QUARTER_HOURLY_PRICE_START_UTC = pd.Timestamp("2025-09-30T22:00:00Z")
 GENERATION_REQUERY_OVERLAP = pd.Timedelta(hours=48)
 LOAD_REQUERY_OVERLAP = pd.Timedelta(hours=48)
+PRICE_REQUERY_OVERLAP = pd.Timedelta(hours=48)
 SENSITIVE_QUERY_PARAMETERS = {
     "accesskey",
     "accesstoken",
@@ -421,6 +424,88 @@ def _append_load_safely(
     }
 
 
+def _merge_and_store_prices(
+    path: Path,
+    prices: pd.DataFrame,
+    *,
+    continuity_start: pd.Timestamp,
+    end_utc_exclusive: pd.Timestamp,
+    revision_window: tuple[pd.Timestamp, pd.Timestamp],
+):
+    """Validate, atomically merge, and retain genuine recent price observations."""
+    incoming = normalize_utc_timestamps(prices)
+    repaired_rows = 0
+    if path.exists():
+        existing = normalize_utc_timestamps(pd.read_csv(path, low_memory=False))
+        existing_timestamps = pd.DatetimeIndex(existing["timestamp"])
+        added_timestamps = pd.DatetimeIndex(
+            incoming.loc[
+                ~incoming["timestamp"].isin(existing_timestamps), "timestamp"
+            ]
+        )
+        existing_hours = set(existing_timestamps.floor("h"))
+        repaired_rows = int(
+            sum(timestamp.floor("h") in existing_hours for timestamp in added_timestamps)
+        )
+        merged = merge_price_rows(
+            existing,
+            incoming,
+            revision_window=revision_window,
+        )
+        combined = merged.data
+    else:
+        combined = incoming
+        merged = None
+
+    continuity_frame = combined.loc[
+        combined["timestamp"].between(
+            continuity_start, end_utc_exclusive, inclusive="left"
+        )
+    ].set_index("timestamp")
+    if "source_resolution" in continuity_frame:
+        missing_resolution = continuity_frame["source_resolution"].isna()
+        continuity_frame.loc[missing_resolution, "source_resolution"] = [
+            "PT15M" if timestamp >= QUARTER_HOURLY_PRICE_START_UTC else "PT60M"
+            for timestamp in continuity_frame.index[missing_resolution]
+        ]
+    continuity = contiguous_price_prefix(
+        continuity_frame,
+        continuity_start,
+        quarter_hourly_transition=QUARTER_HOURLY_PRICE_START_UTC,
+    )
+
+    new_rows = len(incoming) if merged is None else merged.new_rows
+    repaired_by_column = {} if merged is None else merged.repaired_by_column
+    revised_by_column = {} if merged is None else merged.revised_by_column
+    protected_by_column = (
+        {} if merged is None else merged.protected_conflicts_by_column
+    )
+    protected_timestamps = (
+        () if merged is None else merged.protected_conflict_timestamps
+    )
+    changed = bool(new_rows or repaired_by_column or revised_by_column)
+    if changed:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = path.with_suffix(path.suffix + ".tmp")
+        try:
+            combined.to_csv(temporary_path, index=False)
+            temporary_path.replace(path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+    latest = combined["timestamp"].iloc[-1] if not combined.empty else None
+    return {
+        "new_rows": new_rows,
+        "repaired_rows": repaired_rows,
+        "latest_timestamp": latest,
+        "repaired_by_column": repaired_by_column,
+        "revised_by_column": revised_by_column,
+        "protected_conflicts_by_column": protected_by_column,
+        "protected_conflict_timestamps": protected_timestamps,
+        "changed": changed,
+        "continuity": continuity,
+    }
+
+
 def repair_generation_interval(
     client,
     start_utc: pd.Timestamp,
@@ -539,7 +624,16 @@ def _incremental_dataset(
     if latest is None:
         start_utc = get_historical_date_range().start_utc
     else:
-        start_utc = latest + interval
+        if is_price:
+            # Price completeness is hourly even when the source cadence is
+            # PT15M. Re-query a bounded, hour-aligned tail so a late final
+            # quarter-hour can repair the stored hour on a later run.
+            start_utc = max(
+                get_historical_date_range().start_utc,
+                latest.floor("h") - PRICE_REQUERY_OVERLAP,
+            )
+        else:
+            start_utc = latest + interval
         if allow_column_union and value_name is None:
             start_utc = max(
                 get_historical_date_range().start_utc,
@@ -573,18 +667,38 @@ def _incremental_dataset(
         chunk_months=1 if is_price else 6,
     )
     if values is None:
-        metadata = {
-            "new_rows": 0,
-            "latest_timestamp": latest,
-            "unresolved_gap": None,
-            "changed": False,
-        }
-        if is_price:
-            metadata["latest_complete_hour"] = _latest_complete_price_hour(output_path)
-        return metadata
+        if is_price and output_path.exists():
+            stored_columns = [
+                column
+                for column in pd.read_csv(output_path, nrows=0).columns
+                if column != "timestamp"
+            ]
+            values = pd.DataFrame(
+                columns=stored_columns,
+                index=pd.DatetimeIndex([], tz="UTC", name="timestamp"),
+            )
+        else:
+            return {
+                "new_rows": 0,
+                "latest_timestamp": latest,
+                "unresolved_gap": None,
+                "changed": False,
+            }
 
-    continuity_values = values
-    if is_load and output_path.exists():
+    price_merge = None
+    if is_price:
+        price_merge = _merge_and_store_prices(
+            output_path,
+            _to_value_frame(values, value_name),
+            continuity_start=start_utc,
+            end_utc_exclusive=end_utc_exclusive,
+            revision_window=(
+                max(start_utc, end_utc_exclusive - PRICE_REQUERY_OVERLAP),
+                end_utc_exclusive,
+            ),
+        )
+        continuity = price_merge["continuity"]
+    elif is_load and output_path.exists():
         stored_load = pd.read_csv(output_path, usecols=["timestamp"])
         stored_index = pd.DatetimeIndex(
             pd.to_datetime(stored_load["timestamp"], errors="raise", utc=True)
@@ -597,16 +711,9 @@ def _incremental_dataset(
             1.0,
             index=stored_index.union(fetched_index).sort_values(),
         )
-
-    continuity = (
-        contiguous_price_prefix(
-            values,
-            start_utc,
-            quarter_hourly_transition=QUARTER_HOURLY_PRICE_START_UTC,
-        )
-        if is_price
-        else contiguous_prefix(continuity_values, start_utc, interval)
-    )
+        continuity = contiguous_prefix(continuity_values, start_utc, interval)
+    else:
+        continuity = contiguous_prefix(values, start_utc, interval)
     # Retain genuine observations on both sides of an isolated source gap.
     # Hourly completeness is decided downstream; no missing value is filled.
     observed_values = values
@@ -650,10 +757,24 @@ def _incremental_dataset(
             "observed rows while excluding incomplete hours downstream."
         )
 
-    if observed_values.empty:
+    if is_price:
+        new_rows = price_merge["new_rows"]
+        latest_timestamp = price_merge["latest_timestamp"]
+        repaired_by_column = price_merge["repaired_by_column"]
+        repaired_rows = price_merge["repaired_rows"]
+        revised_by_column = price_merge["revised_by_column"]
+        protected_conflicts_by_column = price_merge[
+            "protected_conflicts_by_column"
+        ]
+        protected_conflict_timestamps = price_merge[
+            "protected_conflict_timestamps"
+        ]
+        changed = price_merge["changed"]
+    elif observed_values.empty:
         new_rows = 0
         latest_timestamp = latest
         repaired_by_column = {}
+        repaired_rows = 0
         revised_by_column = {}
         protected_conflicts_by_column = {}
         protected_conflict_timestamps = ()
@@ -671,6 +792,7 @@ def _incremental_dataset(
         new_rows = load_merge["new_rows"]
         latest_timestamp = load_merge["latest_timestamp"]
         repaired_by_column = load_merge["repaired_by_column"]
+        repaired_rows = sum(repaired_by_column.values())
         revised_by_column = load_merge["revised_by_column"]
         protected_conflicts_by_column = load_merge[
             "protected_conflicts_by_column"
@@ -701,16 +823,18 @@ def _incremental_dataset(
                 retain_protected_conflicts=True,
             )
         )
+        repaired_rows = sum(repaired_by_column.values())
         changed = bool(new_rows or repaired_by_column or revised_by_column)
     else:
         result = append_csv_safely(
             output_path,
             _to_value_frame(observed_values, value_name),
-            allow_column_union=allow_column_union or is_price,
+            allow_column_union=allow_column_union,
         )
         new_rows = result.new_rows
         latest_timestamp = result.latest_timestamp
         repaired_by_column = {}
+        repaired_rows = 0
         revised_by_column = {}
         protected_conflicts_by_column = {}
         protected_conflict_timestamps = ()
@@ -722,7 +846,8 @@ def _incremental_dataset(
             "revision(s) outside the permitted revision window; stored value retained."
         )
     print(
-        f"Incremental {dataset_name}: appended {new_rows} rows; "
+        f"Incremental {dataset_name}: appended {new_rows} rows "
+        f"({repaired_rows} repaired missing intervals); "
         f"repaired {sum(repaired_by_column.values())} missing cells; "
         f"accepted {sum(revised_by_column.values())} recent source revisions "
         f"{revised_by_column}; "
@@ -736,7 +861,7 @@ def _incremental_dataset(
         "unresolved_gap": unresolved_gap,
         "repaired_by_column": repaired_by_column,
         "repaired_cells": sum(repaired_by_column.values()),
-        "repaired_rows": sum(repaired_by_column.values()),
+        "repaired_rows": repaired_rows,
         "revised_by_column": revised_by_column,
         "revised_cells": sum(revised_by_column.values()),
         "protected_conflicts_by_column": protected_conflicts_by_column,

@@ -13,8 +13,12 @@ from botocore.exceptions import ClientError
 
 from operational_recovery import (
     backup_operational_database,
+    download_operational_backup,
+    list_operational_backups,
     restore_operational_database,
+    restore_operational_database_from_s3,
     sha256_file,
+    upload_operational_backup,
     validate_operational_backup,
 )
 from presentation_snapshot import create_presentation_snapshot, operational_summaries
@@ -62,6 +66,67 @@ class FakeReadOnlyS3:
     def list_objects_v2(self, **kwargs):
         self._record("list_objects_v2", kwargs)
         return {"KeyCount": 1, "Contents": [{"Key": kwargs["Prefix"] + "item"}]}
+
+
+class FakeBackupS3:
+    def __init__(self):
+        self.calls = []
+        self.objects = {}
+        self.metadata = {}
+
+    @staticmethod
+    def _missing(operation="HeadObject"):
+        return ClientError(
+            {
+                "Error": {"Code": "404", "Message": "Not Found"},
+                "ResponseMetadata": {"HTTPStatusCode": 404},
+            },
+            operation,
+        )
+
+    def head_object(self, **kwargs):
+        self.calls.append(("head_object", kwargs))
+        key = kwargs["Key"]
+        if key not in self.objects:
+            raise self._missing()
+        return {
+            "ContentLength": len(self.objects[key]),
+            "Metadata": self.metadata.get(key, {}),
+        }
+
+    def put_object(self, **kwargs):
+        recorded = {key: value for key, value in kwargs.items() if key != "Body"}
+        self.calls.append(("put_object", recorded))
+        key = kwargs["Key"]
+        if kwargs.get("IfNoneMatch") == "*" and key in self.objects:
+            raise ClientError(
+                {
+                    "Error": {"Code": "PreconditionFailed", "Message": "Exists"},
+                    "ResponseMetadata": {"HTTPStatusCode": 412},
+                },
+                "PutObject",
+            )
+        body = kwargs["Body"]
+        self.objects[key] = body.read() if hasattr(body, "read") else bytes(body)
+        self.metadata[key] = kwargs.get("Metadata", {})
+        return {}
+
+    def list_objects_v2(self, **kwargs):
+        self.calls.append(("list_objects_v2", kwargs))
+        keys = sorted(key for key in self.objects if key.startswith(kwargs["Prefix"]))
+        return {
+            "IsTruncated": False,
+            "KeyCount": len(keys),
+            "Contents": [{"Key": key} for key in keys],
+        }
+
+    def download_file(self, bucket, key, destination):
+        self.calls.append(
+            ("download_file", {"Bucket": bucket, "Key": key, "Destination": destination})
+        )
+        if key not in self.objects:
+            raise self._missing("GetObject")
+        Path(destination).write_bytes(self.objects[key])
 
 
 def make_operational_db(path: Path) -> Path:
@@ -112,6 +177,7 @@ def test_sqlite_backup_is_valid_independent_and_manifest_hash_matches(tmp_path):
     assert validation["status"] == "valid"
     assert validation["row_counts"]["pipeline_runs"] == 1
     assert manifest["sha256"] == sha256_file(Path(validation["backup_db"]))
+    assert manifest["source_db_relative"] == source.name
     assert source.read_bytes() == source_before
     with sqlite3.connect(source) as connection:
         connection.execute("DELETE FROM pipeline_runs")
@@ -167,6 +233,129 @@ def test_restore_requires_force_and_creates_pre_restore_backup(tmp_path):
     assert Path(result["pre_restore_backup"]).is_dir()
     with sqlite3.connect(destination) as connection:
         assert connection.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone()[0] == 1
+
+
+def _validated_backup(tmp_path):
+    project = tmp_path / "project"
+    source = make_operational_db(project / "database/electricity_trading.db")
+    backup = backup_operational_database(
+        source,
+        backup_root=tmp_path / "backups/operational",
+        project_root=project,
+        now=datetime(2026, 10, 12, 8, 30, tzinfo=timezone.utc),
+    )
+    return project, source, backup
+
+
+def test_s3_upload_validates_locally_before_any_s3_call(tmp_path):
+    _, _, backup = _validated_backup(tmp_path)
+    manifest = json.loads((backup / "manifest.json").read_text(encoding="utf-8"))
+    with (backup / manifest["backup_db"]).open("ab") as handle:
+        handle.write(b"tampered")
+    client = FakeBackupS3()
+
+    with pytest.raises(ValueError, match="SHA-256"):
+        upload_operational_backup(backup, bucket="powerflow", client=client)
+    assert client.calls == []
+
+
+def test_s3_backup_upload_is_timestamped_complete_and_never_overwrites(tmp_path):
+    _, _, backup = _validated_backup(tmp_path)
+    client = FakeBackupS3()
+    result = upload_operational_backup(backup, bucket="powerflow", client=client)
+
+    assert result["backup_id"] == "20261012T083000.000000Z"
+    assert set(result["objects"]) == {"database", "manifest"}
+    assert all(key.startswith("backups/operational/20261012T083000.000000Z/")
+               for key in result["objects"].values())
+    assert list_operational_backups(bucket="powerflow", client=client) == [
+        {
+            "backup_id": "20261012T083000.000000Z",
+            "objects": sorted(result["objects"].values()),
+        }
+    ]
+    manifest = json.loads(client.objects[result["objects"]["manifest"]])
+    assert manifest["source_db_relative"] == "database/electricity_trading.db"
+    assert manifest["file_size_bytes"] > 0
+    assert manifest["sha256"] == result["sha256"]
+
+    calls_before = len(client.calls)
+    with pytest.raises(FileExistsError, match="already exists"):
+        upload_operational_backup(backup, bucket="powerflow", client=client)
+    assert not any(name == "put_object" for name, _ in client.calls[calls_before:])
+
+
+def test_s3_download_validates_checksum_before_active_database_restore(tmp_path):
+    project, _, backup = _validated_backup(tmp_path)
+    client = FakeBackupS3()
+    uploaded = upload_operational_backup(backup, bucket="powerflow", client=client)
+    database_key = uploaded["objects"]["database"]
+    client.objects[database_key] += b"tampered"
+    active = make_operational_db(tmp_path / "active/electricity_trading.db")
+    before = active.read_bytes()
+
+    with pytest.raises(ValueError, match="SHA-256"):
+        restore_operational_database_from_s3(
+            uploaded["backup_id"],
+            active,
+            bucket="powerflow",
+            client=client,
+            download_root=tmp_path / "downloads",
+            force=True,
+            project_root=project,
+        )
+    assert active.read_bytes() == before
+
+
+def test_s3_download_is_explicit_validated_and_does_not_replace_local_copy(tmp_path):
+    _, _, backup = _validated_backup(tmp_path)
+    client = FakeBackupS3()
+    uploaded = upload_operational_backup(backup, bucket="powerflow", client=client)
+    result = download_operational_backup(
+        uploaded["backup_id"],
+        bucket="powerflow",
+        client=client,
+        download_root=tmp_path / "downloads",
+    )
+    assert result["status"] == "downloaded_and_validated"
+    assert validate_operational_backup(Path(result["backup_dir"]))["status"] == "valid"
+    with pytest.raises(FileExistsError, match="already exists"):
+        download_operational_backup(
+            uploaded["backup_id"],
+            bucket="powerflow",
+            client=client,
+            download_root=tmp_path / "downloads",
+        )
+
+
+def test_s3_restore_requires_force_before_any_download(tmp_path):
+    active = make_operational_db(tmp_path / "active/electricity_trading.db")
+    before = active.read_bytes()
+    client = FakeBackupS3()
+    with pytest.raises(FileExistsError, match="--force"):
+        restore_operational_database_from_s3(
+            "20261012T083000.000000Z",
+            active,
+            bucket="powerflow",
+            client=client,
+            download_root=tmp_path / "downloads",
+        )
+    assert client.calls == []
+    assert active.read_bytes() == before
+
+
+def test_bootstrap_contains_both_frozen_release_mappings():
+    script = (PROJECT_ROOT / "scripts/bootstrap_ec2_data.sh").read_text(encoding="utf-8")
+    expected = {
+        "models/releases/final_gold_model.joblib|artifacts/models/final_gold_model.joblib",
+        "models/releases/final_gold_model_features.joblib|artifacts/models/final_gold_model_features.joblib",
+        "models/releases/final_model_release_manifest.json|artifacts/models/final_model_release_manifest.json",
+        "models/releases/next24h/next24h_model.joblib|artifacts/models/releases/next24h/next24h_model.joblib",
+        "models/releases/next24h/next24h_feature_contract.joblib|artifacts/models/releases/next24h/next24h_feature_contract.joblib",
+        "models/releases/next24h/next24h_release_manifest.json|artifacts/models/releases/next24h/next24h_release_manifest.json",
+    }
+    assert all(mapping in script for mapping in expected)
+    assert 'if [[ -f "${destination}" && "${FORCE}" -ne 1 ]]' in script
 
 
 def make_snapshot_project(root: Path) -> tuple[Path, Path]:
@@ -249,6 +438,7 @@ def test_scripts_resolve_paths_from_repository_root():
         "restore_operational_state.py",
         "create_presentation_snapshot.py",
         "check_s3_recovery_readiness.py",
+        "operational_backup_s3.py",
     )
     for script in scripts:
         result = subprocess.run(

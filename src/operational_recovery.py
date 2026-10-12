@@ -6,8 +6,10 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,6 +22,8 @@ EXPECTED_OPERATIONAL_TABLES = frozenset(
         "pipeline_stage_timings",
     }
 )
+OPERATIONAL_BACKUP_PREFIX = "backups/operational"
+_BACKUP_ID = re.compile(r"^\d{8}T\d{6}\.\d{6}Z$")
 _SENSITIVE_FILENAME = re.compile(
     r"(^|[._-])(\.env|credentials?|secrets?|id_[rd]sa|.*\.pem|.*\.key)([._-]|$)",
     re.IGNORECASE,
@@ -124,6 +128,13 @@ def _safe_backup_name(source_db: Path) -> str:
     return name
 
 
+def _source_relative_path(source_db: Path, project_root: Path) -> str:
+    try:
+        return source_db.relative_to(Path(project_root).resolve()).as_posix()
+    except ValueError:
+        return source_db.name
+
+
 def backup_operational_database(
     source_db: Path,
     *,
@@ -161,6 +172,7 @@ def backup_operational_database(
             if now is None
             else now.astimezone(timezone.utc).isoformat(),
             "source_db": str(source_db),
+            "source_db_relative": _source_relative_path(source_db, project_root),
             "backup_db": destination_db.name,
             "sha256": sha256_file(destination_db),
             "file_size_bytes": destination_db.stat().st_size,
@@ -183,6 +195,206 @@ def backup_operational_database(
             pass
         raise
     return destination_dir
+
+
+def _safe_backup_id(value: str) -> str:
+    backup_id = str(value).strip()
+    if not _BACKUP_ID.fullmatch(backup_id):
+        raise ValueError("Operational backup ID must be a UTC timestamp directory name.")
+    return backup_id
+
+
+def _s3_not_found(error: Exception) -> bool:
+    response = getattr(error, "response", {})
+    code = str(response.get("Error", {}).get("Code", ""))
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+    return code in {"404", "NoSuchKey", "NotFound"} or status == 404
+
+
+def _s3_precondition_failed(error: Exception) -> bool:
+    response = getattr(error, "response", {})
+    code = str(response.get("Error", {}).get("Code", ""))
+    status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+    return code in {"PreconditionFailed", "412"} or status == 412
+
+
+def _s3_object_exists(client, bucket: str, key: str) -> bool:
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+        return True
+    except Exception as error:
+        if _s3_not_found(error):
+            return False
+        raise
+
+
+def _put_new_s3_object(
+    client,
+    bucket: str,
+    key: str,
+    source: Path,
+    *,
+    metadata: dict[str, str],
+) -> None:
+    try:
+        with Path(source).open("rb") as body:
+            client.put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=body,
+                ContentLength=Path(source).stat().st_size,
+                Metadata=metadata,
+                IfNoneMatch="*",
+            )
+    except Exception as error:
+        if _s3_precondition_failed(error):
+            raise FileExistsError(
+                f"Operational backup object already exists: s3://{bucket}/{key}"
+            ) from None
+        raise
+
+
+def upload_operational_backup(
+    backup_dir: Path,
+    *,
+    bucket: str,
+    client,
+    prefix: str = OPERATIONAL_BACKUP_PREFIX,
+) -> dict:
+    """Upload a locally validated backup without replacing any S3 object."""
+    if not str(bucket).strip():
+        raise ValueError("An S3 bucket is required for operational backup upload.")
+    validation = validate_operational_backup(backup_dir)
+    backup_dir = Path(validation["backup_dir"])
+    backup_id = _safe_backup_id(backup_dir.name)
+    manifest_path = backup_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    backup_db = Path(validation["backup_db"])
+    normalized_prefix = str(prefix).strip("/")
+    base_key = f"{normalized_prefix}/{backup_id}"
+    objects = {
+        "database": f"{base_key}/{backup_db.name}",
+        "manifest": f"{base_key}/manifest.json",
+    }
+
+    # Validation deliberately precedes every S3 operation. Both this explicit
+    # check and If-None-Match protect timestamped backups from replacement.
+    existing = [
+        key for key in objects.values() if _s3_object_exists(client, bucket, key)
+    ]
+    if existing:
+        raise FileExistsError(
+            "Timestamped operational backup already exists in S3: "
+            + ", ".join(existing)
+        )
+
+    shared_metadata = {
+        "backup-timestamp": backup_id,
+        "database-sha256": str(manifest["sha256"]),
+        "database-size-bytes": str(manifest["file_size_bytes"]),
+        "source-db-relative": str(manifest["source_db_relative"]),
+    }
+    _put_new_s3_object(
+        client,
+        bucket,
+        objects["database"],
+        backup_db,
+        metadata={**shared_metadata, "artifact": "sqlite-database"},
+    )
+    _put_new_s3_object(
+        client,
+        bucket,
+        objects["manifest"],
+        manifest_path,
+        metadata={**shared_metadata, "artifact": "backup-manifest"},
+    )
+    return {
+        "status": "uploaded",
+        "bucket": bucket,
+        "prefix": normalized_prefix,
+        "backup_id": backup_id,
+        "sha256": validation["sha256"],
+        "objects": objects,
+    }
+
+
+def list_operational_backups(
+    *,
+    bucket: str,
+    client,
+    prefix: str = OPERATIONAL_BACKUP_PREFIX,
+) -> list[dict]:
+    """List complete timestamped operational backup object sets."""
+    normalized_prefix = str(prefix).strip("/")
+    query_prefix = f"{normalized_prefix}/"
+    keys: list[str] = []
+    continuation = None
+    while True:
+        arguments = {"Bucket": bucket, "Prefix": query_prefix}
+        if continuation:
+            arguments["ContinuationToken"] = continuation
+        page = client.list_objects_v2(**arguments)
+        keys.extend(item["Key"] for item in page.get("Contents", []))
+        if not page.get("IsTruncated"):
+            break
+        continuation = page.get("NextContinuationToken")
+        if not continuation:
+            raise RuntimeError("S3 backup listing was truncated without a continuation token.")
+
+    grouped: dict[str, list[str]] = {}
+    for key in keys:
+        relative = key.removeprefix(query_prefix)
+        parts = relative.split("/", 1)
+        if len(parts) == 2 and _BACKUP_ID.fullmatch(parts[0]):
+            grouped.setdefault(parts[0], []).append(key)
+    return [
+        {"backup_id": backup_id, "objects": sorted(object_keys)}
+        for backup_id, object_keys in sorted(grouped.items(), reverse=True)
+        if f"{query_prefix}{backup_id}/manifest.json" in object_keys
+        and len(object_keys) >= 2
+    ]
+
+
+def download_operational_backup(
+    backup_id: str,
+    *,
+    bucket: str,
+    client,
+    download_root: Path,
+    prefix: str = OPERATIONAL_BACKUP_PREFIX,
+) -> dict:
+    """Download one explicit S3 backup and validate it before making it visible."""
+    backup_id = _safe_backup_id(backup_id)
+    normalized_prefix = str(prefix).strip("/")
+    base_key = f"{normalized_prefix}/{backup_id}"
+    download_root = Path(download_root).resolve()
+    destination = download_root / backup_id
+    if destination.exists():
+        raise FileExistsError(f"Downloaded backup destination already exists: {destination}")
+    download_root.mkdir(parents=True, exist_ok=True)
+    temporary = download_root / f".{backup_id}.downloading-{uuid.uuid4().hex}"
+    temporary.mkdir(mode=0o700)
+    try:
+        manifest_path = temporary / "manifest.json"
+        client.download_file(bucket, f"{base_key}/manifest.json", str(manifest_path))
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        backup_name = manifest.get("backup_db")
+        if not isinstance(backup_name, str) or Path(backup_name).name != backup_name:
+            raise ValueError("Downloaded backup manifest contains an unsafe database path.")
+        client.download_file(bucket, f"{base_key}/{backup_name}", str(temporary / backup_name))
+        validate_operational_backup(temporary)
+        os.replace(temporary, destination)
+    except Exception:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
+    validation = validate_operational_backup(destination)
+    return {
+        "status": "downloaded_and_validated",
+        "bucket": bucket,
+        "backup_id": backup_id,
+        "backup_dir": str(destination),
+        "sha256": validation["sha256"],
+    }
 
 
 def validate_operational_backup(
@@ -284,3 +496,43 @@ def restore_operational_database(
         "source_backup": str(Path(backup_dir).resolve()),
         "pre_restore_backup": str(pre_restore_backup) if pre_restore_backup else None,
     }
+
+
+def restore_operational_database_from_s3(
+    backup_id: str,
+    destination_db: Path,
+    *,
+    bucket: str,
+    client,
+    download_root: Path,
+    force: bool = False,
+    pre_restore_root: Path | None = None,
+    project_root: Path = Path("."),
+    prefix: str = OPERATIONAL_BACKUP_PREFIX,
+) -> dict:
+    """Download and validate an explicit S3 backup before restoring SQLite."""
+    destination_db = Path(destination_db).resolve()
+    if destination_db.exists() and not force:
+        raise FileExistsError(
+            "Restore destination exists; pass --force to permit an overwrite."
+        )
+    downloaded = download_operational_backup(
+        backup_id,
+        bucket=bucket,
+        client=client,
+        download_root=download_root,
+        prefix=prefix,
+    )
+    result = restore_operational_database(
+        Path(downloaded["backup_dir"]),
+        destination_db,
+        force=force,
+        pre_restore_root=pre_restore_root,
+        project_root=project_root,
+    )
+    result.update(
+        s3_bucket=bucket,
+        s3_backup_id=downloaded["backup_id"],
+        downloaded_backup=downloaded["backup_dir"],
+    )
+    return result

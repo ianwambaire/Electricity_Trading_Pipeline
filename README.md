@@ -554,8 +554,10 @@ capture an approved presentation evidence bundle with:
 
 ```bash
 python scripts/backup_operational_state.py
+python scripts/backup_operational_state.py --upload-s3
 python scripts/validate_operational_backup.py \
   backups/operational/YYYYMMDDTHHMMSS.ffffffZ
+python scripts/operational_backup_s3.py list
 python scripts/check_s3_recovery_readiness.py
 python scripts/create_presentation_snapshot.py
 ```

@@ -259,6 +259,24 @@ Validation checks the hash, file size, SQLite integrity, expected operational
 tables, and row counts. It opens the backup read-only and never touches the
 production database.
 
+To create the same validated local backup and upload it off-instance, use the
+EC2 IAM role and the existing PowerFlow bucket:
+
+```bash
+python scripts/backup_operational_state.py --upload-s3
+```
+
+S3 backups are stored under the append-only prefix
+`backups/operational/<UTC-backup-ID>/`. Each directory contains the SQLite file
+and its manifest. Local checksum, size, schema, and SQLite integrity validation
+complete before the first S3 request. Both objects use conditional creation, so
+an existing timestamped object is never replaced. This task applies no automatic
+retention deletion; lifecycle and retention remain administrator-controlled.
+
+The backup role needs `s3:PutObject` for
+`arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/backups/operational/*`.
+No delete permission is required by the backup command.
+
 ## Restore operational SQLite
 
 Prefer restoring to a separate path for inspection:
@@ -283,6 +301,29 @@ sudo systemctl start powerflow-prefect-worker.service powerflow-streamlit.servic
 ```
 
 Validate the selected backup before any restore and retain its manifest.
+
+For off-instance backups, list the complete backup IDs and download one explicit
+version for inspection:
+
+```bash
+python scripts/operational_backup_s3.py list
+python scripts/operational_backup_s3.py download \
+  YYYYMMDDTHHMMSS.ffffffZ
+```
+
+Restore to a separate destination first whenever possible:
+
+```bash
+python scripts/operational_backup_s3.py restore \
+  YYYYMMDDTHHMMSS.ffffffZ \
+  --destination /tmp/powerflow-operational-restore.db
+```
+
+Replacing the active database still requires `--force`; the helper downloads
+the manifest and database, verifies SHA-256, size, schema, and SQLite integrity,
+then delegates to the existing protected restore path. A failed download or
+validation cannot replace the destination. S3 recovery requires `s3:ListBucket`
+on the bucket and `s3:GetObject` on `backups/operational/*`.
 
 ## S3 recovery readiness
 

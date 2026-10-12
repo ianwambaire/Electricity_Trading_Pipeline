@@ -100,6 +100,7 @@ directories=(
   data/features
   data/reports
   artifacts/models
+  artifacts/models/releases/next24h
   database
   logs
 )
@@ -117,6 +118,9 @@ mappings=(
   "models/releases/final_gold_model.joblib|artifacts/models/final_gold_model.joblib"
   "models/releases/final_gold_model_features.joblib|artifacts/models/final_gold_model_features.joblib"
   "models/releases/final_model_release_manifest.json|artifacts/models/final_model_release_manifest.json"
+  "models/releases/next24h/next24h_model.joblib|artifacts/models/releases/next24h/next24h_model.joblib"
+  "models/releases/next24h/next24h_feature_contract.joblib|artifacts/models/releases/next24h/next24h_feature_contract.joblib"
+  "models/releases/next24h/next24h_release_manifest.json|artifacts/models/releases/next24h/next24h_release_manifest.json"
 )
 
 for mapping in "${mappings[@]}"; do

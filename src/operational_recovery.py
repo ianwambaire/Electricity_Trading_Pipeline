@@ -511,18 +511,30 @@ def restore_operational_database_from_s3(
     prefix: str = OPERATIONAL_BACKUP_PREFIX,
 ) -> dict:
     """Download and validate an explicit S3 backup before restoring SQLite."""
+    backup_id = _safe_backup_id(backup_id)
     destination_db = Path(destination_db).resolve()
     if destination_db.exists() and not force:
         raise FileExistsError(
             "Restore destination exists; pass --force to permit an overwrite."
         )
-    downloaded = download_operational_backup(
-        backup_id,
-        bucket=bucket,
-        client=client,
-        download_root=download_root,
-        prefix=prefix,
-    )
+    cached_backup = Path(download_root).resolve() / backup_id
+    if cached_backup.exists():
+        validation = validate_operational_backup(cached_backup)
+        downloaded = {
+            "backup_id": backup_id,
+            "backup_dir": validation["backup_dir"],
+            "sha256": validation["sha256"],
+        }
+        reused_cached_backup = True
+    else:
+        downloaded = download_operational_backup(
+            backup_id,
+            bucket=bucket,
+            client=client,
+            download_root=download_root,
+            prefix=prefix,
+        )
+        reused_cached_backup = False
     result = restore_operational_database(
         Path(downloaded["backup_dir"]),
         destination_db,
@@ -534,5 +546,6 @@ def restore_operational_database_from_s3(
         s3_bucket=bucket,
         s3_backup_id=downloaded["backup_id"],
         downloaded_backup=downloaded["backup_dir"],
+        reused_cached_backup=reused_cached_backup,
     )
     return result

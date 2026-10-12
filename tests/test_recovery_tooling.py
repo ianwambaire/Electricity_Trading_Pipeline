@@ -344,6 +344,67 @@ def test_s3_restore_requires_force_before_any_download(tmp_path):
     assert active.read_bytes() == before
 
 
+def test_s3_restore_revalidates_and_reuses_prior_download(tmp_path):
+    project, _, backup = _validated_backup(tmp_path)
+    client = FakeBackupS3()
+    uploaded = upload_operational_backup(backup, bucket="powerflow", client=client)
+    downloaded = download_operational_backup(
+        uploaded["backup_id"],
+        bucket="powerflow",
+        client=client,
+        download_root=tmp_path / "downloads",
+    )
+    calls_before_restore = len(client.calls)
+    destination = tmp_path / "restored/electricity_trading.db"
+
+    result = restore_operational_database_from_s3(
+        uploaded["backup_id"],
+        destination,
+        bucket="powerflow",
+        client=client,
+        download_root=tmp_path / "downloads",
+        project_root=project,
+    )
+
+    assert result["reused_cached_backup"] is True
+    assert result["downloaded_backup"] == downloaded["backup_dir"]
+    assert len(client.calls) == calls_before_restore
+    with sqlite3.connect(destination) as connection:
+        assert connection.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+        assert connection.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone()[0] == 1
+
+
+def test_s3_restore_rejects_invalid_cached_backup_without_redownload(tmp_path):
+    project, _, backup = _validated_backup(tmp_path)
+    client = FakeBackupS3()
+    uploaded = upload_operational_backup(backup, bucket="powerflow", client=client)
+    downloaded = download_operational_backup(
+        uploaded["backup_id"],
+        bucket="powerflow",
+        client=client,
+        download_root=tmp_path / "downloads",
+    )
+    cached_dir = Path(downloaded["backup_dir"])
+    manifest = json.loads((cached_dir / "manifest.json").read_text(encoding="utf-8"))
+    with (cached_dir / manifest["backup_db"]).open("ab") as handle:
+        handle.write(b"tampered cache")
+    calls_before_restore = len(client.calls)
+    destination = tmp_path / "must-not-exist.db"
+
+    with pytest.raises(ValueError, match="SHA-256"):
+        restore_operational_database_from_s3(
+            uploaded["backup_id"],
+            destination,
+            bucket="powerflow",
+            client=client,
+            download_root=tmp_path / "downloads",
+            project_root=project,
+        )
+
+    assert len(client.calls) == calls_before_restore
+    assert not destination.exists()
+
+
 def test_bootstrap_contains_both_frozen_release_mappings():
     script = (PROJECT_ROOT / "scripts/bootstrap_ec2_data.sh").read_text(encoding="utf-8")
     expected = {

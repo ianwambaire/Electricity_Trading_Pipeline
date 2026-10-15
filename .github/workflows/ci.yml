@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python 3.14 checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: src
+      MPLBACKEND: Agg
+      AWS_EC2_METADATA_DISABLED: "true"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-prod.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip install -r requirements-prod.txt
+
+      - name: Verify protected production artifacts
+        shell: bash
+        run: |
+          sha256sum -c <<'EOF'
+          14040b7696e8f433b50bb82c5cb0501c85c9874987f1ca68d814bc05c1736b4c  artifacts/models/final_gold_model.joblib
+          227ecd25aa75d482cfdedb8e4ca13ebb41da575836310871feac12199fb4e9c9  artifacts/models/final_gold_model_features.joblib
+          64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6  artifacts/models/final_model_release_manifest.json
+          69a3fa10f45c18c4733b3f8e12792e36ec9b209b7afd5e94a9932315e4dde0ed  artifacts/models/releases/next24h/next24h_model.joblib
+          1d6554e469a869613dd91d820b0537b4562321ea69e8827ecb83137950078a88  artifacts/models/releases/next24h/next24h_feature_contract.joblib
+          1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650  artifacts/models/releases/next24h/next24h_release_manifest.json
+          EOF
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+      - name: Check production imports
+        run: python scripts/check_production_imports.py
+
+      - name: Compile Python sources and tests
+        run: python -m compileall -q src tests
+
+      - name: Check diff whitespace
+        run: git diff --check

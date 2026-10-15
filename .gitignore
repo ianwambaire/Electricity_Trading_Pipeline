@@ -144,6 +144,9 @@ artifacts/*
 !artifacts/README.md
 !artifacts/models/
 artifacts/models/*
+!artifacts/models/final_gold_model.joblib
+!artifacts/models/final_gold_model_features.joblib
+!artifacts/models/final_model_release_manifest.json
 !artifacts/models/releases/
 artifacts/models/releases/*
 !artifacts/models/releases/next24h/

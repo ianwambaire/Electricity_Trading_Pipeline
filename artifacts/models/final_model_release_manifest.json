@@ -1,0 +1,83 @@
+{
+  "manifest_schema_version": 1,
+  "release_type": "final_2025_holdout_evaluation",
+  "created_at_utc": "2026-09-17T13:09:59.033586+00:00",
+  "final_holdout_used": true,
+  "dataset": {
+    "path": "data/features/gold_model_features.csv",
+    "sha256": "60e71c9b76cd007eaeaab178bf682896649938e7df1250d4931b54e5ad9db83d",
+    "version": "gold-sha256-60e71c9b76cd007eaeaab178bf682896649938e7df1250d4931b54e5ad9db83d",
+    "source_date_range": {
+      "start": "2019-01-08T00:00:00+00:00",
+      "end": "2025-09-30T22:00:00+00:00"
+    }
+  },
+  "training": {
+    "target_date_range": {
+      "start": "2019-01-08T01:00:00+00:00",
+      "end": "2024-12-31T23:00:00+00:00"
+    },
+    "rows": 52439
+  },
+  "final_holdout": {
+    "target_date_range": {
+      "start": "2025-01-01T00:00:00+00:00",
+      "end": "2025-09-30T23:00:00+00:00"
+    },
+    "rows": 6552,
+    "metrics": {
+      "mae": 10.786919023250146,
+      "rmse": 18.88568551202895,
+      "r2": 0.8794442554637898
+    }
+  },
+  "model": {
+    "selected_model": "Ordinary Linear Regression",
+    "selected_feature_group": "Full PowerFlow",
+    "feature_count": 31,
+    "hyperparameters_selected_using_holdout": false
+  },
+  "baseline_comparisons": [
+    {
+      "baseline_name": "Persistence Baseline",
+      "holdout_rows": 6552,
+      "holdout_start": "2025-01-01T00:00:00+00:00",
+      "holdout_end": "2025-09-30T23:00:00+00:00",
+      "mae": 14.44379884004884,
+      "rmse": 23.536034179514342,
+      "r2": 0.8127641637287353
+    },
+    {
+      "baseline_name": "Daily Seasonal Naive",
+      "holdout_rows": 6552,
+      "holdout_start": "2025-01-01T00:00:00+00:00",
+      "holdout_end": "2025-09-30T23:00:00+00:00",
+      "mae": 26.03151404151404,
+      "rmse": 40.51529002027939,
+      "r2": 0.44516952585540626
+    },
+    {
+      "baseline_name": "Weekly Seasonal Naive",
+      "holdout_rows": 6552,
+      "holdout_start": "2025-01-01T00:00:00+00:00",
+      "holdout_end": "2025-09-30T23:00:00+00:00",
+      "mae": 32.167347374847374,
+      "rmse": 48.571196488842574,
+      "r2": 0.20259306862466886
+    }
+  ],
+  "rmse_improvements": {
+    "vs_persistence_pct": 19.758420777333146,
+    "best_seasonal_baseline": "Daily Seasonal Naive",
+    "vs_best_seasonal_pct": 53.38627589096371
+  },
+  "git_commit_sha": "2c73f8c01a0c1a8e2789b0015da98bbbbce211ae",
+  "mlflow_run_id": "22838219903d4cc0b5b51892697ed70a",
+  "artifacts": {
+    "model_path": "artifacts/models/final_gold_model.joblib",
+    "feature_list_path": "artifacts/models/final_gold_model_features.joblib",
+    "metrics_report_path": "data/reports/final_holdout_metrics.csv",
+    "baselines_report_path": "data/reports/final_holdout_baselines.csv",
+    "regime_report_path": "data/reports/final_holdout_regime_performance.csv"
+  }
+}

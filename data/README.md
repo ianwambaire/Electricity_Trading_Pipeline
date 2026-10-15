@@ -76,6 +76,19 @@ Cleaned and aligned datasets. The primary output is:
 
 The silver dataset joins hourly price, load, generation, and weather data by timestamp. Incremental runs currently rebuild this file from the complete raw history; this is intentional so UTC continuity and hourly aggregation are rechecked before Gold generation. `clean_electricity_market_data.csv` is a legacy pipeline output.
 
+`silver_next24h_exogenous_vintages.csv` is a separate offline-only dataset with
+grain `collection_issue_time × target_timestamp × horizon_hours`. It combines
+exact issue-hour observed history with forecast vintages selected as of each
+logical collection cycle. Provider responses acquired a few minutes after the
+nominal hour are part of that same UTC cycle, but vintages from later cycles are
+never eligible. PT15M ENTSO-E forecasts are averaged only when all four exact
+quarter-hours are present; incomplete forecast hours are excluded without
+interpolation. A69/A40 intraday wind/solar is preferred per technology and target,
+with A69/A01 day-ahead as the deterministic fallback. Realized future price is
+attached only as `target_price_eur_mwh`; realized future load, generation, and
+weather never enter its feature columns. This dataset is not consumed by either
+production model or the observed Silver/Gold builders.
+
 ### `features/`
 
 Model-ready feature tables. The primary output is:

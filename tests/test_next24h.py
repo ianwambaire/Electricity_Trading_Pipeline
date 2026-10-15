@@ -207,7 +207,8 @@ def test_validation_selection_prefers_simpler_within_two_percent():
 def test_candidate_load_and_manual_report_are_separate_from_frozen_release(tmp_path):
     model_path = tmp_path / "candidate.joblib"
     manifest_path = tmp_path / "candidate_manifest.json"
-    silver_path, output_path = tmp_path / "silver.csv", tmp_path / "forecast.csv"
+    silver_path, gold_path = tmp_path / "silver.csv", tmp_path / "gold.csv"
+    output_path = tmp_path / "forecast.csv"
     joblib.dump(FixedModel(), model_path)
     manifest_path.write_text(
         json.dumps(
@@ -239,5 +240,6 @@ def test_candidate_load_and_manual_report_are_separate_from_frozen_release(tmp_p
         )
 
     frozen_model, frozen_features = load_final_model_release()
-    gold_row = pd.read_csv("data/features/gold_model_features.csv", nrows=1)
+    build_gold_dataset(silver_path, gold_path)
+    gold_row = pd.read_csv(gold_path, nrows=1)
     assert len(predict_with_final_model(gold_row, frozen_model, frozen_features)) == 1

@@ -62,7 +62,7 @@ class FakeSession:
 def test_parser_keeps_exactly_t_plus_1_through_t_plus_24_in_utc():
     frame = parse_open_meteo_forecast(
         _payload(),
-        forecast_issue_time=ISSUE,
+        collection_issue_time=ISSUE,
         acquired_at_utc=ACQUIRED,
     )
 
@@ -81,20 +81,20 @@ def test_missing_or_duplicate_target_hours_are_rejected():
     with pytest.raises(ValueError, match="does not cover every"):
         parse_open_meteo_forecast(
             _payload(remove_hour=8),
-            forecast_issue_time=ISSUE,
+            collection_issue_time=ISSUE,
             acquired_at_utc=ACQUIRED,
         )
     with pytest.raises(ValueError, match="duplicate target hours"):
         parse_open_meteo_forecast(
             _payload(duplicate_hour=8),
-            forecast_issue_time=ISSUE,
+            collection_issue_time=ISSUE,
             acquired_at_utc=ACQUIRED,
         )
 
 
 def test_finite_ranges_and_non_negative_horizons_are_strict():
     frame = parse_open_meteo_forecast(
-        _payload(), forecast_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
     )
     invalid = frame.copy()
     invalid.loc[0, "temperature_2m"] = float("inf")
@@ -112,20 +112,20 @@ def test_finite_ranges_and_non_negative_horizons_are_strict():
         normalize_weather_forecast_vintages(invalid)
 
 
-def test_identical_vintage_is_idempotent_and_acquisition_vintages_are_preserved():
+def test_same_collection_cycle_is_idempotent_and_keeps_earliest_acquisition():
     original = parse_open_meteo_forecast(
-        _payload(), forecast_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
     )
     assert len(merge_weather_forecast_vintages(original, original)) == 24
 
     later = parse_open_meteo_forecast(
         _payload(),
-        forecast_issue_time=ISSUE,
+        collection_issue_time=ISSUE,
         acquired_at_utc=ACQUIRED + pd.Timedelta(minutes=10),
     )
     combined = merge_weather_forecast_vintages(original, later)
-    assert len(combined) == 48
-    assert combined["acquired_at_utc"].nunique() == 2
+    assert len(combined) == 24
+    assert set(combined["acquired_at_utc"]) == {ACQUIRED}
 
 
 def test_fetcher_requests_expected_window_and_never_mutates_observed_weather(tmp_path):
@@ -158,7 +158,7 @@ def test_fetcher_requests_expected_window_and_never_mutates_observed_weather(tmp
 
 def test_observed_weather_destination_is_rejected(tmp_path):
     frame = parse_open_meteo_forecast(
-        _payload(), forecast_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
     )
     observed = tmp_path / "open_meteo_weather.csv"
     observed.write_text("do not replace\n", encoding="utf-8")
@@ -172,11 +172,103 @@ def test_issue_time_timezone_and_schema_are_strict():
     with pytest.raises(ValueError, match="explicit timezone"):
         parse_open_meteo_forecast(
             _payload(),
-            forecast_issue_time="2026-10-15T12:00:00",
+            collection_issue_time="2026-10-15T12:00:00",
             acquired_at_utc=ACQUIRED,
         )
     frame = parse_open_meteo_forecast(
-        _payload(), forecast_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
     )
-    with pytest.raises(ValueError, match="schema must be exactly"):
+    with pytest.raises(ValueError, match="current schema or the documented legacy"):
         normalize_weather_forecast_vintages(frame.drop(columns="model"))
+
+
+def test_legacy_issue_time_schema_is_readable_and_horizons_remain_1_to_24():
+    current = parse_open_meteo_forecast(
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+    )
+    legacy = current.rename(
+        columns={"collection_issue_time": "forecast_issue_time"}
+    )
+
+    normalized = normalize_weather_forecast_vintages(legacy)
+
+    assert tuple(normalized.columns) == WEATHER_FORECAST_COLUMNS
+    assert set(normalized["collection_issue_time"]) == {ISSUE}
+    assert normalized["horizon_hours"].tolist() == list(range(1, 25))
+
+
+def test_idempotent_weather_reacquisition_does_not_rewrite_existing_file(tmp_path):
+    frame = parse_open_meteo_forecast(
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+    )
+    path = tmp_path / "open_meteo_forecast_vintages.csv"
+    frame.to_csv(path, index=False)
+    before = path.read_bytes()
+    later = parse_open_meteo_forecast(
+        _payload(),
+        collection_issue_time=ISSUE,
+        acquired_at_utc=ACQUIRED + pd.Timedelta(minutes=10),
+    )
+
+    result = append_weather_forecast_vintages(path, later)
+
+    assert result["new_rows"] == 0
+    assert path.read_bytes() == before
+
+
+def test_new_weather_cycle_migrates_legacy_issue_column_without_losing_rows(
+    tmp_path,
+):
+    original = parse_open_meteo_forecast(
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+    )
+    legacy = original.rename(
+        columns={"collection_issue_time": "forecast_issue_time"}
+    )
+    path = tmp_path / "open_meteo_forecast_vintages.csv"
+    legacy.to_csv(path, index=False)
+    next_issue = ISSUE + pd.Timedelta(hours=1)
+    next_payload = _payload()
+    next_payload["hourly"]["time"] = [
+        (pd.Timestamp(value, tz="UTC") + pd.Timedelta(hours=1)).strftime(
+            "%Y-%m-%dT%H:%M"
+        )
+        for value in next_payload["hourly"]["time"]
+    ]
+    incoming = parse_open_meteo_forecast(
+        next_payload,
+        collection_issue_time=next_issue,
+        acquired_at_utc=ACQUIRED + pd.Timedelta(hours=1),
+    )
+
+    result = append_weather_forecast_vintages(path, incoming)
+    saved = pd.read_csv(path)
+
+    assert result["new_rows"] == 24
+    assert len(saved) == 48
+    assert "collection_issue_time" in saved
+    assert "forecast_issue_time" not in saved
+
+
+def test_weather_acquisition_clock_runs_after_successful_response(tmp_path):
+    events = []
+
+    class OrderedSession(FakeSession):
+        def get(self, url, params, timeout):
+            events.append("response")
+            return super().get(url, params, timeout)
+
+    def acquisition_clock():
+        events.append("acquired")
+        return ACQUIRED
+
+    result = fetch_operational_weather_forecast_vintage(
+        ISSUE,
+        acquisition_clock=acquisition_clock,
+        session=OrderedSession(_payload()),
+        output_path=tmp_path / "open_meteo_forecast_vintages.csv",
+    )
+
+    assert events == ["response", "acquired"]
+    assert result["collection_issue_time"] == ISSUE.isoformat()
+    assert result["acquired_at_utc"] == ACQUIRED.isoformat()

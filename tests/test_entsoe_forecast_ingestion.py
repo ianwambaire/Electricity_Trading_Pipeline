@@ -8,6 +8,7 @@ from ingestion.fetch_entsoe_forecasts import (
     append_entsoe_vintages,
     collect_entsoe_forecast_vintages,
     merge_entsoe_vintages,
+    normalize_entsoe_vintages,
     parse_entsoe_forecast_xml,
 )
 
@@ -142,7 +143,14 @@ def test_xml_contract_schema_technology_and_utc_normalization(
     assert set(frame["document_type"]) == {document_type}
     assert set(frame["process_type"]) == {process_type}
     assert str(frame["target_timestamp"].dt.tz) == "UTC"
-    assert sorted(frame["horizon_minutes"].unique()) == [60.0, 120.0, 180.0, 240.0]
+    assert set(frame["collection_issue_time"]) == {ACQUIRED.floor("h")}
+    assert (frame["acquired_at_utc"] >= frame["source_created_at_utc"]).all()
+    assert sorted(frame["source_horizon_minutes"].unique()) == [
+        60.0,
+        120.0,
+        180.0,
+        240.0,
+    ]
 
 
 def test_revision_rows_and_day_ahead_intraday_processes_remain_distinct():
@@ -168,7 +176,12 @@ def test_quarter_hour_resolution_produces_exact_utc_targets():
     assert frame["target_timestamp"].tolist() == list(
         pd.date_range("2026-10-15T01:00:00Z", periods=4, freq="15min")
     )
-    assert frame["horizon_minutes"].tolist() == [60.0, 75.0, 90.0, 105.0]
+    assert frame["source_horizon_minutes"].tolist() == [
+        60.0,
+        75.0,
+        90.0,
+        105.0,
+    ]
 
 
 def test_same_source_vintage_is_idempotent_but_conflicts_are_rejected():
@@ -199,9 +212,10 @@ def test_invalid_timestamp_horizon_and_numeric_values_fail_safely():
         )
     with pytest.raises(ValueError, match="non-negative"):
         _parse(
-            _xml("A65", "A01", created="2026-10-15T02:00:00Z"),
+            _xml("A65", "A01", created="2026-10-15T01:30:00Z"),
             "A65",
             "A01",
+            acquired=pd.Timestamp("2026-10-15T02:05:00Z"),
         )
     with pytest.raises(ValueError, match="finite"):
         _parse(
@@ -209,6 +223,34 @@ def test_invalid_timestamp_horizon_and_numeric_values_fail_safely():
             "A65",
             "A01",
         )
+
+
+def test_acquisition_must_follow_source_creation_without_clock_skew_tolerance():
+    with pytest.raises(ValueError, match="must not precede"):
+        _parse(
+            _xml("A65", "A01", created="2026-10-15T00:05:01Z"),
+            "A65",
+            "A01",
+            acquired=pd.Timestamp("2026-10-15T00:05:00Z"),
+        )
+
+
+def test_collection_issue_time_is_distinct_from_source_and_acquisition_times():
+    issue = pd.Timestamp("2026-10-15T00:00:00Z")
+    acquired = pd.Timestamp("2026-10-15T00:07:00Z")
+    frame = parse_entsoe_forecast_xml(
+        _xml("A65", "A01", created="2026-10-15T00:03:00Z"),
+        expected_document_type="A65",
+        expected_process_type="A01",
+        collection_issue_time=issue,
+        acquired_at_utc=acquired,
+    )
+
+    assert set(frame["collection_issue_time"]) == {issue}
+    assert set(frame["source_created_at_utc"]) == {
+        pd.Timestamp("2026-10-15T00:03:00Z")
+    }
+    assert set(frame["acquired_at_utc"]) == {acquired}
 
 
 def test_collection_writes_only_new_forecast_paths_and_expected_sample_counts(tmp_path):
@@ -248,6 +290,7 @@ def test_collection_writes_only_new_forecast_paths_and_expected_sample_counts(tm
     assert len(client.calls) == 4
     assert all(call[1] == "DE_LU" for call in client.calls)
     assert before == {path: path.read_bytes() for path in observed.values()}
+    first_files = {path: path.read_bytes() for path in paths.values()}
 
     second = collect_entsoe_forecast_vintages(
         START,
@@ -259,6 +302,113 @@ def test_collection_writes_only_new_forecast_paths_and_expected_sample_counts(tm
     assert second["load"]["new_rows"] == 0
     assert second["wind_solar"]["new_rows"] == 0
     assert second["generation"]["new_rows"] == 0
+    assert first_files == {path: path.read_bytes() for path in paths.values()}
+
+
+def test_sequential_provider_responses_get_distinct_post_response_acquisitions(
+    tmp_path,
+):
+    acquisition_times = iter(
+        pd.date_range("2026-10-15T00:05:00Z", periods=4, freq="min")
+    )
+    client = MockRawClient()
+    responses_seen = []
+
+    def acquisition_clock():
+        responses_seen.append(len(client.calls))
+        return next(acquisition_times)
+
+    paths = {
+        "load": tmp_path / "load_forecast_vintages.csv",
+        "wind_solar": tmp_path / "wind_solar_forecast_vintages.csv",
+        "generation": tmp_path / "generation_forecast_vintages.csv",
+    }
+
+    result = collect_entsoe_forecast_vintages(
+        START,
+        END,
+        client=client,
+        collection_issue_time="2026-10-15T00:00:00Z",
+        acquisition_clock=acquisition_clock,
+        output_paths=paths,
+    )
+
+    assert list(result["endpoint_acquired_at_utc"].values()) == [
+        "2026-10-15T00:05:00+00:00",
+        "2026-10-15T00:06:00+00:00",
+        "2026-10-15T00:07:00+00:00",
+        "2026-10-15T00:08:00+00:00",
+    ]
+    assert responses_seen == [1, 2, 3, 4]
+    wind = pd.read_csv(paths["wind_solar"])
+    assert set(wind["acquired_at_utc"]) == {
+        "2026-10-15 00:06:00+00:00",
+        "2026-10-15 00:07:00+00:00",
+    }
+
+
+def test_legacy_schema_remains_readable_without_inventing_collection_issue_time():
+    current = _parse(_xml("A65", "A01"), "A65", "A01")
+    legacy = current.drop(columns="collection_issue_time").rename(
+        columns={"source_horizon_minutes": "horizon_minutes"}
+    )
+    legacy.loc[:, "acquired_at_utc"] = pd.Timestamp("2026-10-14T23:59:59Z")
+
+    normalized = normalize_entsoe_vintages(legacy)
+
+    assert normalized["collection_issue_time"].isna().all()
+    assert "source_horizon_minutes" in normalized
+    assert "horizon_minutes" not in normalized
+    assert set(normalized["document_id"]) == {"document-1"}
+
+
+def test_idempotent_reacquisition_does_not_rewrite_legacy_file(tmp_path):
+    incoming = _parse(_xml("A65", "A01"), "A65", "A01")
+    legacy = incoming.drop(columns="collection_issue_time").rename(
+        columns={"source_horizon_minutes": "horizon_minutes"}
+    )
+    path = tmp_path / "load_forecast_vintages.csv"
+    legacy.to_csv(path, index=False)
+    before = path.read_bytes()
+
+    result = append_entsoe_vintages(path, incoming)
+
+    assert result["new_rows"] == 0
+    assert path.read_bytes() == before
+
+
+def test_new_revision_explicitly_migrates_legacy_rows_without_changing_identity(
+    tmp_path,
+):
+    original = _parse(
+        _xml("A65", "A01", revision="1"), "A65", "A01"
+    )
+    legacy = original.drop(columns="collection_issue_time").rename(
+        columns={"source_horizon_minutes": "horizon_minutes"}
+    )
+    path = tmp_path / "load_forecast_vintages.csv"
+    legacy.to_csv(path, index=False)
+    revised = _parse(
+        _xml("A65", "A01", revision="2"),
+        "A65",
+        "A01",
+        acquired=ACQUIRED + pd.Timedelta(minutes=1),
+    )
+
+    result = append_entsoe_vintages(path, revised)
+    saved = normalize_entsoe_vintages(
+        pd.read_csv(path, dtype={"revision_number": "string"})
+    )
+
+    assert result["new_rows"] == 4
+    assert len(saved) == 8
+    assert set(saved["revision_number"].astype(str)) == {"1", "2"}
+    assert saved.loc[
+        saved["revision_number"].astype(str).eq("1"), "collection_issue_time"
+    ].isna().all()
+    assert saved.loc[
+        saved["revision_number"].astype(str).eq("2"), "collection_issue_time"
+    ].notna().all()
 
 
 def test_atomic_append_rejects_observed_filename(tmp_path):

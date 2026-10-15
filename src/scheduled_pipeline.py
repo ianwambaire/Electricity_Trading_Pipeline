@@ -223,7 +223,7 @@ def weather_ingestion_task(mode: str, start_date=None, end_date=None):
 def _safe_collection_failure(
     source: str,
     error: Exception,
-    acquisition_timestamp: str,
+    collection_issue_time: str | None,
     local_destination,
 ) -> dict:
     """Describe an optional-provider failure without persisting its payload."""
@@ -234,7 +234,8 @@ def _safe_collection_failure(
         "rows_newly_persisted": 0,
         "duplicate_rows": 0,
         "revision_count": None,
-        "acquisition_timestamp": acquisition_timestamp,
+        "collection_issue_time": collection_issue_time,
+        "acquisition_timestamp": None,
         "local_destination": local_destination,
         "s3_sync_status": "NOT_ATTEMPTED",
         "error_type": type(error).__name__,
@@ -243,7 +244,7 @@ def _safe_collection_failure(
 
 def _validate_entsoe_collection_results(
     results: dict,
-    acquisition_timestamp: str,
+    collection_issue_time: str,
 ) -> list[dict]:
     """Revalidate persisted ENTSO-E files before they become S3 eligible."""
     source_names = {
@@ -260,7 +261,6 @@ def _validate_entsoe_collection_results(
         "generation": ("generation",),
     }
     summaries = []
-    acquired_at = pd.Timestamp(acquisition_timestamp)
     for group, source in source_names.items():
         details = results[group]
         path = Path(details["path"])
@@ -269,19 +269,9 @@ def _validate_entsoe_collection_results(
         )
         if len(stored) != int(details["rows_after"]):
             raise ValueError(f"Validated row count mismatch for {source}.")
-        acquired_rows = stored.loc[stored["acquired_at_utc"].eq(acquired_at)]
-        revision_count = len(
-            acquired_rows[
-                [
-                    "document_type",
-                    "process_type",
-                    "document_id",
-                    "revision_number",
-                ]
-            ].drop_duplicates()
-        )
         fetched_rows = int(details["fetched_rows"])
         new_rows = int(details["new_rows"])
+        acquisition_timestamps = list(details["acquisition_timestamps"])
         summaries.append(
             {
                 "source": source,
@@ -289,12 +279,18 @@ def _validate_entsoe_collection_results(
                 "rows_acquired": fetched_rows,
                 "rows_newly_persisted": new_rows,
                 "duplicate_rows": max(0, fetched_rows - new_rows),
-                "revision_count": revision_count,
+                "revision_count": int(details["revision_count"]),
                 "endpoint_rows": {
                     endpoint: int(results["endpoints"][endpoint])
                     for endpoint in endpoint_names[group]
                 },
-                "acquisition_timestamp": acquisition_timestamp,
+                "endpoint_acquired_at_utc": {
+                    endpoint: results["endpoint_acquired_at_utc"][endpoint]
+                    for endpoint in endpoint_names[group]
+                },
+                "collection_issue_time": collection_issue_time,
+                "acquisition_timestamp": max(acquisition_timestamps),
+                "acquisition_timestamps": acquisition_timestamps,
                 "local_destination": str(path),
                 "s3_sync_status": "PENDING",
             }
@@ -304,17 +300,15 @@ def _validate_entsoe_collection_results(
 
 def _validate_weather_collection_result(
     result: dict,
-    acquisition_timestamp: str,
+    collection_issue_time: str,
 ) -> dict:
     """Revalidate the exact t+1..t+24 weather vintage after atomic write."""
     path = Path(result["path"])
     stored = normalize_weather_forecast_vintages(pd.read_csv(path))
-    acquired_at = pd.Timestamp(acquisition_timestamp)
-    acquired_rows = stored.loc[stored["acquired_at_utc"].eq(acquired_at)]
-    if len(acquired_rows) != 24:
-        raise ValueError("Validated Open-Meteo acquisition must contain 24 rows.")
     if len(stored) != int(result["rows_after"]):
         raise ValueError("Validated row count mismatch for OPEN_METEO.")
+    if result["collection_issue_time"] != collection_issue_time:
+        raise ValueError("Open-Meteo collection issue time changed unexpectedly.")
     new_rows = int(result["new_rows"])
     return {
         "source": "OPEN_METEO",
@@ -323,23 +317,25 @@ def _validate_weather_collection_result(
         "rows_newly_persisted": new_rows,
         "duplicate_rows": max(0, 24 - new_rows),
         "revision_count": None,
-        "acquisition_timestamp": acquisition_timestamp,
+        "collection_issue_time": collection_issue_time,
+        "acquisition_timestamp": result["acquired_at_utc"],
         "local_destination": str(path),
         "s3_sync_status": "PENDING",
     }
 
 
 @task(name="Collect forecast vintages")
-def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
+def forecast_vintage_collection_task(collection_issue_time=None) -> dict:
     """Collect optional forecast vintages without calling production inference."""
-    acquired = pd.Timestamp(
-        acquired_at_utc if acquired_at_utc is not None else datetime.now(timezone.utc)
+    cycle_reference = pd.Timestamp(
+        collection_issue_time
+        if collection_issue_time is not None
+        else datetime.now(timezone.utc)
     )
-    if acquired.tzinfo is None:
-        raise ValueError("acquired_at_utc must include an explicit timezone.")
-    acquired = acquired.tz_convert("UTC")
-    acquisition_timestamp = acquired.isoformat()
-    issue_time = acquired.floor("h")
+    if cycle_reference.tzinfo is None:
+        raise ValueError("collection_issue_time must include an explicit timezone.")
+    issue_time = cycle_reference.tz_convert("UTC").floor("h")
+    issue_timestamp = issue_time.isoformat()
     entsoe_paths = {
         group: PROJECT_ROOT / path
         for group, path in ENTSOE_FORECAST_OUTPUT_PATHS.items()
@@ -351,13 +347,13 @@ def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
         entsoe_results = collect_entsoe_forecast_vintages(
             issue_time + pd.Timedelta(hours=1),
             issue_time + pd.Timedelta(hours=25),
-            acquired_at_utc=acquired,
+            collection_issue_time=issue_time,
             output_paths=entsoe_paths,
         )
         sources.extend(
             _validate_entsoe_collection_results(
                 entsoe_results,
-                acquisition_timestamp,
+                issue_timestamp,
             )
         )
     except Exception as error:
@@ -365,7 +361,7 @@ def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
             _safe_collection_failure(
                 "ENTSOE",
                 error,
-                acquisition_timestamp,
+                issue_timestamp,
                 [str(path) for path in entsoe_paths.values()],
             )
         )
@@ -373,13 +369,12 @@ def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
     try:
         weather_result = fetch_operational_weather_forecast_vintage(
             issue_time,
-            acquired_at_utc=acquired,
             output_path=weather_path,
         )
         sources.append(
             _validate_weather_collection_result(
                 weather_result,
-                acquisition_timestamp,
+                issue_timestamp,
             )
         )
     except Exception as error:
@@ -387,7 +382,7 @@ def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
             _safe_collection_failure(
                 "OPEN_METEO",
                 error,
-                acquisition_timestamp,
+                issue_timestamp,
                 str(weather_path),
             )
         )
@@ -398,8 +393,7 @@ def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
         status = "FAILED"
     return {
         "status": status,
-        "issue_time": issue_time.isoformat(),
-        "acquisition_timestamp": acquisition_timestamp,
+        "collection_issue_time": issue_timestamp,
         "validated_local_persistence": successful > 0,
         "sources": sources,
     }
@@ -738,17 +732,16 @@ def _run_forecast_vintage_collection(
             forecast_vintage_collection_task,
         )
     except Exception as error:
-        acquisition_timestamp = _utc_now()
+        collection_issue_time = pd.Timestamp.now(tz="UTC").floor("h").isoformat()
         result = {
             "status": "FAILED",
-            "issue_time": None,
-            "acquisition_timestamp": acquisition_timestamp,
+            "collection_issue_time": collection_issue_time,
             "validated_local_persistence": False,
             "sources": [
                 _safe_collection_failure(
                     "FORECAST_VINTAGE_STAGE",
                     error,
-                    acquisition_timestamp,
+                    collection_issue_time,
                     None,
                 )
             ],

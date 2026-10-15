@@ -29,11 +29,13 @@ Future-known exogenous forecasts are stored separately from observed inputs:
 The ENTSO-E grain is one source-document vintage, target timestamp, and
 controlled technology. Provenance includes `source`, `document_type`,
 `process_type`, `document_id`, `revision_number`, `source_created_at_utc`,
-`acquired_at_utc`, `market_area`, `resolution`, and forecast horizon. The
-`source_created_at_utc` field is the timestamp declared by the source document;
-`acquired_at_utc` records when PowerFlow actually retrieved that document. Both
-are retained because document creation does not prove the exact API publication
-or first-availability time.
+`collection_issue_time`, `acquired_at_utc`, `market_area`, `resolution`, and
+`source_horizon_minutes`. The `collection_issue_time` is PowerFlow's logical UTC
+collection-cycle hour. `source_created_at_utc` is preserved exactly from the
+ENTSO-E `createdDateTime` field, and `acquired_at_utc` is captured after that
+specific provider response succeeds. `source_horizon_minutes` measures source
+document creation to target time; it is not the eventual ML horizon. A future ML
+horizon must be derived from `collection_issue_time` to `target_timestamp`.
 
 ENTSO-E rows are never collapsed by target timestamp alone. Document and process
 type, document identifier, revision, creation time, target, and technology form
@@ -42,10 +44,19 @@ while an identical reacquisition is idempotent. A69 day-ahead (`A01`) and intrad
 (`A40`) wind/solar forecasts therefore remain distinguishable.
 
 Open-Meteo exposes no equivalent ENTSO-E document revision identifier. Its grain
-is the PowerFlow forecast issue hour, acquisition time, provider/model, and target
-hour. Each acquisition stores exactly target hours t+1 through t+24. Here,
-`forecast_issue_time` is PowerFlow's UTC issue hour and `acquired_at_utc` is the
-actual retrieval time; separate acquisitions are preserved as separate vintages.
+is the PowerFlow collection issue hour, provider/model, and target hour. Each
+cycle stores exactly target hours t+1 through t+24. Here,
+`collection_issue_time` is PowerFlow's UTC cycle hour and `acquired_at_utc` is
+captured after the HTTP response succeeds. Reacquiring the same cycle is
+idempotent and retains its earliest successful acquisition timestamp.
+
+Legacy files remain readable. ENTSO-E files that predate
+`collection_issue_time` retain those historical rows with an unknown/null cycle
+time, and their legacy `horizon_minutes` is interpreted as
+`source_horizon_minutes`. Open-Meteo's legacy `forecast_issue_time` is an exact
+semantic predecessor and is renamed to `collection_issue_time` during an append.
+No file is rewritten for an idempotent reacquisition; the schema is migrated
+atomically only when genuinely new vintage rows are appended.
 
 These forecast-vintage files are not observed market or weather history. They are
 not inputs to the current Raw-to-Silver-to-Gold builders and must never be joined

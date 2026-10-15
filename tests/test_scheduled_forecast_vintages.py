@@ -11,6 +11,7 @@ from storage.sync import SyncResult
 
 
 ACQUIRED = "2026-10-15T10:17:00+00:00"
+COLLECTION_ISSUE = "2026-10-15T10:00:00+00:00"
 
 
 def _successful_source(source="OPEN_METEO", destination="forecast.csv"):
@@ -21,6 +22,7 @@ def _successful_source(source="OPEN_METEO", destination="forecast.csv"):
         "rows_newly_persisted": 24,
         "duplicate_rows": 0,
         "revision_count": None,
+        "collection_issue_time": COLLECTION_ISSUE,
         "acquisition_timestamp": ACQUIRED,
         "local_destination": destination,
         "s3_sync_status": "PENDING",
@@ -30,8 +32,7 @@ def _successful_source(source="OPEN_METEO", destination="forecast.csv"):
 def _collection_result(*sources, validated=True):
     return {
         "status": "SUCCESS",
-        "issue_time": "2026-10-15T10:00:00+00:00",
-        "acquisition_timestamp": ACQUIRED,
+        "collection_issue_time": COLLECTION_ISSUE,
         "validated_local_persistence": validated,
         "sources": list(sources),
     }
@@ -56,10 +57,14 @@ def test_provider_failure_is_isolated_and_does_not_expose_provider_payload(
 
     def fail_entsoe(*args, **kwargs):
         requested["entsoe_paths"] = kwargs["output_paths"]
+        assert kwargs["collection_issue_time"] == pd.Timestamp(COLLECTION_ISSUE)
+        assert "acquired_at_utc" not in kwargs
         raise RuntimeError(secret_url)
 
     def collect_weather(issue_time, **kwargs):
         requested["weather_path"] = kwargs["output_path"]
+        assert issue_time == pd.Timestamp(COLLECTION_ISSUE)
+        assert "acquired_at_utc" not in kwargs
         return {"path": str(kwargs["output_path"]), "new_rows": 24}
 
     monkeypatch.setattr(pipeline, "PROJECT_ROOT", tmp_path)
@@ -170,7 +175,8 @@ def test_all_optional_sources_can_fail_without_raising_or_s3_sync(monkeypatch):
         "rows_newly_persisted": 0,
         "duplicate_rows": 0,
         "revision_count": None,
-        "acquisition_timestamp": ACQUIRED,
+        "collection_issue_time": COLLECTION_ISSUE,
+        "acquisition_timestamp": None,
         "local_destination": None,
         "s3_sync_status": "NOT_ATTEMPTED",
         "error_type": "RuntimeError",

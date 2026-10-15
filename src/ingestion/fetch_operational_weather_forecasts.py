@@ -25,7 +25,7 @@ WEATHER_VARIABLES = (
     "shortwave_radiation",
 )
 WEATHER_FORECAST_COLUMNS = (
-    "forecast_issue_time",
+    "collection_issue_time",
     "acquired_at_utc",
     "target_timestamp",
     "horizon_hours",
@@ -33,11 +33,14 @@ WEATHER_FORECAST_COLUMNS = (
     "provider",
     "model",
 )
+LEGACY_WEATHER_FORECAST_COLUMNS = tuple(
+    "forecast_issue_time" if column == "collection_issue_time" else column
+    for column in WEATHER_FORECAST_COLUMNS
+)
 WEATHER_VINTAGE_IDENTITY = (
     "provider",
     "model",
-    "forecast_issue_time",
-    "acquired_at_utc",
+    "collection_issue_time",
     "target_timestamp",
 )
 
@@ -55,15 +58,28 @@ def _normalize_utc_column(frame: pd.DataFrame, column: str) -> None:
     )
 
 
+def _migrate_legacy_weather_schema(frame: pd.DataFrame) -> pd.DataFrame:
+    """Rename the prior issue-time field without changing its values."""
+    if list(frame.columns) == list(WEATHER_FORECAST_COLUMNS):
+        return frame.copy()
+    if list(frame.columns) != list(LEGACY_WEATHER_FORECAST_COLUMNS):
+        raise ValueError(
+            "Open-Meteo forecast schema must be the current schema or the "
+            "documented legacy schema."
+        )
+    return frame.rename(
+        columns={"forecast_issue_time": "collection_issue_time"}
+    ).loc[:, WEATHER_FORECAST_COLUMNS]
+
+
 def normalize_weather_forecast_vintages(frame: pd.DataFrame) -> pd.DataFrame:
     """Validate exact 24-hour issue-time vintages and normalize to UTC."""
-    if list(frame.columns) != list(WEATHER_FORECAST_COLUMNS):
-        raise ValueError(
-            "Open-Meteo forecast schema must be exactly "
-            f"{list(WEATHER_FORECAST_COLUMNS)}."
-        )
-    normalized = frame.copy()
-    for column in ("forecast_issue_time", "acquired_at_utc", "target_timestamp"):
+    normalized = _migrate_legacy_weather_schema(frame)
+    for column in (
+        "collection_issue_time",
+        "acquired_at_utc",
+        "target_timestamp",
+    ):
         _normalize_utc_column(normalized, column)
     numeric = ["horizon_hours", *WEATHER_VARIABLES]
     for column in numeric:
@@ -79,16 +95,16 @@ def normalize_weather_forecast_vintages(frame: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("Weather forecast values and horizons must be finite.")
     if (normalized["horizon_hours"] < 0).any():
         raise ValueError("Weather forecast horizons must be non-negative.")
-    if not normalized["forecast_issue_time"].eq(
-        normalized["forecast_issue_time"].dt.floor("h")
+    if not normalized["collection_issue_time"].eq(
+        normalized["collection_issue_time"].dt.floor("h")
     ).all():
-        raise ValueError("forecast_issue_time must be an exact UTC hour.")
+        raise ValueError("collection_issue_time must be an exact UTC hour.")
     if not normalized["target_timestamp"].eq(
         normalized["target_timestamp"].dt.floor("h")
     ).all():
         raise ValueError("Weather forecast targets must be exact UTC hours.")
     expected_horizon = (
-        normalized["target_timestamp"] - normalized["forecast_issue_time"]
+        normalized["target_timestamp"] - normalized["collection_issue_time"]
     ).dt.total_seconds() / 3600.0
     if not np.allclose(normalized["horizon_hours"], expected_horizon):
         raise ValueError("Weather forecast horizon_hours is inconsistent.")
@@ -114,15 +130,14 @@ def normalize_weather_forecast_vintages(frame: pd.DataFrame) -> pd.DataFrame:
                 raise ValueError(
                     "Conflicting weather values share one forecast-vintage identity."
                 )
-        normalized = normalized.drop_duplicates(
+        normalized = normalized.sort_values("acquired_at_utc").drop_duplicates(
             subset=list(WEATHER_VINTAGE_IDENTITY), keep="first"
         )
 
     group_columns = [
         "provider",
         "model",
-        "forecast_issue_time",
-        "acquired_at_utc",
+        "collection_issue_time",
     ]
     expected = set(range(1, 25))
     for _, vintage in normalized.groupby(group_columns, dropna=False):
@@ -131,20 +146,32 @@ def normalize_weather_forecast_vintages(frame: pd.DataFrame) -> pd.DataFrame:
             raise ValueError("Each weather forecast vintage must contain horizons 1..24.")
 
     return normalized.sort_values(
-        ["forecast_issue_time", "acquired_at_utc", "target_timestamp"]
+        ["collection_issue_time", "acquired_at_utc", "target_timestamp"]
     ).reset_index(drop=True)
 
 
 def parse_open_meteo_forecast(
     payload: dict[str, Any],
     *,
-    forecast_issue_time: Any,
+    collection_issue_time: Any | None = None,
+    forecast_issue_time: Any | None = None,
     acquired_at_utc: Any,
 ) -> pd.DataFrame:
     """Parse exactly t+1 through t+24 from one operational forecast response."""
-    issue = _utc_timestamp(forecast_issue_time, "forecast_issue_time")
+    if collection_issue_time is not None and forecast_issue_time is not None:
+        raise ValueError(
+            "Use collection_issue_time; forecast_issue_time is a legacy alias."
+        )
+    issue_value = (
+        collection_issue_time
+        if collection_issue_time is not None
+        else forecast_issue_time
+    )
+    if issue_value is None:
+        raise ValueError("collection_issue_time is required.")
+    issue = _utc_timestamp(issue_value, "collection_issue_time")
     if issue != issue.floor("h"):
-        raise ValueError("forecast_issue_time must be an exact UTC hour.")
+        raise ValueError("collection_issue_time must be an exact UTC hour.")
     acquired = _utc_timestamp(acquired_at_utc, "acquired_at_utc")
     if payload.get("timezone") not in {"UTC", "GMT"}:
         raise ValueError("Open-Meteo forecast response is not explicitly UTC.")
@@ -182,7 +209,7 @@ def parse_open_meteo_forecast(
             f"missing={len(missing_targets)}."
         )
 
-    frame["forecast_issue_time"] = issue
+    frame["collection_issue_time"] = issue
     frame["acquired_at_utc"] = acquired
     frame["horizon_hours"] = (
         frame["target_timestamp"] - issue
@@ -232,12 +259,14 @@ def append_weather_forecast_vintages(
     existing = pd.read_csv(path) if path.exists() else None
     previous_rows = 0 if existing is None else len(existing)
     combined = merge_weather_forecast_vintages(existing, incoming)
-    _write_atomic(combined, path)
+    new_rows = len(combined) - previous_rows
+    if existing is None or new_rows:
+        _write_atomic(combined, path)
     return {
         "path": str(path),
         "rows_before": previous_rows,
         "rows_after": len(combined),
-        "new_rows": len(combined) - previous_rows,
+        "new_rows": new_rows,
     }
 
 
@@ -245,16 +274,18 @@ def fetch_operational_weather_forecast_vintage(
     issue_time: Any | None = None,
     *,
     acquired_at_utc: Any | None = None,
+    acquisition_clock=None,
     session: Any = requests,
     output_path: Path = OUTPUT_PATH,
 ) -> dict[str, Any]:
     """Fetch and persist one independent Open-Meteo t+1..t+24 vintage."""
-    acquired = _utc_timestamp(
-        acquired_at_utc if acquired_at_utc is not None else datetime.now(timezone.utc),
-        "acquired_at_utc",
-    )
+    if acquired_at_utc is not None and acquisition_clock is not None:
+        raise ValueError(
+            "Use either acquired_at_utc or acquisition_clock, not both."
+        )
+    cycle_started = datetime.now(timezone.utc)
     issue = (
-        acquired.floor("h")
+        pd.Timestamp(cycle_started).floor("h")
         if issue_time is None
         else _utc_timestamp(issue_time, "issue_time")
     )
@@ -275,14 +306,25 @@ def fetch_operational_weather_forecast_vintage(
         timeout=60,
     )
     response.raise_for_status()
+    payload = response.json()
+    acquired = _utc_timestamp(
+        acquired_at_utc
+        if acquired_at_utc is not None
+        else (
+            acquisition_clock()
+            if acquisition_clock is not None
+            else datetime.now(timezone.utc)
+        ),
+        "acquired_at_utc",
+    )
     frame = parse_open_meteo_forecast(
-        response.json(),
-        forecast_issue_time=issue,
+        payload,
+        collection_issue_time=issue,
         acquired_at_utc=acquired,
     )
     result = append_weather_forecast_vintages(output_path, frame)
     result.update(
-        forecast_issue_time=issue.isoformat(),
+        collection_issue_time=issue.isoformat(),
         acquired_at_utc=acquired.isoformat(),
         target_start_utc=frame["target_timestamp"].min().isoformat(),
         target_end_utc=frame["target_timestamp"].max().isoformat(),

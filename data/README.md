@@ -89,6 +89,15 @@ attached only as `target_price_eur_mwh`; realized future load, generation, and
 weather never enter its feature columns. This dataset is not consumed by either
 production model or the observed Silver/Gold builders.
 
+Its quality report separates leakage correctness from evaluation readiness.
+`dataset_status` is `NOT_READY` when no safe complete 24-horizon issue cycle is
+available, `PARTIALLY_READY` when safe rows exist but history is still limited,
+and `READY_FOR_EVALUATION` only after at least 14 distinct issue cycles spanning
+at least 7 UTC calendar days cover every horizon 1–24 with no duplicate grain and
+a passing leakage audit. These are configurable engineering gates for beginning
+evaluation; they do not guarantee statistical sufficiency, regime coverage, or
+model quality.
+
 ### `features/`
 
 Model-ready feature tables. The primary output is:

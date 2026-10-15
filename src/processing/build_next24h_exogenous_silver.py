@@ -46,6 +46,14 @@ QUALITY_REPORT_PATH = Path(
     "data/reports/monitoring/next24h_exogenous_silver_quality.json"
 )
 HORIZONS = tuple(range(1, 25))
+# Engineering gates for deciding when the prospectively collected dataset is
+# large and complete enough to begin evaluation.  They do not establish
+# statistical power, representativeness, or model quality.
+MIN_READY_ISSUE_CYCLES = 14
+MIN_READY_CALENDAR_DAYS = 7
+DATASET_STATUS_NOT_READY = "NOT_READY"
+DATASET_STATUS_PARTIALLY_READY = "PARTIALLY_READY"
+DATASET_STATUS_READY = "READY_FOR_EVALUATION"
 KEY_COLUMNS = (
     "collection_issue_time",
     "target_timestamp",
@@ -448,6 +456,118 @@ def _audit_output(data: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def assess_dataset_readiness(
+    data: pd.DataFrame,
+    leakage_audit: Mapping[str, Any],
+    *,
+    minimum_issue_cycles: int = MIN_READY_ISSUE_CYCLES,
+    minimum_calendar_days: int = MIN_READY_CALENDAR_DAYS,
+) -> dict[str, Any]:
+    """Assess engineering readiness independently from leakage correctness.
+
+    These minimums are conservative operational gates, not guarantees that a
+    downstream evaluation has sufficient sample size or market-regime coverage.
+    """
+    if minimum_issue_cycles < 1 or minimum_calendar_days < 1:
+        raise ValueError("Readiness thresholds must be positive integers.")
+
+    if data.empty:
+        issue_times = pd.Series([], dtype="datetime64[ns, UTC]")
+        horizons: set[int] = set()
+        complete_issue_cycles = 0
+    else:
+        issue_times = pd.to_datetime(
+            data["collection_issue_time"], errors="raise", utc=True
+        )
+        horizons = set(
+            pd.to_numeric(data["horizon_hours"], errors="raise").astype(int)
+        )
+        complete_issue_cycles = 0
+        for _, cycle in data.assign(_issue_time=issue_times).groupby("_issue_time"):
+            cycle_horizons = set(
+                pd.to_numeric(cycle["horizon_hours"], errors="raise").astype(int)
+            )
+            if cycle_horizons == set(HORIZONS) and len(cycle) == len(HORIZONS):
+                complete_issue_cycles += 1
+
+    distinct_issue_cycles = int(issue_times.nunique())
+    distinct_calendar_days = int(issue_times.dt.floor("D").nunique())
+    missing_horizons = sorted(set(HORIZONS) - horizons)
+    duplicate_count = int(
+        leakage_audit.get(
+            "duplicate_key_count",
+            data.duplicated(list(KEY_COLUMNS)).sum() if not data.empty else 0,
+        )
+    )
+    leakage_passed = bool(leakage_audit.get("passed", False))
+
+    reasons: list[str] = []
+    if data.empty:
+        reasons.append("No complete training rows are currently available")
+    if complete_issue_cycles == 0 and not data.empty:
+        reasons.append(
+            "No collection issue cycle currently contains all horizons 1 through 24"
+        )
+    if not leakage_passed:
+        reasons.append("Leakage audit did not pass")
+    if duplicate_count:
+        reasons.append(f"{duplicate_count} duplicate grain row(s) were detected")
+    if missing_horizons:
+        reasons.append(
+            "Dataset is missing horizon(s): "
+            + ", ".join(str(value) for value in missing_horizons)
+        )
+    if distinct_issue_cycles < minimum_issue_cycles:
+        reasons.append(
+            f"Only {distinct_issue_cycles} distinct issue cycle(s) are available; "
+            f"at least {minimum_issue_cycles} are required"
+        )
+    if distinct_calendar_days < minimum_calendar_days:
+        reasons.append(
+            f"Only {distinct_calendar_days} distinct calendar day(s) are available; "
+            f"at least {minimum_calendar_days} are required"
+        )
+
+    structurally_invalid = (
+        data.empty
+        or complete_issue_cycles == 0
+        or not leakage_passed
+        or duplicate_count > 0
+    )
+    if structurally_invalid:
+        status = DATASET_STATUS_NOT_READY
+    elif (
+        distinct_issue_cycles < minimum_issue_cycles
+        or distinct_calendar_days < minimum_calendar_days
+        or missing_horizons
+    ):
+        status = DATASET_STATUS_PARTIALLY_READY
+    else:
+        status = DATASET_STATUS_READY
+        reasons = []
+
+    return {
+        "dataset_status": status,
+        "readiness_reasons": reasons,
+        "distinct_issue_cycles": distinct_issue_cycles,
+        "distinct_calendar_days": distinct_calendar_days,
+        "complete_issue_cycles": int(complete_issue_cycles),
+        "horizon_coverage_count": int(len(horizons & set(HORIZONS))),
+        "horizons_missing_from_dataset": missing_horizons,
+        "readiness_thresholds": {
+            "minimum_distinct_issue_cycles": int(minimum_issue_cycles),
+            "minimum_distinct_calendar_days": int(minimum_calendar_days),
+            "required_horizons": list(HORIZONS),
+            "requires_zero_duplicate_grain": True,
+            "requires_leakage_check_passed": True,
+            "classification": (
+                "Engineering readiness threshold only; it does not guarantee "
+                "statistical sufficiency or representative market regimes."
+            ),
+        },
+    }
+
+
 def build_next24h_exogenous_frame(
     observed_silver: pd.DataFrame,
     load_vintages: pd.DataFrame,
@@ -587,6 +707,7 @@ def build_next24h_exogenous_frame(
     if not audit["passed"]:
         failed = sorted(name for name, passed in audit["checks"].items() if not passed)
         raise ValueError(f"Exogenous Silver leakage audit failed: {failed}")
+    readiness = assess_dataset_readiness(output, audit)
 
     generated = pd.Timestamp(
         generated_at_utc if generated_at_utc is not None else datetime.now(timezone.utc)
@@ -601,6 +722,7 @@ def build_next24h_exogenous_frame(
         "generated_at_utc": generated.isoformat(),
         "dataset": str(OUTPUT_PATH),
         "grain": "collection_issue_time x target_timestamp x horizon_hours",
+        **readiness,
         "as_of_semantics": (
             "A response is eligible only when its logical collection cycle is not "
             "later than the output issue cycle and acquisition occurred within its "

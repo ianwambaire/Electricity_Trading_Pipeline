@@ -12,9 +12,15 @@ from ingestion.fetch_operational_weather_forecasts import (
     WEATHER_FORECAST_COLUMNS,
 )
 from processing.build_next24h_exogenous_silver import (
+    DATASET_STATUS_NOT_READY,
+    DATASET_STATUS_PARTIALLY_READY,
+    DATASET_STATUS_READY,
     EXOGENOUS_FEATURE_COLUMNS,
+    MIN_READY_CALENDAR_DAYS,
+    MIN_READY_ISSUE_CYCLES,
     OUTPUT_COLUMNS,
     TARGET_COLUMN,
+    assess_dataset_readiness,
     build_next24h_exogenous_frame,
     build_next24h_exogenous_silver,
 )
@@ -168,6 +174,11 @@ def test_exact_grain_schema_horizons_and_leakage_audit():
     assert report["leakage_check"]["passed"] is True
     assert report["duplicate_key_count"] == 0
     assert report["horizons_represented"] == list(range(1, 25))
+    assert report["dataset_status"] == DATASET_STATUS_PARTIALLY_READY
+    assert report["distinct_issue_cycles"] == 1
+    assert report["distinct_calendar_days"] == 1
+    assert report["horizon_coverage_count"] == 24
+    assert report["horizons_missing_from_dataset"] == []
 
 
 def test_pt15m_forecasts_are_averaged_only_from_complete_quarters():
@@ -368,4 +379,101 @@ def test_builder_is_not_wired_to_production_forecasting():
 
     assert "build_next24h_exogenous_silver" not in scheduled
     assert "build_next24h_exogenous_silver" not in production
+
+
+def _readiness_rows(cycles, horizons=range(1, 25)):
+    rows = []
+    for issue in cycles:
+        for horizon in horizons:
+            rows.append(
+                {
+                    "collection_issue_time": issue,
+                    "target_timestamp": issue + pd.Timedelta(hours=horizon),
+                    "horizon_hours": horizon,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _passing_audit(data):
+    return {
+        "passed": True,
+        "duplicate_key_count": int(
+            data.duplicated(
+                ["collection_issue_time", "target_timestamp", "horizon_hours"]
+            ).sum()
+        ),
+    }
+
+
+def test_zero_output_rows_are_not_ready_in_generated_quality_report():
+    inputs = list(_inputs())
+    silver = inputs[0]
+    future = pd.to_datetime(silver["timestamp"], utc=True) > ISSUE
+    silver.loc[future, "price_eur_mwh"] = np.nan
+    inputs[0] = silver
+
+    data, report = _build(tuple(inputs))
+
+    assert data.empty
+    assert report["dataset_status"] == DATASET_STATUS_NOT_READY
+    assert "No complete training rows are currently available" in report[
+        "readiness_reasons"
+    ]
+    assert report["leakage_check"]["passed"] is True
+
+
+def test_complete_rows_with_insufficient_history_are_partially_ready():
+    data = _readiness_rows([ISSUE])
+    readiness = assess_dataset_readiness(data, _passing_audit(data))
+
+    assert readiness["dataset_status"] == DATASET_STATUS_PARTIALLY_READY
+    assert readiness["complete_issue_cycles"] == 1
+    assert readiness["horizon_coverage_count"] == 24
+    assert readiness["readiness_reasons"]
+
+
+def test_full_engineering_thresholds_are_ready_for_evaluation():
+    cycles = [
+        ISSUE.floor("D") + pd.Timedelta(days=day, hours=hour)
+        for day in range(MIN_READY_CALENDAR_DAYS)
+        for hour in (0, 12)
+    ][:MIN_READY_ISSUE_CYCLES]
+    data = _readiness_rows(cycles)
+    readiness = assess_dataset_readiness(data, _passing_audit(data))
+
+    assert readiness["dataset_status"] == DATASET_STATUS_READY
+    assert readiness["distinct_issue_cycles"] == MIN_READY_ISSUE_CYCLES
+    assert readiness["distinct_calendar_days"] == MIN_READY_CALENDAR_DAYS
+    assert readiness["horizons_missing_from_dataset"] == []
+    assert readiness["readiness_reasons"] == []
+
+
+def test_leakage_failure_can_never_be_ready_for_evaluation():
+    cycles = [
+        ISSUE.floor("D") + pd.Timedelta(days=day, hours=hour)
+        for day in range(MIN_READY_CALENDAR_DAYS)
+        for hour in (0, 12)
+    ][:MIN_READY_ISSUE_CYCLES]
+    data = _readiness_rows(cycles)
+    audit = _passing_audit(data)
+    audit["passed"] = False
+    readiness = assess_dataset_readiness(data, audit)
+
+    assert readiness["dataset_status"] == DATASET_STATUS_NOT_READY
+    assert "Leakage audit did not pass" in readiness["readiness_reasons"]
+
+
+def test_missing_horizons_prevent_ready_for_evaluation():
+    cycles = [
+        ISSUE.floor("D") + pd.Timedelta(days=day, hours=hour)
+        for day in range(MIN_READY_CALENDAR_DAYS)
+        for hour in (0, 12)
+    ][:MIN_READY_ISSUE_CYCLES]
+    data = _readiness_rows(cycles, horizons=range(1, 24))
+    readiness = assess_dataset_readiness(data, _passing_audit(data))
+
+    assert readiness["dataset_status"] == DATASET_STATUS_NOT_READY
+    assert readiness["horizon_coverage_count"] == 23
+    assert readiness["horizons_missing_from_dataset"] == [24]
 

@@ -1,0 +1,25 @@
+[Unit]
+Description=PowerFlow read-only FastAPI service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/Electricity_Trading_Pipeline
+Environment=PYTHONPATH=/home/ec2-user/Electricity_Trading_Pipeline/src
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/ec2-user/Electricity_Trading_Pipeline/.venv-prod/bin/uvicorn api.app:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

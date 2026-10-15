@@ -523,6 +523,13 @@ Verify them with `systemctl status`; rerun `bootstrap_ec2_data.sh` only when loc
 working files are missing, and rerun `setup_prefect_ec2.sh` only when the pool or
 deployment needs to be restored or updated.
 
+The read-only FastAPI service runs independently on loopback and is
+published by the existing Nginx HTTPS server beneath `/api/`. Install, update,
+validate, or roll back that service using
+[`docs/api_ec2_deployment.md`](docs/api_ec2_deployment.md). Do not open port
+8000 in the EC2 security group; the documented Nginx snippet preserves the
+existing Streamlit route and HTTP-to-HTTPS redirect.
+
 Before the final reboot-persistence test, audit resource usage and IAM-backed S3
 access. These reads do not modify production objects:
 

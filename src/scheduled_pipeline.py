@@ -33,6 +33,7 @@ from models.next24h_production import (
     run_next24h_forecast,
 )
 from models.prediction_visualization import run_prediction_report
+from monitoring.forecast_vintage_health import write_forecast_vintage_health_report
 from notifications.email_alert import (
     DEFAULT_ALERT_COOLDOWN_HOURS,
     alert_cooldown_hours,
@@ -41,6 +42,7 @@ from notifications.email_alert import (
     send_failure_alert,
 )
 from store_data import (
+    DATABASE_PATH,
     failure_alert_cooldown_active,
     incident_is_active,
     initialize_database,
@@ -397,6 +399,16 @@ def forecast_vintage_collection_task(collection_issue_time=None) -> dict:
         "validated_local_persistence": successful > 0,
         "sources": sources,
     }
+
+
+@task(name="Monitor forecast vintage health")
+def forecast_vintage_health_task(collection_result: dict) -> dict:
+    """Write a read-only health summary for the optional vintage datasets."""
+    return write_forecast_vintage_health_report(
+        project_root=PROJECT_ROOT,
+        collection_result=collection_result,
+        database_path=PROJECT_ROOT / DATABASE_PATH,
+    )
 
 
 @task(name="Build silver dataset")
@@ -802,6 +814,58 @@ def _run_forecast_vintage_collection(
     return result
 
 
+def _run_forecast_vintage_health(
+    collection_result: dict,
+    storage_state: dict,
+    run_id: str | None = None,
+):
+    """Monitor vintages without allowing monitoring to block production."""
+    try:
+        report = _timed_stage(
+            run_id,
+            "Forecast-vintage health monitoring",
+            forecast_vintage_health_task,
+            collection_result,
+        )
+        storage_state["forecast_vintage_health_status"] = report["overall_status"]
+        storage_state["forecast_vintage_health_report"] = (
+            "data/reports/monitoring/forecast_vintage_health.json"
+        )
+        quality_status = (
+            "PASSED" if report["overall_status"] == "HEALTHY" else "WARNING"
+        )
+        try:
+            initialize_database()
+            log_data_quality_result(
+                "forecast_vintage_health",
+                quality_status,
+                json.dumps(
+                    {
+                        "overall_status": report["overall_status"],
+                        "sources": {
+                            item["source"]: item["status"]
+                            for item in report["sources"]
+                        },
+                    },
+                    sort_keys=True,
+                ),
+            )
+        except Exception:
+            logger.exception("Unable to record forecast-vintage health state.")
+        return report
+    except Exception as error:
+        storage_state["forecast_vintage_health_status"] = "FAILED"
+        storage_state.setdefault("warnings", []).append(
+            "Forecast-vintage health monitoring failed "
+            f"({type(error).__name__}); production forecasting continued."
+        )
+        logger.exception("Optional forecast-vintage health monitoring failed.")
+        return {
+            "overall_status": "FAILED",
+            "monitoring_error": type(error).__name__,
+        }
+
+
 def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
     release_id = _timed_stage(
         run_id, "Next24h model verification", verify_next24h_release_task
@@ -1046,7 +1110,11 @@ def powerflow_entsoe_pipeline(
         _sync_storage_group(storage_sync, storage_state, "raw_weather", stage_name)
 
         stage_name = "Forecast-vintage collection (non-blocking)"
-        _run_forecast_vintage_collection(storage_sync, storage_state, run_id)
+        vintage_collection_result = _run_forecast_vintage_collection(storage_sync, storage_state, run_id)
+        stage_name = "Forecast-vintage health monitoring (non-blocking)"
+        _run_forecast_vintage_health(
+            vintage_collection_result, storage_state, run_id
+        )
 
         raw_rows_after = _raw_row_counts()
         if mode == "incremental":

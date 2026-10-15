@@ -108,6 +108,26 @@ Generated analysis and model outputs, including:
 
 These reports can be regenerated and are excluded from Git.
 
+### Forecast-vintage health report
+
+The scheduled pipeline writes a compact, read-only collection-health summary to
+`reports/monitoring/forecast_vintage_health.json`. It monitors the four distinct
+ENTSO-E document/process combinations plus Open-Meteo without supplying inputs to
+either production forecast model. A monitoring failure is therefore non-blocking.
+
+The expected collection schedule is hourly. An acquisition no more than 90
+minutes old is fresh; an age over 90 minutes is `DEGRADED`, and an age over 180
+minutes is `STALE`. Missing or invalid files and files without a usable collection
+cycle are `FAILED`. Fresh collections are also `DEGRADED` when target intervals
+are missing, duplicate vintage identities are present, recent collection failures
+exist, or the latest S3 synchronization failed. Open-Meteo requires all horizons
+1 through 24. ENTSO-E coverage is calculated separately for every document,
+revision, technology, and source resolution over its actual returned target range;
+the monitor does not impose a common row count on different endpoints. Overall
+health is the most severe source status (`FAILED`, then `STALE`, `DEGRADED`, and
+`HEALTHY`). The thresholds and their descriptions are also embedded in every JSON
+report so the operational interpretation remains inspectable.
+
 ## S3 durable layout
 
 The storage mapping is intentionally stable and independent of the local directory

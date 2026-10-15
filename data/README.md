@@ -17,6 +17,42 @@ The ENTSO-E files contain Germany-Luxembourg market data. The weather file conta
 
 The root-level `raw/electricity_market_data.csv` belongs to the retained legacy EIA pipeline.
 
+#### Forecast vintages
+
+Future-known exogenous forecasts are stored separately from observed inputs:
+
+- `raw/entsoe/forecasts/load_forecast_vintages.csv`
+- `raw/entsoe/forecasts/wind_solar_forecast_vintages.csv`
+- `raw/entsoe/forecasts/generation_forecast_vintages.csv`
+- `raw/weather/open_meteo_forecast_vintages.csv`
+
+The ENTSO-E grain is one source-document vintage, target timestamp, and
+controlled technology. Provenance includes `source`, `document_type`,
+`process_type`, `document_id`, `revision_number`, `source_created_at_utc`,
+`acquired_at_utc`, `market_area`, `resolution`, and forecast horizon. The
+`source_created_at_utc` field is the timestamp declared by the source document;
+`acquired_at_utc` records when PowerFlow actually retrieved that document. Both
+are retained because document creation does not prove the exact API publication
+or first-availability time.
+
+ENTSO-E rows are never collapsed by target timestamp alone. Document and process
+type, document identifier, revision, creation time, target, and technology form
+the source-vintage identity. A later `revision_number` remains a separate vintage,
+while an identical reacquisition is idempotent. A69 day-ahead (`A01`) and intraday
+(`A40`) wind/solar forecasts therefore remain distinguishable.
+
+Open-Meteo exposes no equivalent ENTSO-E document revision identifier. Its grain
+is the PowerFlow forecast issue hour, acquisition time, provider/model, and target
+hour. Each acquisition stores exactly target hours t+1 through t+24. Here,
+`forecast_issue_time` is PowerFlow's UTC issue hour and `acquired_at_utc` is the
+actual retrieval time; separate acquisitions are preserved as separate vintages.
+
+These forecast-vintage files are not observed market or weather history. They are
+not inputs to the current Raw-to-Silver-to-Gold builders and must never be joined
+to historical training rows merely by target timestamp. Preserving issue,
+creation, acquisition, process, and revision metadata is the anti-leakage control
+needed for future as-of joins and honest forecast backtests.
+
 ### `external/`
 
 Downloaded EIA and Open-Meteo files used by the retained legacy California pipeline. These are generated external inputs and are not part of the primary ENTSO-E flow.
@@ -70,6 +106,10 @@ layout:
 - ENTSO-E load: `raw/entsoe/load/load.csv`
 - ENTSO-E generation: `raw/entsoe/generation/generation.csv`
 - Open-Meteo: `raw/weather/open_meteo_weather.csv`
+- ENTSO-E load forecast vintages: `raw/entsoe/forecasts/load/load_forecast_vintages.csv`
+- ENTSO-E wind/solar forecast vintages: `raw/entsoe/forecasts/wind-solar/wind_solar_forecast_vintages.csv`
+- ENTSO-E generation forecast vintages: `raw/entsoe/forecasts/generation/generation_forecast_vintages.csv`
+- Open-Meteo operational forecast vintages: `raw/weather/operational-forecasts/open_meteo_forecast_vintages.csv`
 - Silver: `silver/silver_electricity_market_data.csv`
 - Gold: `gold/gold_model_features.csv`
 - predictions: `reports/predictions/`
@@ -82,6 +122,13 @@ Silver/Gold validation. Reports are synchronized after their generator succeeds.
 Content hashes prevent unnecessary reuploads. Local mode is the default and makes
 no AWS calls. S3 mode uses the standard AWS credential chain; access keys must not
 be written into tracked files.
+
+The four vintage files form the `forecast_vintages` storage group. This group is
+separate from the observed `raw`, `raw_entsoe`, and `raw_weather` groups, so merely
+adding recovery support does not schedule forecast collection or change existing
+pipeline sync behavior. EC2 bootstrap restores vintage files when present in S3
+but treats them as optional until their first successful collection. Existing
+observed Raw, Silver, Gold, and frozen model-release files remain required.
 
 ### `backups/`
 

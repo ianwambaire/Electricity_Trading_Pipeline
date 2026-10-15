@@ -13,6 +13,16 @@ from dotenv import load_dotenv
 from prefect import flow, task
 
 from ingestion.fetch_entsoe_data import fetch_entsoe_data, latest_generation_timestamp
+from ingestion.fetch_entsoe_forecasts import (
+    DEFAULT_OUTPUT_PATHS as ENTSOE_FORECAST_OUTPUT_PATHS,
+    collect_entsoe_forecast_vintages,
+    normalize_entsoe_vintages,
+)
+from ingestion.fetch_operational_weather_forecasts import (
+    OUTPUT_PATH as WEATHER_FORECAST_OUTPUT_PATH,
+    fetch_operational_weather_forecast_vintage,
+    normalize_weather_forecast_vintages,
+)
 from ingestion.fetch_weather_data import fetch_open_meteo_weather
 from ingestion.incremental_utils import latest_stored_timestamp
 from models.final_model_runtime import load_final_model_release
@@ -208,6 +218,191 @@ def weather_ingestion_task(mode: str, start_date=None, end_date=None):
     metadata = fetch_open_meteo_weather(start_date, end_date, mode=mode)
     logger.info("Completed stage: Open-Meteo %s ingestion", mode)
     return metadata
+
+
+def _safe_collection_failure(
+    source: str,
+    error: Exception,
+    acquisition_timestamp: str,
+    local_destination,
+) -> dict:
+    """Describe an optional-provider failure without persisting its payload."""
+    return {
+        "source": source,
+        "status": "FAILED",
+        "rows_acquired": 0,
+        "rows_newly_persisted": 0,
+        "duplicate_rows": 0,
+        "revision_count": None,
+        "acquisition_timestamp": acquisition_timestamp,
+        "local_destination": local_destination,
+        "s3_sync_status": "NOT_ATTEMPTED",
+        "error_type": type(error).__name__,
+    }
+
+
+def _validate_entsoe_collection_results(
+    results: dict,
+    acquisition_timestamp: str,
+) -> list[dict]:
+    """Revalidate persisted ENTSO-E files before they become S3 eligible."""
+    source_names = {
+        "load": "ENTSOE_TOTAL_LOAD",
+        "wind_solar": "ENTSOE_WIND_SOLAR",
+        "generation": "ENTSOE_TOTAL_GENERATION",
+    }
+    endpoint_names = {
+        "load": ("load",),
+        "wind_solar": (
+            "wind_solar_day_ahead",
+            "wind_solar_intraday",
+        ),
+        "generation": ("generation",),
+    }
+    summaries = []
+    acquired_at = pd.Timestamp(acquisition_timestamp)
+    for group, source in source_names.items():
+        details = results[group]
+        path = Path(details["path"])
+        stored = normalize_entsoe_vintages(
+            pd.read_csv(path, dtype={"revision_number": "string"})
+        )
+        if len(stored) != int(details["rows_after"]):
+            raise ValueError(f"Validated row count mismatch for {source}.")
+        acquired_rows = stored.loc[stored["acquired_at_utc"].eq(acquired_at)]
+        revision_count = len(
+            acquired_rows[
+                [
+                    "document_type",
+                    "process_type",
+                    "document_id",
+                    "revision_number",
+                ]
+            ].drop_duplicates()
+        )
+        fetched_rows = int(details["fetched_rows"])
+        new_rows = int(details["new_rows"])
+        summaries.append(
+            {
+                "source": source,
+                "status": "SUCCESS",
+                "rows_acquired": fetched_rows,
+                "rows_newly_persisted": new_rows,
+                "duplicate_rows": max(0, fetched_rows - new_rows),
+                "revision_count": revision_count,
+                "endpoint_rows": {
+                    endpoint: int(results["endpoints"][endpoint])
+                    for endpoint in endpoint_names[group]
+                },
+                "acquisition_timestamp": acquisition_timestamp,
+                "local_destination": str(path),
+                "s3_sync_status": "PENDING",
+            }
+        )
+    return summaries
+
+
+def _validate_weather_collection_result(
+    result: dict,
+    acquisition_timestamp: str,
+) -> dict:
+    """Revalidate the exact t+1..t+24 weather vintage after atomic write."""
+    path = Path(result["path"])
+    stored = normalize_weather_forecast_vintages(pd.read_csv(path))
+    acquired_at = pd.Timestamp(acquisition_timestamp)
+    acquired_rows = stored.loc[stored["acquired_at_utc"].eq(acquired_at)]
+    if len(acquired_rows) != 24:
+        raise ValueError("Validated Open-Meteo acquisition must contain 24 rows.")
+    if len(stored) != int(result["rows_after"]):
+        raise ValueError("Validated row count mismatch for OPEN_METEO.")
+    new_rows = int(result["new_rows"])
+    return {
+        "source": "OPEN_METEO",
+        "status": "SUCCESS",
+        "rows_acquired": 24,
+        "rows_newly_persisted": new_rows,
+        "duplicate_rows": max(0, 24 - new_rows),
+        "revision_count": None,
+        "acquisition_timestamp": acquisition_timestamp,
+        "local_destination": str(path),
+        "s3_sync_status": "PENDING",
+    }
+
+
+@task(name="Collect forecast vintages")
+def forecast_vintage_collection_task(acquired_at_utc=None) -> dict:
+    """Collect optional forecast vintages without calling production inference."""
+    acquired = pd.Timestamp(
+        acquired_at_utc if acquired_at_utc is not None else datetime.now(timezone.utc)
+    )
+    if acquired.tzinfo is None:
+        raise ValueError("acquired_at_utc must include an explicit timezone.")
+    acquired = acquired.tz_convert("UTC")
+    acquisition_timestamp = acquired.isoformat()
+    issue_time = acquired.floor("h")
+    entsoe_paths = {
+        group: PROJECT_ROOT / path
+        for group, path in ENTSOE_FORECAST_OUTPUT_PATHS.items()
+    }
+    weather_path = PROJECT_ROOT / WEATHER_FORECAST_OUTPUT_PATH
+    sources = []
+
+    try:
+        entsoe_results = collect_entsoe_forecast_vintages(
+            issue_time + pd.Timedelta(hours=1),
+            issue_time + pd.Timedelta(hours=25),
+            acquired_at_utc=acquired,
+            output_paths=entsoe_paths,
+        )
+        sources.extend(
+            _validate_entsoe_collection_results(
+                entsoe_results,
+                acquisition_timestamp,
+            )
+        )
+    except Exception as error:
+        sources.append(
+            _safe_collection_failure(
+                "ENTSOE",
+                error,
+                acquisition_timestamp,
+                [str(path) for path in entsoe_paths.values()],
+            )
+        )
+
+    try:
+        weather_result = fetch_operational_weather_forecast_vintage(
+            issue_time,
+            acquired_at_utc=acquired,
+            output_path=weather_path,
+        )
+        sources.append(
+            _validate_weather_collection_result(
+                weather_result,
+                acquisition_timestamp,
+            )
+        )
+    except Exception as error:
+        sources.append(
+            _safe_collection_failure(
+                "OPEN_METEO",
+                error,
+                acquisition_timestamp,
+                str(weather_path),
+            )
+        )
+
+    successful = sum(item["status"] == "SUCCESS" for item in sources)
+    status = "SUCCESS" if successful == len(sources) else "PARTIAL"
+    if successful == 0:
+        status = "FAILED"
+    return {
+        "status": status,
+        "issue_time": issue_time.isoformat(),
+        "acquisition_timestamp": acquisition_timestamp,
+        "validated_local_persistence": successful > 0,
+        "sources": sources,
+    }
 
 
 @task(name="Build silver dataset")
@@ -530,6 +725,90 @@ def _sync_storage_group(synchronizer, storage_state, group, stage_name):
     return result
 
 
+def _run_forecast_vintage_collection(
+    storage_sync,
+    storage_state: dict,
+    run_id: str | None = None,
+):
+    """Run optional vintage collection and S3 sync without failing production."""
+    try:
+        result = _timed_stage(
+            run_id,
+            "Forecast-vintage collection",
+            forecast_vintage_collection_task,
+        )
+    except Exception as error:
+        acquisition_timestamp = _utc_now()
+        result = {
+            "status": "FAILED",
+            "issue_time": None,
+            "acquisition_timestamp": acquisition_timestamp,
+            "validated_local_persistence": False,
+            "sources": [
+                _safe_collection_failure(
+                    "FORECAST_VINTAGE_STAGE",
+                    error,
+                    acquisition_timestamp,
+                    None,
+                )
+            ],
+        }
+
+    successful_sources = [
+        item for item in result["sources"] if item["status"] == "SUCCESS"
+    ]
+    sync_status = "NOT_ATTEMPTED"
+    if successful_sources and result.get("validated_local_persistence"):
+        try:
+            sync_result = storage_sync.sync_group(
+                "forecast_vintages",
+                require_all=False,
+            )
+            storage_state.setdefault("objects_uploaded", []).extend(
+                sync_result.uploaded
+            )
+            storage_state.setdefault("objects_unchanged", []).extend(
+                sync_result.unchanged
+            )
+            sync_status = sync_result.status
+        except Exception as error:
+            sync_status = "FAILED"
+            storage_state.setdefault("warnings", []).append(
+                "Forecast-vintage S3 synchronization failed "
+                f"({type(error).__name__})."
+            )
+
+    for source in successful_sources:
+        source["s3_sync_status"] = sync_status
+    result["s3_sync_status"] = sync_status
+    storage_state["forecast_vintage_s3_sync_status"] = sync_status
+    storage_state["forecast_vintage_collection"] = result
+
+    failed_sources = [
+        item for item in result["sources"] if item["status"] == "FAILED"
+    ]
+    for source in failed_sources:
+        storage_state.setdefault("warnings", []).append(
+            f"Optional forecast-vintage source {source['source']} failed "
+            f"({source['error_type']})."
+        )
+
+    logger.info(
+        "Forecast-vintage collection result: %s",
+        json.dumps(result, sort_keys=True),
+    )
+    try:
+        initialize_database()
+        log_data_quality_result(
+            "forecast_vintage_collection",
+            "PASSED" if result["status"] == "SUCCESS" else "WARNING",
+            json.dumps(result, sort_keys=True),
+        )
+    except Exception:
+        logger.exception("Unable to record forecast-vintage collection state.")
+    return result
+
+
 def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
     release_id = _timed_stage(
         run_id, "Next24h model verification", verify_next24h_release_task
@@ -772,6 +1051,10 @@ def powerflow_entsoe_pipeline(
 
         stage_name = "Open-Meteo raw S3 synchronization"
         _sync_storage_group(storage_sync, storage_state, "raw_weather", stage_name)
+
+        stage_name = "Forecast-vintage collection (non-blocking)"
+        _run_forecast_vintage_collection(storage_sync, storage_state, run_id)
+
         raw_rows_after = _raw_row_counts()
         if mode == "incremental":
             new_rows_ingested = sum(

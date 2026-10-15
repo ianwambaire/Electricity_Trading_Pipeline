@@ -589,6 +589,11 @@ def _configure_no_change_pipeline(monkeypatch, pipeline, tmp_path):
         "weather_ingestion_task",
         lambda *args: {"new_rows": 0, "changed": False},
     )
+    monkeypatch.setattr(
+        pipeline,
+        "_run_forecast_vintage_collection",
+        lambda *args: {"status": "SUCCESS", "sources": []},
+    )
     monkeypatch.setattr(pipeline, "_sync_storage_group", lambda *args: None)
     monkeypatch.setattr(pipeline, "log_stage_timing", lambda *args: None)
     monkeypatch.setattr(pipeline, "_record_incident", lambda *args, **kwargs: True)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -417,6 +418,111 @@ def test_bootstrap_contains_both_frozen_release_mappings():
     }
     assert all(mapping in script for mapping in expected)
     assert 'if [[ -f "${destination}" && "${FORCE}" -ne 1 ]]' in script
+
+
+def _temporary_bootstrap_project(tmp_path):
+    project = tmp_path / "project"
+    scripts = project / "scripts"
+    scripts.mkdir(parents=True)
+    bootstrap = scripts / "bootstrap_ec2_data.sh"
+    bootstrap.write_text(
+        (PROJECT_ROOT / "scripts/bootstrap_ec2_data.sh").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_aws = fake_bin / "aws"
+    fake_aws.write_text(
+        """#!/usr/bin/env bash
+set -eu
+source_uri="$3"
+destination="$4"
+if [[ -n "${FAKE_FAIL_KEY:-}" && "${source_uri}" == *"${FAKE_FAIL_KEY}"* ]]; then
+  exit 1
+fi
+if [[ "${FAKE_OPTIONAL_MISSING:-0}" == "1" ]] &&
+   { [[ "${source_uri}" == *"/entsoe/forecasts/"* ]] ||
+     [[ "${source_uri}" == *"/operational-forecasts/"* ]]; }; then
+  exit 1
+fi
+printf 'restored from %s\n' "${source_uri}" > "${destination}"
+""",
+        encoding="utf-8",
+    )
+    fake_aws.chmod(0o755)
+    environment = os.environ.copy()
+    environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
+    return project, bootstrap, environment
+
+
+def test_bootstrap_skips_missing_optional_forecast_vintages(tmp_path):
+    project, bootstrap, environment = _temporary_bootstrap_project(tmp_path)
+    environment["FAKE_OPTIONAL_MISSING"] = "1"
+
+    result = subprocess.run(
+        ["bash", str(bootstrap), "--bucket", "powerflow", "--region", "us-east-1"],
+        capture_output=True,
+        text=True,
+        env=environment,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "completed successfully" in result.stdout
+    assert result.stderr.count("Optional forecast vintage unavailable") == 4
+    assert (project / "data/raw/entsoe/prices.csv").is_file()
+    assert (project / "data/processed/silver_electricity_market_data.csv").is_file()
+    assert (project / "artifacts/models/final_gold_model.joblib").is_file()
+    assert not (
+        project / "data/raw/entsoe/forecasts/load_forecast_vintages.csv"
+    ).exists()
+
+
+def test_bootstrap_fails_loudly_when_required_production_file_is_unavailable(
+    tmp_path,
+):
+    _, bootstrap, environment = _temporary_bootstrap_project(tmp_path)
+    environment["FAKE_FAIL_KEY"] = "raw/entsoe/load/load.csv"
+
+    result = subprocess.run(
+        ["bash", str(bootstrap), "--bucket", "powerflow", "--region", "us-east-1"],
+        capture_output=True,
+        text=True,
+        env=environment,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "Required production artifact unavailable" in result.stderr
+    assert "raw/entsoe/load/load.csv" in result.stderr
+
+
+def test_frozen_production_release_hashes_are_unchanged():
+    expected = {
+        "artifacts/models/final_gold_model.joblib": (
+            "14040b7696e8f433b50bb82c5cb0501c85c9874987f1ca68d814bc05c1736b4c"
+        ),
+        "artifacts/models/final_gold_model_features.joblib": (
+            "227ecd25aa75d482cfdedb8e4ca13ebb41da575836310871feac12199fb4e9c9"
+        ),
+        "artifacts/models/final_model_release_manifest.json": (
+            "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6"
+        ),
+        "artifacts/models/releases/next24h/next24h_model.joblib": (
+            "69a3fa10f45c18c4733b3f8e12792e36ec9b209b7afd5e94a9932315e4dde0ed"
+        ),
+        "artifacts/models/releases/next24h/next24h_feature_contract.joblib": (
+            "1d6554e469a869613dd91d820b0537b4562321ea69e8827ecb83137950078a88"
+        ),
+        "artifacts/models/releases/next24h/next24h_release_manifest.json": (
+            "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650"
+        ),
+    }
+
+    assert {
+        relative: sha256_file(PROJECT_ROOT / relative)
+        for relative in expected
+    } == expected
 
 
 def make_snapshot_project(root: Path) -> tuple[Path, Path]:

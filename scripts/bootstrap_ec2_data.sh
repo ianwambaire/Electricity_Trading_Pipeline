@@ -13,7 +13,9 @@ Usage: scripts/bootstrap_ec2_data.sh [--force] [--bucket NAME] [--region REGION]
 
 Downloads missing PowerFlow production working files from S3. Existing files
 are preserved unless --force is supplied. AWS credentials come from the normal
-AWS CLI provider chain (the EC2 IAM role in production).
+AWS CLI provider chain (the EC2 IAM role in production). Forecast-vintage files
+are optional until their first collection; observed datasets and model releases
+remain required.
 EOF
 }
 
@@ -95,6 +97,7 @@ command -v aws >/dev/null 2>&1 || {
 
 directories=(
   data/raw/entsoe
+  data/raw/entsoe/forecasts
   data/raw/weather
   data/processed
   data/features
@@ -108,7 +111,7 @@ for directory in "${directories[@]}"; do
   mkdir -p -- "${PROJECT_ROOT}/${directory}"
 done
 
-mappings=(
+required_mappings=(
   "raw/entsoe/prices/prices.csv|data/raw/entsoe/prices.csv"
   "raw/entsoe/load/load.csv|data/raw/entsoe/load.csv"
   "raw/entsoe/generation/generation.csv|data/raw/entsoe/generation.csv"
@@ -123,25 +126,51 @@ mappings=(
   "models/releases/next24h/next24h_release_manifest.json|artifacts/models/releases/next24h/next24h_release_manifest.json"
 )
 
-for mapping in "${mappings[@]}"; do
-  s3_key="${mapping%%|*}"
-  relative_path="${mapping#*|}"
-  destination="${PROJECT_ROOT}/${relative_path}"
+optional_mappings=(
+  "raw/entsoe/forecasts/load/load_forecast_vintages.csv|data/raw/entsoe/forecasts/load_forecast_vintages.csv"
+  "raw/entsoe/forecasts/wind-solar/wind_solar_forecast_vintages.csv|data/raw/entsoe/forecasts/wind_solar_forecast_vintages.csv"
+  "raw/entsoe/forecasts/generation/generation_forecast_vintages.csv|data/raw/entsoe/forecasts/generation_forecast_vintages.csv"
+  "raw/weather/operational-forecasts/open_meteo_forecast_vintages.csv|data/raw/weather/open_meteo_forecast_vintages.csv"
+)
+
+download_mapping() {
+  local mapping="$1"
+  local requirement="$2"
+  local s3_key="${mapping%%|*}"
+  local relative_path="${mapping#*|}"
+  local destination="${PROJECT_ROOT}/${relative_path}"
 
   if [[ -f "${destination}" && "${FORCE}" -ne 1 ]]; then
     echo "Keeping existing ${relative_path}"
-    continue
+    return 0
   fi
 
   TEMPORARY_FILE="${destination}.download.$$"
   echo "Downloading s3://${BUCKET}/${s3_key} -> ${relative_path}"
-  aws s3 cp \
+  if ! aws s3 cp \
     "s3://${BUCKET}/${s3_key}" \
     "${TEMPORARY_FILE}" \
     --region "${REGION}" \
-    --only-show-errors
+    --only-show-errors; then
+    rm -f -- "${TEMPORARY_FILE}"
+    TEMPORARY_FILE=""
+    if [[ "${requirement}" == "optional" ]]; then
+      echo "Optional forecast vintage unavailable; skipping ${relative_path}" >&2
+      return 0
+    fi
+    echo "Required production artifact unavailable: s3://${BUCKET}/${s3_key}" >&2
+    return 1
+  fi
   mv -f -- "${TEMPORARY_FILE}" "${destination}"
   TEMPORARY_FILE=""
+}
+
+for mapping in "${required_mappings[@]}"; do
+  download_mapping "${mapping}" required
+done
+
+for mapping in "${optional_mappings[@]}"; do
+  download_mapping "${mapping}" optional
 done
 
 echo "PowerFlow EC2 data bootstrap completed successfully."

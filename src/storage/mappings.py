@@ -8,6 +8,10 @@ ARTIFACT_MAPPINGS = {
     "data/raw/entsoe/load.csv": "raw/entsoe/load/load.csv",
     "data/raw/entsoe/generation.csv": "raw/entsoe/generation/generation.csv",
     "data/raw/weather/open_meteo_weather.csv": "raw/weather/open_meteo_weather.csv",
+    "data/raw/entsoe/forecasts/load_forecast_vintages.csv": "raw/entsoe/forecasts/load/load_forecast_vintages.csv",
+    "data/raw/entsoe/forecasts/wind_solar_forecast_vintages.csv": "raw/entsoe/forecasts/wind-solar/wind_solar_forecast_vintages.csv",
+    "data/raw/entsoe/forecasts/generation_forecast_vintages.csv": "raw/entsoe/forecasts/generation/generation_forecast_vintages.csv",
+    "data/raw/weather/open_meteo_forecast_vintages.csv": "raw/weather/operational-forecasts/open_meteo_forecast_vintages.csv",
     "data/processed/silver_electricity_market_data.csv": "silver/silver_electricity_market_data.csv",
     "data/features/gold_model_features.csv": "gold/gold_model_features.csv",
     "data/reports/actual_vs_predicted.csv": "reports/predictions/actual_vs_predicted.csv",
@@ -32,10 +36,24 @@ ARTIFACT_MAPPINGS = {
     "data/reports/final_holdout_regime_performance.csv": "models/releases/final_holdout_regime_performance.csv",
 }
 
+OBSERVED_RAW_PATHS = (
+    "data/raw/entsoe/prices.csv",
+    "data/raw/entsoe/load.csv",
+    "data/raw/entsoe/generation.csv",
+    "data/raw/weather/open_meteo_weather.csv",
+)
+FORECAST_VINTAGE_PATHS = (
+    "data/raw/entsoe/forecasts/load_forecast_vintages.csv",
+    "data/raw/entsoe/forecasts/wind_solar_forecast_vintages.csv",
+    "data/raw/entsoe/forecasts/generation_forecast_vintages.csv",
+    "data/raw/weather/open_meteo_forecast_vintages.csv",
+)
+
 GROUPS = {
-    "raw": tuple(key for key in ARTIFACT_MAPPINGS if key.startswith("data/raw/")),
-    "raw_entsoe": tuple(key for key in ARTIFACT_MAPPINGS if key.startswith("data/raw/entsoe/")),
+    "raw": OBSERVED_RAW_PATHS,
+    "raw_entsoe": OBSERVED_RAW_PATHS[:3],
     "raw_weather": ("data/raw/weather/open_meteo_weather.csv",),
+    "forecast_vintages": FORECAST_VINTAGE_PATHS,
     "silver": ("data/processed/silver_electricity_market_data.csv",),
     "gold": ("data/features/gold_model_features.csv",),
     "predictions": tuple(key for key in ARTIFACT_MAPPINGS if "reports/actual_vs_predicted" in key),

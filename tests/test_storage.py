@@ -5,7 +5,7 @@ import pytest
 from storage.base import StorageError
 from storage.config import StorageConfig
 from storage.local import LocalStorageBackend
-from storage.mappings import ARTIFACT_MAPPINGS, object_key
+from storage.mappings import ARTIFACT_MAPPINGS, GROUPS, object_key
 from storage.s3 import S3StorageBackend
 from storage.sync import StorageSync
 from scheduled_pipeline import _sync_storage_group
@@ -135,6 +135,42 @@ def test_expected_prefix_mappings_are_exact():
     )
 
 
+def test_forecast_vintage_mappings_and_group_are_exact():
+    expected = {
+        "data/raw/entsoe/forecasts/load_forecast_vintages.csv": (
+            "raw/entsoe/forecasts/load/load_forecast_vintages.csv"
+        ),
+        "data/raw/entsoe/forecasts/wind_solar_forecast_vintages.csv": (
+            "raw/entsoe/forecasts/wind-solar/wind_solar_forecast_vintages.csv"
+        ),
+        "data/raw/entsoe/forecasts/generation_forecast_vintages.csv": (
+            "raw/entsoe/forecasts/generation/generation_forecast_vintages.csv"
+        ),
+        "data/raw/weather/open_meteo_forecast_vintages.csv": (
+            "raw/weather/operational-forecasts/open_meteo_forecast_vintages.csv"
+        ),
+    }
+
+    assert {path: ARTIFACT_MAPPINGS[path] for path in expected} == expected
+    assert GROUPS["forecast_vintages"] == tuple(expected)
+
+
+def test_observed_raw_mappings_and_groups_remain_unchanged():
+    expected = {
+        "data/raw/entsoe/prices.csv": "raw/entsoe/prices/prices.csv",
+        "data/raw/entsoe/load.csv": "raw/entsoe/load/load.csv",
+        "data/raw/entsoe/generation.csv": "raw/entsoe/generation/generation.csv",
+        "data/raw/weather/open_meteo_weather.csv": (
+            "raw/weather/open_meteo_weather.csv"
+        ),
+    }
+
+    assert {path: ARTIFACT_MAPPINGS[path] for path in expected} == expected
+    assert GROUPS["raw"] == tuple(expected)
+    assert GROUPS["raw_entsoe"] == tuple(expected)[:3]
+    assert GROUPS["raw_weather"] == ("data/raw/weather/open_meteo_weather.csv",)
+
+
 def test_local_mode_sync_is_a_noop(tmp_path):
     config = StorageConfig(backend="local", local_root=tmp_path)
     sync = StorageSync(config, tmp_path)
@@ -156,6 +192,24 @@ def test_s3_sync_uploads_mapped_artifact(tmp_path):
     result = sync.sync_group("silver")
 
     assert result.uploaded == ["silver/silver_electricity_market_data.csv"]
+
+
+def test_forecast_vintage_group_can_sync_only_files_collected_so_far(tmp_path):
+    source = (
+        tmp_path
+        / "data/raw/entsoe/forecasts/load_forecast_vintages.csv"
+    )
+    source.parent.mkdir(parents=True)
+    source.write_text("target_timestamp,value_mw\n2026-10-15T01:00:00Z,1\n")
+    client = FakeS3Client()
+    backend = S3StorageBackend("bucket", "us-east-1", client=client)
+    sync = StorageSync(StorageConfig("s3", "bucket"), tmp_path, backend=backend)
+
+    result = sync.sync_group("forecast_vintages", require_all=False)
+
+    assert result.uploaded == [
+        "raw/entsoe/forecasts/load/load_forecast_vintages.csv"
+    ]
 
 
 def test_s3_config_uses_provider_chain_without_credentials(monkeypatch):

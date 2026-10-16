@@ -52,6 +52,7 @@ from store_data import (
     log_stage_timing,
 )
 from storage import StorageConfig, StorageSync
+from storage.mappings import object_key
 from processing.build_silver_dataset import clean_generation, clean_load, clean_prices
 from utils.logger import get_logger
 from validate_data import (
@@ -785,6 +786,21 @@ def _run_forecast_vintage_collection(
 
     for source in successful_sources:
         source["s3_sync_status"] = sync_status
+    if sync_status == "SUCCESS":
+        synced_keys = set(sync_result.uploaded) | set(sync_result.unchanged)
+        for source in result["sources"]:
+            destination = source.get("local_destination")
+            if source["status"] == "SUCCESS" or not isinstance(destination, str):
+                continue
+            try:
+                relative = Path(destination).resolve().relative_to(
+                    PROJECT_ROOT.resolve()
+                )
+                destination_key = object_key(relative)
+            except (KeyError, ValueError):
+                continue
+            if destination_key in synced_keys:
+                source["s3_sync_status"] = "SUCCESS"
     result["s3_sync_status"] = sync_status
     storage_state["forecast_vintage_s3_sync_status"] = sync_status
     storage_state["forecast_vintage_collection"] = result

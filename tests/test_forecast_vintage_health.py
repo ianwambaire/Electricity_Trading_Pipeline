@@ -158,6 +158,8 @@ def test_fresh_complete_collection_is_healthy_and_preserves_endpoint_grain(tmp_p
     assert all(source["status"] == "HEALTHY" for source in sources.values())
     assert sources["OPEN_METEO"]["observed_target_count"] == 24
     assert sources["OPEN_METEO"]["coverage_complete"] is True
+    assert sources["OPEN_METEO"]["duplicate_identity_count"] == 0
+    assert sources["OPEN_METEO"]["s3_sync_status"] == "SUCCESS"
     assert sources["ENTSOE_WIND_SOLAR_DAY_AHEAD"]["resolutions"] == ["PT60M"]
     assert sources["ENTSOE_WIND_SOLAR_INTRADAY"]["resolutions"] == ["PT15M"]
     assert sources["ENTSOE_WIND_SOLAR_DAY_AHEAD"]["process_type"] == "A01"
@@ -246,6 +248,28 @@ def test_duplicate_identity_is_counted_without_hiding_valid_health_data(tmp_path
 
     assert source["status"] == "DEGRADED"
     assert source["duplicate_identity_count"] == 1
+    assert source["coverage_complete"] is True
+
+
+def test_open_meteo_true_duplicate_target_identity_is_degraded(tmp_path):
+    specs = _create_complete_files(tmp_path)
+    weather_path = specs[-1].path
+    weather = pd.read_csv(weather_path)
+    pd.concat([weather, weather.iloc[[0]]], ignore_index=True).to_csv(
+        weather_path, index=False
+    )
+
+    report = build_forecast_vintage_health_report(
+        project_root=tmp_path,
+        now=NOW,
+        source_specs=(specs[-1],),
+        collection_result=_successful_collection_result(),
+    )
+    source = report["sources"][0]
+
+    assert source["status"] == "DEGRADED"
+    assert source["duplicate_identity_count"] == 1
+    assert source["observed_target_count"] == 24
     assert source["coverage_complete"] is True
 
 
@@ -354,6 +378,64 @@ def test_consecutive_failures_are_read_from_operational_metadata(tmp_path):
             )
 
     assert consecutive_collection_failures(spec, database_path=database) == 2
+
+
+def test_current_success_resets_prior_consecutive_failures(tmp_path):
+    spec = SourceSpec(
+        "OPEN_METEO",
+        "OPEN_METEO",
+        Path("unused.csv"),
+        collection_result_source="OPEN_METEO",
+    )
+    database = tmp_path / "operational.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute(
+            "CREATE TABLE pipeline_runs (id INTEGER PRIMARY KEY, run_time TEXT, status TEXT, records_processed INTEGER, message TEXT)"
+        )
+        for index in range(1, 3):
+            payload = {
+                "forecast_vintage_collection": {
+                    "sources": [{"source": "OPEN_METEO", "status": "FAILED"}]
+                }
+            }
+            connection.execute(
+                "INSERT INTO pipeline_runs VALUES (?, ?, ?, ?, ?)",
+                (index, f"2026-10-15T0{index}:00:00+00:00", "SUCCESS", 0, json.dumps(payload)),
+            )
+    current = {
+        "sources": [{"source": "OPEN_METEO", "status": "SUCCESS"}]
+    }
+
+    assert consecutive_collection_failures(
+        spec,
+        database_path=database,
+        current_collection_result=current,
+    ) == 0
+
+
+def test_failed_or_not_attempted_s3_sync_degrades_open_meteo(tmp_path):
+    specs = _create_complete_files(tmp_path)
+    for sync_status in ("FAILED", "NOT_ATTEMPTED"):
+        collection = {
+            "sources": [
+                {
+                    "source": "OPEN_METEO",
+                    "status": "SUCCESS",
+                    "s3_sync_status": sync_status,
+                }
+            ]
+        }
+        report = build_forecast_vintage_health_report(
+            project_root=tmp_path,
+            now=NOW,
+            source_specs=(specs[-1],),
+            collection_result=collection,
+        )
+        source = report["sources"][0]
+
+        assert source["status"] == "DEGRADED"
+        assert source["s3_sync_status"] == sync_status
+        assert any("S3 synchronization" in reason for reason in source["reasons"])
 
 
 def test_monitoring_failure_is_non_blocking_for_production_pipeline(monkeypatch):

@@ -4,6 +4,7 @@ import pytest
 from ingestion.fetch_operational_weather_forecasts import (
     WEATHER_FORECAST_COLUMNS,
     WEATHER_VARIABLES,
+    WEATHER_VINTAGE_IDENTITY,
     append_weather_forecast_vintages,
     fetch_operational_weather_forecast_vintage,
     merge_weather_forecast_vintages,
@@ -214,6 +215,37 @@ def test_idempotent_weather_reacquisition_does_not_rewrite_existing_file(tmp_pat
 
     assert result["new_rows"] == 0
     assert path.read_bytes() == before
+
+
+def test_append_repairs_identical_persisted_duplicates_and_adds_new_cycle(tmp_path):
+    original = parse_open_meteo_forecast(
+        _payload(), collection_issue_time=ISSUE, acquired_at_utc=ACQUIRED
+    )
+    path = tmp_path / "open_meteo_forecast_vintages.csv"
+    pd.concat([original, original], ignore_index=True).to_csv(path, index=False)
+    next_issue = ISSUE + pd.Timedelta(hours=1)
+    next_payload = _payload()
+    next_payload["hourly"]["time"] = [
+        (pd.Timestamp(value, tz="UTC") + pd.Timedelta(hours=1)).strftime(
+            "%Y-%m-%dT%H:%M"
+        )
+        for value in next_payload["hourly"]["time"]
+    ]
+    incoming = parse_open_meteo_forecast(
+        next_payload,
+        collection_issue_time=next_issue,
+        acquired_at_utc=ACQUIRED + pd.Timedelta(hours=1),
+    )
+
+    result = append_weather_forecast_vintages(path, incoming)
+    saved = pd.read_csv(path)
+
+    assert result["rows_before"] == 24
+    assert result["new_rows"] == 24
+    assert result["rows_after"] == 48
+    assert len(saved) == 48
+    assert saved["collection_issue_time"].nunique() == 2
+    assert not saved.duplicated(list(WEATHER_VINTAGE_IDENTITY)).any()
 
 
 def test_new_weather_cycle_migrates_legacy_issue_column_without_losing_rows(

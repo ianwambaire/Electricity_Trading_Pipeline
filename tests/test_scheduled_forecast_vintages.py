@@ -167,6 +167,68 @@ def test_s3_sync_requires_successful_local_validation(monkeypatch):
     assert result["s3_sync_status"] == "NOT_ATTEMPTED"
 
 
+def test_failed_weather_collection_reports_success_when_existing_file_was_synced(
+    tmp_path,
+    monkeypatch,
+):
+    weather_path = (
+        tmp_path / "data/raw/weather/open_meteo_forecast_vintages.csv"
+    )
+    weather_path.parent.mkdir(parents=True)
+    weather_path.write_text("existing valid vintage\n", encoding="utf-8")
+    entsoe = _successful_source(
+        source="ENTSOE_TOTAL_LOAD",
+        destination=str(
+            tmp_path / "data/raw/entsoe/forecasts/load_forecast_vintages.csv"
+        ),
+    )
+    weather_failure = {
+        "source": "OPEN_METEO",
+        "status": "FAILED",
+        "rows_acquired": 0,
+        "rows_newly_persisted": 0,
+        "duplicate_rows": 0,
+        "revision_count": None,
+        "collection_issue_time": COLLECTION_ISSUE,
+        "acquisition_timestamp": None,
+        "local_destination": str(weather_path),
+        "s3_sync_status": "NOT_ATTEMPTED",
+        "error_type": "ValueError",
+    }
+    collection = {
+        **_collection_result(entsoe, weather_failure),
+        "status": "PARTIAL",
+    }
+
+    class FakeSync:
+        config = StorageConfig("s3", "bucket")
+
+        def sync_group(self, group, *, require_all=True):
+            return SyncResult(
+                group,
+                "SUCCESS",
+                unchanged=[
+                    "raw/weather/operational-forecasts/open_meteo_forecast_vintages.csv"
+                ],
+            )
+
+    monkeypatch.setattr(pipeline, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(
+        pipeline, "forecast_vintage_collection_task", lambda: collection
+    )
+    monkeypatch.setattr(pipeline, "initialize_database", lambda: None)
+    monkeypatch.setattr(pipeline, "log_data_quality_result", lambda *args: None)
+    state = {"warnings": [], "objects_uploaded": [], "objects_unchanged": []}
+
+    result = pipeline._run_forecast_vintage_collection(FakeSync(), state)
+
+    weather = next(
+        source for source in result["sources"] if source["source"] == "OPEN_METEO"
+    )
+    assert weather["status"] == "FAILED"
+    assert weather["s3_sync_status"] == "SUCCESS"
+
+
 def test_all_optional_sources_can_fail_without_raising_or_s3_sync(monkeypatch):
     failure = {
         "source": "ENTSOE",

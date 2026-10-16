@@ -543,6 +543,8 @@ def _assess_entsoe_source(
         reasons.append(f"{failures} consecutive collection failure(s) recorded.")
     if s3_status == "FAILED":
         reasons.append("Latest S3 synchronization failed.")
+    elif s3_status == "NOT_ATTEMPTED":
+        reasons.append("Latest S3 synchronization was not attempted.")
     if status == STATUS_HEALTHY and reasons:
         status = STATUS_DEGRADED
 
@@ -680,6 +682,8 @@ def _assess_open_meteo_source(
         reasons.append(f"{failures} consecutive collection failure(s) recorded.")
     if s3_status == "FAILED":
         reasons.append("Latest S3 synchronization failed.")
+    elif s3_status == "NOT_ATTEMPTED":
+        reasons.append("Latest S3 synchronization was not attempted.")
     if status == STATUS_HEALTHY and reasons:
         status = STATUS_DEGRADED
     return {

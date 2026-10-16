@@ -256,11 +256,20 @@ def append_weather_forecast_vintages(
 ) -> dict[str, Any]:
     path = Path(path)
     _assert_safe_output_path(path)
-    existing = pd.read_csv(path) if path.exists() else None
+    existing_raw = pd.read_csv(path) if path.exists() else None
+    existing = (
+        None
+        if existing_raw is None
+        else normalize_weather_forecast_vintages(existing_raw)
+    )
     previous_rows = 0 if existing is None else len(existing)
     combined = merge_weather_forecast_vintages(existing, incoming)
     new_rows = len(combined) - previous_rows
-    if existing is None or new_rows:
+    normalization_changed_file = existing_raw is not None and (
+        len(existing_raw) != len(existing)
+        or tuple(existing_raw.columns) != WEATHER_FORECAST_COLUMNS
+    )
+    if existing is None or new_rows or normalization_changed_file:
         _write_atomic(combined, path)
     return {
         "path": str(path),

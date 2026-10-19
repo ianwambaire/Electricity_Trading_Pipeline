@@ -131,6 +131,183 @@ st.markdown(
         margin-top: 0.25rem;
     }
 
+    .auth-brand-panel {
+        min-height: 430px;
+        padding: 3.2rem 3.4rem;
+        border: 1px solid #DCE5EF;
+        border-radius: 14px;
+        background: #0F2744;
+        color: #FFFFFF;
+        box-shadow: 0 12px 34px rgba(15, 39, 68, 0.12);
+    }
+
+    .auth-wordmark {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 4.5rem;
+        font-size: 1.15rem;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+    }
+
+    .auth-wordmark span {
+        color: #69A9FF;
+    }
+
+    .auth-kicker {
+        color: #0B6FFB;
+        font-size: 0.73rem;
+        font-weight: 750;
+        letter-spacing: 0.075em;
+        text-transform: uppercase;
+    }
+
+    .auth-brand-panel .auth-kicker {
+        color: #9CC8FF;
+    }
+
+    .auth-brand-panel h1 {
+        max-width: 650px;
+        margin-top: 0.65rem !important;
+        color: #FFFFFF !important;
+        font-size: clamp(2rem, 3.5vw, 3.25rem) !important;
+        line-height: 1.05 !important;
+    }
+
+    .auth-description {
+        max-width: 590px;
+        margin: 1.25rem 0 1.8rem;
+        color: #D5E2F1;
+        font-size: 1rem;
+        line-height: 1.65;
+    }
+
+    .auth-context {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        color: #B9CBE0;
+        font-size: 0.76rem;
+        font-weight: 600;
+    }
+
+    .auth-form-heading {
+        margin: 2.2rem 0 1.15rem;
+    }
+
+    .auth-form-heading h2 {
+        margin: 0.45rem 0 0.35rem;
+        color: #0F2744 !important;
+        font-size: 1.75rem !important;
+        letter-spacing: -0.025em;
+    }
+
+    .auth-form-heading p {
+        margin: 0;
+        color: #667085;
+        font-size: 0.9rem;
+    }
+
+    div[data-testid="stForm"] {
+        padding: 1.3rem 1.4rem 1.4rem;
+        border: 1px solid #DCE3EA;
+        border-radius: 12px;
+        background: #FFFFFF;
+        box-shadow: 0 5px 18px rgba(16, 24, 40, 0.06);
+    }
+
+    div[data-testid="stTextInput"] label {
+        color: #344054 !important;
+        font-size: 0.82rem !important;
+        font-weight: 650 !important;
+    }
+
+    div[data-testid="stTextInput"] input {
+        border-color: #C8D2DE;
+        border-radius: 8px;
+        color: #172033;
+    }
+
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #0B6FFB;
+        box-shadow: 0 0 0 1px #0B6FFB;
+    }
+
+    div[data-testid="stFormSubmitButton"] button {
+        min-height: 2.75rem;
+        border: 1px solid #075DC7;
+        border-radius: 8px;
+        background: #0B6FFB;
+        color: #FFFFFF;
+        font-weight: 700;
+    }
+
+    div[data-testid="stFormSubmitButton"] button:hover {
+        border-color: #0752AF;
+        background: #075DC7;
+        color: #FFFFFF;
+    }
+
+    .auth-support-note {
+        margin-top: 0.9rem;
+        padding: 0.8rem 0.9rem;
+        border-left: 3px solid #9DB7D3;
+        background: #EEF3F8;
+        color: #53657A;
+        font-size: 0.78rem;
+        line-height: 1.5;
+    }
+
+    .auth-support-note strong {
+        color: #344054;
+    }
+
+    .sidebar-profile {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        margin: 0.15rem 0.5rem 0.55rem;
+        padding: 0.75rem;
+        border: 1px solid #E2E8F0;
+        border-radius: 9px;
+        background: #F8FAFC;
+    }
+
+    .sidebar-profile-avatar {
+        display: grid;
+        flex: 0 0 2.15rem;
+        width: 2.15rem;
+        height: 2.15rem;
+        place-items: center;
+        border-radius: 50%;
+        background: #DCEBFF;
+        color: #075DC7;
+        font-size: 0.82rem;
+        font-weight: 750;
+    }
+
+    .sidebar-profile-copy {
+        min-width: 0;
+    }
+
+    .sidebar-profile-label,
+    .sidebar-profile-role {
+        color: #667085;
+        font-size: 0.67rem;
+        line-height: 1.25;
+    }
+
+    .sidebar-profile-name {
+        overflow: hidden;
+        margin: 0.08rem 0;
+        color: #243B53;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .nav-section-label {
         font-size: 0.72rem;
         font-weight: 650;
@@ -337,6 +514,27 @@ st.markdown(
         div[data-testid="metric-container"] [data-testid="metric-value"],
         div[data-testid="stMetricValue"] {
             font-size: 1.3rem !important;
+        }
+
+        .auth-brand-panel {
+            min-height: auto;
+            padding: 2rem 1.6rem;
+        }
+
+        .auth-wordmark {
+            margin-bottom: 2.2rem;
+        }
+
+        .auth-brand-panel h1 {
+            font-size: 2rem !important;
+        }
+
+        .auth-form-heading {
+            margin-top: 0.75rem;
+        }
+
+        div[data-testid="stForm"] {
+            padding: 1.05rem;
         }
     }
     </style>

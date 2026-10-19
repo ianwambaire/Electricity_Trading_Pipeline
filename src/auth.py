@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import html
 import json
 import os
 import secrets
@@ -23,6 +24,8 @@ MAXIMUM_PBKDF2_ITERATIONS = 2_000_000
 GENERIC_LOGIN_FAILURE = "Sign-in failed. Check your credentials and try again."
 LOCKED_LOGIN_FAILURE = "Sign-in temporarily unavailable. Try again later."
 SUPPORTED_ROLES = ("analyst", "admin")
+DEFAULT_VERIFIED_ROLE = "analyst"
+TRUSTED_ADMIN_GROUP = "powerflow-admins"
 
 ALL_DASHBOARD_PAGES = (
     "Executive Overview",
@@ -436,46 +439,111 @@ def can_access_section(user: AuthUser, section: str) -> bool:
     return section not in ADMIN_ONLY_SECTIONS or user.role == "admin"
 
 
+def role_for_verified_identity(
+    *,
+    email_verified: bool,
+    groups: tuple[str, ...] | list[str] | set[str] | None = None,
+) -> str:
+    """Map future verified OIDC claims to a server-controlled dashboard role.
+
+    This Phase 1 seam is deliberately not connected to the active login flow.
+    A future Cognito integration may pass only claims from Streamlit's verified
+    OIDC identity. Unverified identities fail closed, every verified identity
+    defaults to Analyst, and Admin requires membership in the single trusted
+    Cognito group managed outside the public registration flow.
+    """
+    if email_verified is not True:
+        raise AuthorizationError(
+            "A verified identity is required for dashboard access."
+        )
+    normalized_groups = {
+        str(group).strip()
+        for group in (groups or ())
+        if isinstance(group, str) and str(group).strip()
+    }
+    if TRUSTED_ADMIN_GROUP in normalized_groups:
+        return "admin"
+    return DEFAULT_VERIFIED_ROLE
+
+
 def _render_login(st, settings: AuthSettings, users) -> None:
-    st.markdown(
-        """
-        <div class="page-heading">
-            <div class="page-eyebrow">PowerFlow</div>
-            <h1>Sign in</h1>
-            <p class="page-subtitle">Use your assigned PowerFlow dashboard account.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    def submit_login() -> None:
-        password = str(st.session_state.get(_LOGIN_PASSWORD_WIDGET, ""))
-        result = attempt_login(
-            st.session_state,
-            str(st.session_state.get(_LOGIN_USERNAME_WIDGET, "")),
-            password,
-            users,
-            settings,
+    brand_column, form_column = st.columns([1.12, 0.88], gap="large")
+    with brand_column:
+        st.markdown(
+            """
+            <section class="auth-brand-panel" aria-label="PowerFlow introduction">
+                <div class="auth-wordmark"><span aria-hidden="true">⚡</span> PowerFlow</div>
+                <div class="auth-kicker">Electricity market operations</div>
+                <h1>Decisions backed by a dependable market pipeline.</h1>
+                <p class="auth-description">
+                    Secure access to DE-LU market intelligence, forecasts,
+                    anomaly monitoring, and production pipeline health.
+                </p>
+                <div class="auth-context" role="note">
+                    <span>Restricted workspace</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Germany–Luxembourg</span>
+                </div>
+            </section>
+            """,
+            unsafe_allow_html=True,
         )
-        st.session_state[_LOGIN_MESSAGE] = result.message
-        st.session_state[_LOGIN_LOCKED] = result.locked
-        st.session_state.pop(_LOGIN_PASSWORD_WIDGET, None)
 
-    with st.form("powerflow_login_form"):
-        st.text_input("Username", key=_LOGIN_USERNAME_WIDGET)
-        st.text_input("Password", type="password", key=_LOGIN_PASSWORD_WIDGET)
-        st.form_submit_button(
-            "Sign in",
-            on_click=submit_login,
-            use_container_width=True,
+    with form_column:
+        st.markdown(
+            """
+            <div class="auth-form-heading">
+                <div class="auth-kicker">Secure account access</div>
+                <h2>Welcome back</h2>
+                <p>Sign in with the PowerFlow account assigned to you.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-    message = st.session_state.get(_LOGIN_MESSAGE)
-    if message:
-        st.error(message)
-    st.caption(
-        "Access is controlled by application-level authentication. Contact the "
-        "PowerFlow administrator if you cannot sign in."
-    )
+
+        def submit_login() -> None:
+            password = str(st.session_state.get(_LOGIN_PASSWORD_WIDGET, ""))
+            result = attempt_login(
+                st.session_state,
+                str(st.session_state.get(_LOGIN_USERNAME_WIDGET, "")),
+                password,
+                users,
+                settings,
+            )
+            st.session_state[_LOGIN_MESSAGE] = result.message
+            st.session_state[_LOGIN_LOCKED] = result.locked
+            st.session_state.pop(_LOGIN_PASSWORD_WIDGET, None)
+
+        with st.form("powerflow_login_form"):
+            st.text_input(
+                "Username",
+                key=_LOGIN_USERNAME_WIDGET,
+                placeholder="Enter your username",
+            )
+            st.text_input(
+                "Password",
+                type="password",
+                key=_LOGIN_PASSWORD_WIDGET,
+                placeholder="Enter your password",
+            )
+            st.form_submit_button(
+                "Sign in",
+                on_click=submit_login,
+                use_container_width=True,
+            )
+        message = st.session_state.get(_LOGIN_MESSAGE)
+        if message:
+            st.error(message)
+        st.markdown(
+            """
+            <div class="auth-support-note">
+                <strong>Need access?</strong> Registration is not enabled yet.
+                Contact the PowerFlow administrator for an assigned account or
+                help recovering access.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def require_authentication(st=None) -> AuthUser:
@@ -515,10 +583,31 @@ def render_authenticated_user(st, user: AuthUser) -> None:
     """Render a compact sidebar identity and an explicit logout action."""
     if user.username == "local-development":
         return
-    st.markdown('<div class="nav-section-label">Signed in as</div>', unsafe_allow_html=True)
-    st.markdown(f"**{user.display_name}**  \nRole: {user.role.title()}")
+    safe_name = html.escape(user.display_name)
+    safe_role = html.escape(user.role.title())
+    initial = html.escape(
+        (user.display_name.strip() or user.username.strip() or "P")[0].upper()
+    )
+    st.markdown(
+        f"""
+        <div class="sidebar-profile" aria-label="Signed-in profile">
+            <div class="sidebar-profile-avatar" aria-hidden="true">{initial}</div>
+            <div class="sidebar-profile-copy">
+                <div class="sidebar-profile-label">Signed in</div>
+                <div class="sidebar-profile-name">{safe_name}</div>
+                <div class="sidebar-profile-role">{safe_role} access</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     def logout() -> None:
         clear_authentication_state(st.session_state)
 
-    st.button("Logout", on_click=logout, use_container_width=True)
+    st.button(
+        "Sign out",
+        on_click=logout,
+        use_container_width=True,
+        type="secondary",
+    )

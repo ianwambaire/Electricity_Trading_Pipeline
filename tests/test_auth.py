@@ -210,6 +210,33 @@ def test_analyst_and_admin_page_access_is_centralized():
         auth.require_page_access(admin, page)
 
 
+def test_verified_oidc_identity_defaults_to_restricted_analyst_role():
+    assert auth.role_for_verified_identity(email_verified=True) == "analyst"
+    assert (
+        auth.role_for_verified_identity(
+            email_verified=True,
+            groups=("registered-users", "admin"),
+        )
+        == "analyst"
+    )
+
+
+def test_only_trusted_admin_group_grants_admin_role():
+    assert (
+        auth.role_for_verified_identity(
+            email_verified=True,
+            groups=(auth.TRUSTED_ADMIN_GROUP,),
+        )
+        == "admin"
+    )
+
+
+@pytest.mark.parametrize("email_verified", [False, None, "true", 1])
+def test_unverified_or_ambiguous_oidc_identity_fails_closed(email_verified):
+    with pytest.raises(auth.AuthorizationError):
+        auth.role_for_verified_identity(email_verified=email_verified)
+
+
 def test_logout_clears_all_authentication_state():
     session = {}
     auth.attempt_login(session, "ian_admin", PASSWORD, _users(), _settings(), now=NOW)
@@ -390,14 +417,23 @@ def test_streamlit_login_and_role_filtered_navigation(
     app.run(timeout=30)
     assert not app.radio
     assert [field.label for field in app.text_input] == ["Username", "Password"]
+    login_text = _rendered_text(app)
+    assert "Electricity market operations" in login_text
+    assert "Welcome back" in login_text
+    assert "Registration is not enabled yet" in login_text
+    assert "Continue with Google" not in login_text
+    assert "Continue with Apple" not in login_text
 
     _login(app)
 
     assert not app.exception
     assert app.radio
     assert ("Model Insights" in app.radio[0].options) is model_insights_visible
-    assert any("Signed in as" in markdown.value for markdown in app.markdown)
-    assert any(button.label == "Logout" for button in app.button)
+    assert any("Signed in" in markdown.value for markdown in app.markdown)
+    assert any(
+        f"{role.title()} access" in markdown.value for markdown in app.markdown
+    )
+    assert any(button.label == "Sign out" for button in app.button)
 
 
 def test_streamlit_logout_returns_to_login(monkeypatch, tmp_path):
@@ -407,11 +443,24 @@ def test_streamlit_logout_returns_to_login(monkeypatch, tmp_path):
     app = AppTest.from_file(str(PROJECT_ROOT / "src" / "dashboard.py"))
     app.run(timeout=30)
     _login(app)
-    next(button for button in app.button if button.label == "Logout").click().run(timeout=30)
+    next(button for button in app.button if button.label == "Sign out").click().run(
+        timeout=30
+    )
 
     assert not app.exception
     assert not app.radio
     assert [field.label for field in app.text_input] == ["Username", "Password"]
+
+
+def test_authentication_ui_includes_responsive_accessible_styles():
+    source = (PROJECT_ROOT / "src" / "dashboard.py").read_text(encoding="utf-8")
+
+    assert ".auth-brand-panel" in source
+    assert ".sidebar-profile" in source
+    assert "@media (max-width: 900px)" in source
+    assert 'aria-label="PowerFlow introduction"' in (
+        PROJECT_ROOT / "src" / "auth.py"
+    ).read_text(encoding="utf-8")
 
 
 def test_analyst_pipeline_summary_omits_admin_only_sections(monkeypatch, tmp_path):

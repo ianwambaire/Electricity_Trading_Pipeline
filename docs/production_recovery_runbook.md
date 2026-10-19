@@ -134,6 +134,12 @@ that print decrypted values.
 
 ## Dashboard authentication and role migration
 
+Phase 1 retains the login mechanism documented below. The proposed Cognito
+managed-login/OIDC architecture, fail-closed Analyst/Admin mapping, registration
+controls, migration gates, and rollback prerequisites are documented in
+[`docs/cognito_authentication_design.md`](cognito_authentication_design.md).
+Nothing in Phase 1 enables Cognito, social sign-in, or public registration.
+
 PowerFlow dashboard authentication uses the existing secret backend. Production
 should store one SSM `SecureString` named:
 

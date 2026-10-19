@@ -134,11 +134,11 @@ that print decrypted values.
 
 ## Dashboard authentication and role migration
 
-Phase 1 retains the login mechanism documented below. The proposed Cognito
+The legacy provider remains the production default. The optional Cognito
 managed-login/OIDC architecture, fail-closed Analyst/Admin mapping, registration
-controls, migration gates, and rollback prerequisites are documented in
+controls, cutover gates, and rollback prerequisites are documented in
 [`docs/cognito_authentication_design.md`](cognito_authentication_design.md).
-Nothing in Phase 1 enables Cognito, social sign-in, or public registration.
+Adding the code does not enable Cognito, social sign-in, or public registration.
 
 PowerFlow dashboard authentication uses the existing secret backend. Production
 should store one SSM `SecureString` named:
@@ -194,6 +194,7 @@ to non-secret policy settings:
 POWERFLOW_SECRETS_BACKEND=ssm
 POWERFLOW_SECRETS_PREFIX=/powerflow/production
 POWERFLOW_AUTH_ENABLED=true
+POWERFLOW_AUTH_PROVIDER=legacy
 POWERFLOW_SESSION_TIMEOUT_MINUTES=60
 POWERFLOW_MAX_LOGIN_ATTEMPTS=5
 POWERFLOW_LOGIN_LOCKOUT_MINUTES=10
@@ -240,6 +241,22 @@ secret or IAM permission.
 This mechanism is application-level authentication with session-scoped login
 rate limiting. It does not replace TLS termination, an EC2 security group,
 centralized identity, enterprise SSO, a WAF, or network-level rate limiting.
+
+For a future reviewed Cognito cutover, install `Authlib` through
+`requirements-prod.txt`, securely materialize the ignored
+`.streamlit/secrets.toml` from `.streamlit/secrets.toml.example`, and set only:
+
+```dotenv
+POWERFLOW_AUTH_ENABLED=true
+POWERFLOW_AUTH_PROVIDER=cognito
+```
+
+The production callback must remain exactly
+`https://powerflowenergy.dev/oauth2callback`. Never place the Cognito client
+secret or Streamlit cookie secret in `.env`, Git, service-unit files, commands,
+or logs. Validate Analyst and trusted-group Admin behavior before restarting
+production. Roll back by restoring `POWERFLOW_AUTH_PROVIDER=legacy`; the legacy
+user registry must remain readable throughout the initial cutover window.
 
 ## Back up operational SQLite
 

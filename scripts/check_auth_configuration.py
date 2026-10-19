@@ -20,20 +20,30 @@ from auth import (  # noqa: E402
     AuthConfigurationError,
     load_auth_settings,
     load_user_registry,
+    validate_cognito_streamlit_configuration,
 )
 
 
-def configuration_report() -> dict:
+def configuration_report(st_module=None) -> dict:
     settings = load_auth_settings()
     users = {}
     readable = False
-    if settings.enabled:
+    oidc_readable = False
+    if settings.enabled and settings.provider == "legacy":
         users = load_user_registry()
         readable = True
+    elif settings.enabled and settings.provider == "cognito":
+        if st_module is None:
+            import streamlit as st_module
+
+        validate_cognito_streamlit_configuration(st_module)
+        oidc_readable = True
     role_counts = Counter(record["role"] for record in users.values())
     return {
         "auth_enabled": settings.enabled,
+        "auth_provider": settings.provider,
         "backend": settings.backend,
+        "oidc_configuration_readable": oidc_readable,
         "users_configuration_readable": readable,
         "configured_user_count": len(users),
         "role_counts": {
@@ -55,18 +65,22 @@ def main() -> None:
             settings = load_auth_settings()
             backend = settings.backend
             enabled = settings.enabled
+            provider = settings.provider
             timeout = settings.session_timeout_minutes
             attempts = settings.max_login_attempts
             lockout = settings.login_lockout_minutes
         except AuthConfigurationError:
             backend = "invalid"
             enabled = True
+            provider = "invalid"
             timeout = None
             attempts = None
             lockout = None
         report = {
             "auth_enabled": enabled,
+            "auth_provider": provider,
             "backend": backend,
+            "oidc_configuration_readable": False,
             "users_configuration_readable": False,
             "configured_user_count": 0,
             "role_counts": {"admin": 0, "analyst": 0},

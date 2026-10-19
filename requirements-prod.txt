@@ -1,5 +1,6 @@
 # PowerFlow EC2 runtime (Python 3.14, Amazon Linux 2023 x86_64)
 # Direct production dependencies only. Transitive dependencies are resolved by pip.
+Authlib==1.9.1
 awscrt==0.36.0
 boto3==1.43.98
 entsoe-py==0.8.0

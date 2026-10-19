@@ -24,6 +24,7 @@ os.environ.setdefault("XDG_CACHE_HOME", str(RUNTIME_CACHE / "xdg"))
 
 BLOCKED_RESEARCH_PACKAGES = {"mlflow", "xgboost"}
 REQUIRED_DISTRIBUTIONS = (
+    "Authlib",
     "awscrt",
     "boto3",
     "entsoe-py",

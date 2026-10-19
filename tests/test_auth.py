@@ -34,6 +34,7 @@ def _users_payload(role="admin", *, password_hash=PASSWORD_HASH):
 def _environment(**overrides):
     environment = {
         "POWERFLOW_AUTH_ENABLED": "true",
+        "POWERFLOW_AUTH_PROVIDER": "legacy",
         "POWERFLOW_SECRETS_BACKEND": "env",
         "POWERFLOW_AUTH_USERS_JSON": _users_payload(),
         "POWERFLOW_SESSION_TIMEOUT_MINUTES": "60",
@@ -42,6 +43,37 @@ def _environment(**overrides):
     }
     environment.update(overrides)
     return environment
+
+
+def _cognito_claims(**overrides):
+    claims = {
+        "is_logged_in": True,
+        "provider": auth.COGNITO_PROVIDER_NAME,
+        "iss": auth.COGNITO_ISSUER,
+        "aud": auth.COGNITO_APP_CLIENT_ID,
+        "token_use": "id",
+        "sub": "cognito-subject-123",
+        "email": "verified.user@example.com",
+        "email_verified": True,
+        "name": "Verified User",
+        "exp": int((NOW + timedelta(hours=1)).timestamp()),
+    }
+    claims.update(overrides)
+    return claims
+
+
+def _cognito_secrets():
+    return {
+        "auth": {
+            "redirect_uri": "http://localhost:8501/oauth2callback",
+            "cookie_secret": "test-cookie-secret-not-for-production",
+            "cognito": {
+                "client_id": auth.COGNITO_APP_CLIENT_ID,
+                "client_secret": "test-client-secret-not-for-production",
+                "server_metadata_url": auth.COGNITO_METADATA_URL,
+            },
+        }
+    }
 
 
 def _settings(**overrides):
@@ -143,8 +175,15 @@ def _rendered_text(app):
 def test_authentication_disabled_defaults_to_local_development_admin():
     settings = auth.load_auth_settings({})
     assert settings.enabled is False
+    assert settings.provider == "legacy"
     assert settings.session_timeout_minutes == 60
     assert auth.allowed_pages_for_role("admin") == auth.ALL_DASHBOARD_PAGES
+
+
+def test_authentication_provider_is_explicit_and_validated():
+    assert _settings(POWERFLOW_AUTH_PROVIDER="cognito").provider == "cognito"
+    with pytest.raises(auth.AuthConfigurationError):
+        _settings(POWERFLOW_AUTH_PROVIDER="oidc")
 
 
 def test_authentication_enabled_loads_valid_hashed_users():
@@ -229,6 +268,142 @@ def test_only_trusted_admin_group_grants_admin_role():
         )
         == "admin"
     )
+
+
+def test_cognito_claims_default_to_analyst_without_trusted_group():
+    without_groups = auth.cognito_user_from_claims(_cognito_claims(), now=NOW)
+    malformed_groups = auth.cognito_user_from_claims(
+        _cognito_claims(**{"cognito:groups": auth.TRUSTED_ADMIN_GROUP}),
+        now=NOW,
+    )
+    near_match = auth.cognito_user_from_claims(
+        _cognito_claims(**{"cognito:groups": ["PowerFlow-Admins", "admin"]}),
+        now=NOW,
+    )
+
+    assert without_groups.role == "analyst"
+    assert malformed_groups.role == "analyst"
+    assert near_match.role == "analyst"
+    assert without_groups.auth_provider == "cognito"
+
+
+def test_cognito_exact_trusted_group_grants_admin():
+    user = auth.cognito_user_from_claims(
+        _cognito_claims(
+            **{"cognito:groups": ["analysts", auth.TRUSTED_ADMIN_GROUP]}
+        ),
+        now=NOW,
+    )
+
+    assert user.role == "admin"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"is_logged_in": False},
+        {"provider": "other"},
+        {"iss": "https://malicious.example.com"},
+        {"aud": "wrong-client"},
+        {"token_use": "access"},
+        {"exp": int((NOW - timedelta(seconds=1)).timestamp())},
+        {"exp": "not-a-timestamp"},
+        {"sub": ""},
+        {"email": ""},
+        {"email_verified": False},
+        {"email_verified": "true"},
+    ],
+)
+def test_cognito_invalid_or_unverified_core_claims_fail_closed(overrides):
+    with pytest.raises(auth.AuthorizationError):
+        auth.cognito_user_from_claims(_cognito_claims(**overrides), now=NOW)
+
+
+class _FakeColumn:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+
+class _FakeCognitoStreamlit:
+    def __init__(self, *, user=None, button_clicked=False):
+        self.secrets = _cognito_secrets()
+        self.user = _cognito_claims() if user is None else user
+        self.session_state = {"role": "admin"}
+        self.button_clicked = button_clicked
+        self.login_calls = []
+        self.logout_calls = 0
+        self.button_callbacks = {}
+
+    def login(self, provider):
+        self.login_calls.append(provider)
+
+    def logout(self):
+        self.logout_calls += 1
+
+    def columns(self, *_args, **_kwargs):
+        return _FakeColumn(), _FakeColumn()
+
+    def markdown(self, *_args, **_kwargs):
+        return None
+
+    def error(self, *_args, **_kwargs):
+        return None
+
+    def button(self, label, *, on_click=None, **_kwargs):
+        self.button_callbacks[label] = on_click
+        return self.button_clicked
+
+    def stop(self):
+        raise RuntimeError("streamlit stopped")
+
+
+def test_cognito_configuration_contract_accepts_only_expected_provider():
+    st = _FakeCognitoStreamlit()
+    auth.validate_cognito_streamlit_configuration(st)
+
+    st.secrets["auth"]["cognito"]["client_id"] = "wrong-client"
+    with pytest.raises(auth.AuthConfigurationError) as captured:
+        auth.validate_cognito_streamlit_configuration(st)
+    assert "wrong-client" not in str(captured.value)
+
+    st = _FakeCognitoStreamlit()
+    st.secrets["auth"]["cookie_secret"] = "REPLACE_WITH_A_LONG_RANDOM_VALUE"
+    with pytest.raises(auth.AuthConfigurationError):
+        auth.validate_cognito_streamlit_configuration(st)
+
+
+def test_cognito_provider_ignores_session_role_override(monkeypatch):
+    monkeypatch.setenv("POWERFLOW_AUTH_ENABLED", "true")
+    monkeypatch.setenv("POWERFLOW_AUTH_PROVIDER", "cognito")
+    monkeypatch.setattr(auth, "_utc_now", lambda: NOW)
+    st = _FakeCognitoStreamlit(user=_cognito_claims())
+
+    user = auth.require_authentication(st)
+
+    assert st.session_state["role"] == "admin"
+    assert user.role == "analyst"
+    assert user.username == "cognito-subject-123"
+
+
+def test_cognito_login_uses_named_native_streamlit_provider():
+    st = _FakeCognitoStreamlit(user={"is_logged_in": False}, button_clicked=True)
+
+    auth._render_cognito_login(st)
+
+    assert st.login_calls == [auth.COGNITO_PROVIDER_NAME]
+
+
+def test_cognito_sidebar_logout_uses_native_streamlit_logout():
+    st = _FakeCognitoStreamlit()
+    user = auth.cognito_user_from_claims(_cognito_claims(), now=NOW)
+
+    auth.render_authenticated_user(st, user)
+    st.button_callbacks["Sign out"]()
+
+    assert st.logout_calls == 1
 
 
 @pytest.mark.parametrize("email_verified", [False, None, "true", 1])
@@ -361,11 +536,28 @@ def test_diagnostic_output_contains_counts_but_no_usernames_or_hashes(monkeypatc
     rendered = json.dumps(report, sort_keys=True)
 
     assert report["auth_enabled"] is True
+    assert report["auth_provider"] == "legacy"
     assert report["configured_user_count"] == 1
     assert report["role_counts"] == {"admin": 1, "analyst": 0}
     assert "ian_admin" not in rendered
     assert PASSWORD_HASH not in rendered
     assert PASSWORD not in rendered
+
+
+def test_cognito_diagnostic_does_not_require_legacy_user_registry(monkeypatch):
+    for name, value in _environment(POWERFLOW_AUTH_PROVIDER="cognito").items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("POWERFLOW_AUTH_USERS_JSON", raising=False)
+
+    report = check_auth_configuration.configuration_report(
+        _FakeCognitoStreamlit()
+    )
+
+    assert report["auth_enabled"] is True
+    assert report["auth_provider"] == "cognito"
+    assert report["oidc_configuration_readable"] is True
+    assert report["users_configuration_readable"] is False
+    assert report["configured_user_count"] == 0
 
 
 def test_secret_values_do_not_appear_in_configuration_errors_or_logs(caplog):

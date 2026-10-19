@@ -11,12 +11,14 @@ import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Mapping, MutableMapping
+from typing import Any, Mapping, MutableMapping
 
 from powerflow_secrets import SecretConfigurationError, get_secret, secrets_backend
 
 
 AUTH_USERS_SECRET = "POWERFLOW_AUTH_USERS_JSON"
+AUTH_PROVIDER_ENV = "POWERFLOW_AUTH_PROVIDER"
+SUPPORTED_AUTH_PROVIDERS = ("legacy", "cognito")
 PASSWORD_HASH_SCHEME = "pbkdf2_sha256"
 DEFAULT_PBKDF2_ITERATIONS = 600_000
 MINIMUM_PBKDF2_ITERATIONS = 100_000
@@ -26,6 +28,18 @@ LOCKED_LOGIN_FAILURE = "Sign-in temporarily unavailable. Try again later."
 SUPPORTED_ROLES = ("analyst", "admin")
 DEFAULT_VERIFIED_ROLE = "analyst"
 TRUSTED_ADMIN_GROUP = "powerflow-admins"
+COGNITO_PROVIDER_NAME = "cognito"
+COGNITO_ISSUER = (
+    "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_NLoYFRvex"
+)
+COGNITO_APP_CLIENT_ID = "5qa93km3lf2bbu3ffnrpea4r3g"
+COGNITO_METADATA_URL = f"{COGNITO_ISSUER}/.well-known/openid-configuration"
+COGNITO_ALLOWED_CALLBACKS = frozenset(
+    {
+        "http://localhost:8501/oauth2callback",
+        "https://powerflowenergy.dev/oauth2callback",
+    }
+)
 
 ALL_DASHBOARD_PAGES = (
     "Executive Overview",
@@ -78,6 +92,7 @@ class AuthorizationError(PermissionError):
 @dataclass(frozen=True)
 class AuthSettings:
     enabled: bool
+    provider: str
     session_timeout_minutes: int
     max_login_attempts: int
     login_lockout_minutes: int
@@ -89,6 +104,7 @@ class AuthUser:
     username: str
     role: str
     display_name: str
+    auth_provider: str = "legacy"
 
 
 @dataclass(frozen=True)
@@ -136,12 +152,18 @@ def load_auth_settings(
         backend = secrets_backend(environment)
     except SecretConfigurationError as exc:
         raise AuthConfigurationError(str(exc)) from None
+    provider = str(environment.get(AUTH_PROVIDER_ENV, "legacy")).strip().lower()
+    if provider not in SUPPORTED_AUTH_PROVIDERS:
+        raise AuthConfigurationError(
+            f"{AUTH_PROVIDER_ENV} must be legacy or cognito."
+        )
     return AuthSettings(
         enabled=_parse_bool(
             "POWERFLOW_AUTH_ENABLED",
             environment.get("POWERFLOW_AUTH_ENABLED"),
             default=False,
         ),
+        provider=provider,
         session_timeout_minutes=_positive_integer(
             "POWERFLOW_SESSION_TIMEOUT_MINUTES",
             environment.get("POWERFLOW_SESSION_TIMEOUT_MINUTES"),
@@ -442,31 +464,149 @@ def can_access_section(user: AuthUser, section: str) -> bool:
 def role_for_verified_identity(
     *,
     email_verified: bool,
-    groups: tuple[str, ...] | list[str] | set[str] | None = None,
+    groups: object = None,
 ) -> str:
-    """Map future verified OIDC claims to a server-controlled dashboard role.
+    """Map verified OIDC claims to a server-controlled dashboard role.
 
-    This Phase 1 seam is deliberately not connected to the active login flow.
-    A future Cognito integration may pass only claims from Streamlit's verified
-    OIDC identity. Unverified identities fail closed, every verified identity
-    defaults to Analyst, and Admin requires membership in the single trusted
-    Cognito group managed outside the public registration flow.
+    The Cognito flow passes only claims from Streamlit's verified OIDC identity.
+    Unverified identities fail closed, every verified identity defaults to
+    Analyst, and Admin requires membership in the single trusted Cognito group
+    managed outside the public registration flow.
     """
     if email_verified is not True:
         raise AuthorizationError(
             "A verified identity is required for dashboard access."
         )
+    if not isinstance(groups, (list, tuple, set, frozenset)):
+        groups = ()
     normalized_groups = {
-        str(group).strip()
-        for group in (groups or ())
-        if isinstance(group, str) and str(group).strip()
+        group.strip()
+        for group in groups
+        if isinstance(group, str) and group.strip()
     }
     if TRUSTED_ADMIN_GROUP in normalized_groups:
         return "admin"
     return DEFAULT_VERIFIED_ROLE
 
 
-def _render_login(st, settings: AuthSettings, users) -> None:
+def _config_value(mapping: object, key: str) -> object:
+    if isinstance(mapping, Mapping):
+        return mapping.get(key)
+    getter = getattr(mapping, "get", None)
+    if callable(getter):
+        return getter(key)
+    return None
+
+
+def _configured_secret(value: object, *, minimum_length: int) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value.strip()) >= minimum_length
+        and not value.strip().startswith("REPLACE_")
+    )
+
+
+def validate_cognito_streamlit_configuration(st) -> None:
+    """Validate the non-secret OIDC contract without revealing secret values."""
+    try:
+        auth_section = st.secrets["auth"]
+        provider_section = _config_value(auth_section, COGNITO_PROVIDER_NAME)
+    except Exception:
+        raise AuthConfigurationError(
+            "Cognito authentication configuration is unavailable."
+        ) from None
+
+    redirect_uri = _config_value(auth_section, "redirect_uri")
+    cookie_secret = _config_value(auth_section, "cookie_secret")
+    client_id = _config_value(provider_section, "client_id")
+    client_secret = _config_value(provider_section, "client_secret")
+    metadata_url = _config_value(provider_section, "server_metadata_url")
+    if (
+        redirect_uri not in COGNITO_ALLOWED_CALLBACKS
+        or client_id != COGNITO_APP_CLIENT_ID
+        or metadata_url != COGNITO_METADATA_URL
+        or not _configured_secret(cookie_secret, minimum_length=32)
+        or not _configured_secret(client_secret, minimum_length=16)
+    ):
+        raise AuthConfigurationError(
+            "Cognito authentication configuration is invalid."
+        )
+
+    if not all(callable(getattr(st, name, None)) for name in ("login", "logout")):
+        raise AuthConfigurationError(
+            "The installed Streamlit runtime does not support native OIDC."
+        )
+    try:
+        import authlib
+
+        version = tuple(int(part) for part in authlib.__version__.split(".")[:3])
+    except (ImportError, ModuleNotFoundError, TypeError, ValueError):
+        raise AuthConfigurationError(
+            "The native OIDC runtime dependency is unavailable."
+        ) from None
+    if version < (1, 3, 2):
+        raise AuthConfigurationError(
+            "The native OIDC runtime dependency is unsupported."
+        )
+
+
+def cognito_user_from_claims(
+    claims: Mapping[str, Any],
+    *,
+    now: datetime | None = None,
+) -> AuthUser:
+    """Build an authorized user from Streamlit's validated Cognito claims."""
+    if not isinstance(claims, Mapping) or claims.get("is_logged_in") is not True:
+        raise AuthorizationError("A valid Cognito identity is required.")
+    if claims.get("provider") != COGNITO_PROVIDER_NAME:
+        raise AuthorizationError("The OIDC identity provider is invalid.")
+    issuer = claims.get("iss")
+    audience = claims.get("aud")
+    if not isinstance(issuer, str) or not hmac.compare_digest(
+        issuer, COGNITO_ISSUER
+    ):
+        raise AuthorizationError("The OIDC identity issuer is invalid.")
+    if not isinstance(audience, str) or not hmac.compare_digest(
+        audience, COGNITO_APP_CLIENT_ID
+    ):
+        raise AuthorizationError("The OIDC identity audience is invalid.")
+    if claims.get("token_use") != "id":
+        raise AuthorizationError("The OIDC identity token type is invalid.")
+
+    now = _utc_now() if now is None else now.astimezone(timezone.utc)
+    expires_at = claims.get("exp")
+    if isinstance(expires_at, bool) or not isinstance(expires_at, (int, float)):
+        raise AuthorizationError("The OIDC identity expiration is invalid.")
+    if float(expires_at) <= now.timestamp():
+        raise AuthorizationError("The OIDC identity has expired.")
+
+    subject = claims.get("sub")
+    email = claims.get("email")
+    if not isinstance(subject, str) or not subject.strip():
+        raise AuthorizationError("The OIDC identity subject is invalid.")
+    if not isinstance(email, str) or not email.strip():
+        raise AuthorizationError("The OIDC identity email is invalid.")
+
+    groups_claim = claims.get("cognito:groups")
+    # Cognito defines this claim as an array. Any other shape is treated as no
+    # trusted group membership so it can never elevate a user to Admin.
+    groups = groups_claim if isinstance(groups_claim, list) else []
+    role = role_for_verified_identity(
+        email_verified=claims.get("email_verified") is True,
+        groups=groups,
+    )
+    display_name = claims.get("name")
+    if not isinstance(display_name, str) or not display_name.strip():
+        display_name = email
+    return AuthUser(
+        username=subject.strip(),
+        role=role,
+        display_name=display_name.strip(),
+        auth_provider=COGNITO_PROVIDER_NAME,
+    )
+
+
+def _render_authentication_brand(st) -> tuple[object, object]:
     brand_column, form_column = st.columns([1.12, 0.88], gap="large")
     with brand_column:
         st.markdown(
@@ -488,6 +628,11 @@ def _render_login(st, settings: AuthSettings, users) -> None:
             """,
             unsafe_allow_html=True,
         )
+    return brand_column, form_column
+
+
+def _render_legacy_login(st, settings: AuthSettings, users) -> None:
+    _, form_column = _render_authentication_brand(st)
 
     with form_column:
         st.markdown(
@@ -546,6 +691,71 @@ def _render_login(st, settings: AuthSettings, users) -> None:
         )
 
 
+def _render_cognito_login(st) -> None:
+    _, form_column = _render_authentication_brand(st)
+    with form_column:
+        st.markdown(
+            """
+            <div class="auth-form-heading">
+                <div class="auth-kicker">Secure account access</div>
+                <h2>Continue to PowerFlow</h2>
+                <p>
+                    Sign in with email and password or Google through the
+                    PowerFlow secure identity service.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            "Continue to secure sign in",
+            use_container_width=True,
+            type="primary",
+        ):
+            st.login(COGNITO_PROVIDER_NAME)
+        st.markdown(
+            """
+            <div class="auth-support-note">
+                <strong>Account access</strong> Registration, email
+                verification, and recovery are handled in the secure sign-in
+                portal when enabled by the PowerFlow administrator.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def _require_cognito_authentication(st) -> AuthUser:
+    try:
+        validate_cognito_streamlit_configuration(st)
+    except AuthConfigurationError:
+        st.error("Cognito authentication configuration is unavailable or invalid.")
+        st.stop()
+
+    try:
+        claims = dict(st.user)
+    except Exception:
+        st.error("Cognito authentication is temporarily unavailable.")
+        st.stop()
+    if claims.get("is_logged_in") is not True:
+        _render_cognito_login(st)
+        st.stop()
+
+    try:
+        return cognito_user_from_claims(claims)
+    except AuthorizationError:
+        st.error(
+            "Your authenticated identity could not be verified for PowerFlow. "
+            "Sign out and try again, or contact the PowerFlow administrator."
+        )
+        st.button(
+            "Return to sign in",
+            on_click=st.logout,
+            use_container_width=True,
+        )
+        st.stop()
+
+
 def require_authentication(st=None) -> AuthUser:
     """Enforce fail-closed Streamlit authentication before dashboard data loads."""
     if st is None:
@@ -557,7 +767,15 @@ def require_authentication(st=None) -> AuthUser:
         st.error("Dashboard authentication configuration is invalid.")
         st.stop()
     if not settings.enabled:
-        return AuthUser("local-development", "admin", "Local development")
+        return AuthUser(
+            "local-development",
+            "admin",
+            "Local development",
+            auth_provider="local",
+        )
+
+    if settings.provider == COGNITO_PROVIDER_NAME:
+        return _require_cognito_authentication(st)
 
     try:
         users = load_user_registry()
@@ -575,7 +793,7 @@ def require_authentication(st=None) -> AuthUser:
         refresh_session_activity(st.session_state)
         return user
 
-    _render_login(st, settings, users)
+    _render_legacy_login(st, settings, users)
     st.stop()
 
 
@@ -603,7 +821,10 @@ def render_authenticated_user(st, user: AuthUser) -> None:
     )
 
     def logout() -> None:
-        clear_authentication_state(st.session_state)
+        if user.auth_provider == COGNITO_PROVIDER_NAME:
+            st.logout()
+        else:
+            clear_authentication_state(st.session_state)
 
     st.button(
         "Sign out",

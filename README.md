@@ -186,6 +186,7 @@ Then replace the placeholders locally. Never commit `.env`.
 | `POWERFLOW_SECRETS_BACKEND` | Secret source: `env` (default), `ssm`, or `secretsmanager` |
 | `POWERFLOW_SECRETS_PREFIX` | Optional AWS secret identifier prefix; defaults to `/powerflow/production` |
 | `POWERFLOW_AUTH_ENABLED` | Enables application-level Streamlit authentication; defaults to `false` for local development |
+| `POWERFLOW_AUTH_PROVIDER` | `legacy` (default) or the explicitly configured `cognito` native-OIDC provider |
 | `POWERFLOW_AUTH_USERS_JSON` | Hashed dashboard-user configuration; store in the selected secret backend, never Git |
 | `POWERFLOW_SESSION_TIMEOUT_MINUTES` | Inactivity timeout; defaults to 60 minutes |
 | `POWERFLOW_MAX_LOGIN_ATTEMPTS` | Session-scoped failures before lockout; defaults to 5 |
@@ -211,14 +212,23 @@ to `.env`. Run `python scripts/check_secret_configuration.py` to see only each
 name's `configured`/`missing` state. The complete IAM, migration, and rollback
 procedure is in `docs/production_recovery_runbook.md`.
 
-Dashboard authentication is disabled by default for local compatibility. In
-production, enable it only after the hashed `POWERFLOW_AUTH_USERS_JSON` secret
-passes `python scripts/check_auth_configuration.py`. The dashboard supports
+Dashboard authentication is disabled by default for local compatibility, and
+the provider defaults to `legacy`. In production, enable legacy authentication
+only after the hashed `POWERFLOW_AUTH_USERS_JSON` secret passes
+`python scripts/check_auth_configuration.py`. The dashboard supports
 `analyst` and `admin` roles, an inactivity timeout, session-scoped login
 lockout, and explicit logout. Generate password hashes interactively with
 `python scripts/generate_auth_password_hash.py`; passwords and hashes are never
 written automatically. This is application-level access control, not enterprise
 SSO, and the EC2 security group should still restrict port 8501.
+
+Optional Cognito authentication uses native Streamlit OIDC and the protected,
+Git-ignored `.streamlit/secrets.toml`. Start from
+`.streamlit/secrets.toml.example`; enter the client secret and cookie secret
+locally yourself, and set `POWERFLOW_AUTH_PROVIDER=cognito` only after adding
+the exact local or production callback to the Cognito app client. Full setup,
+RBAC, rollback, and cutover instructions are in
+`docs/cognito_authentication_design.md`.
 
 AWS credentials are never stored in PowerFlow configuration. S3 mode uses boto3's
 standard credential provider chain, so local runs can use an AWS profile or environment,
@@ -339,11 +349,11 @@ streamlit run src/dashboard.py
 Open `http://localhost:8501`.
 
 With `POWERFLOW_AUTH_ENABLED=true`, unauthenticated visitors see only the login
-screen. Analysts can use forecasting, market/anomaly views, model monitoring,
-and the health/data-quality summary. Admins retain the complete dashboard,
-including technical pipeline, incident, timing, dataset-path, and release
-metadata. When authentication is disabled, the local dashboard retains the
-existing full-access development behavior.
+screen for the selected provider. Analysts can use forecasting, market/anomaly
+views, model monitoring, and the health/data-quality summary. Admins retain the
+complete dashboard, including technical pipeline, incident, timing,
+dataset-path, and release metadata. When authentication is disabled, the local
+dashboard retains the existing full-access development behavior.
 
 ### 4. Run the MLflow UI
 

@@ -58,12 +58,12 @@ export function AppLayout() {
             <span className="topbar-workspace">Workspace</span><ChevronRight className="topbar-divider" size={15} aria-hidden="true" /><span className="truncate text-sm font-medium">{title}</span>
           </div>
           <div className="flex shrink-0 items-center gap-4">
-            <span className="foundation-badge"><span aria-hidden="true" />Frontend preview</span>
+            <span className="foundation-badge"><span aria-hidden="true" />Read-only workspace</span>
             <Link to="/profile" className="account-link" aria-label="My Profile — no account connected"><CircleUserRound size={23} aria-hidden="true" /><span>My account</span></Link>
           </div>
         </header>
         <main id="main-content" ref={main} tabIndex={-1} className="main-content"><Outlet /></main>
-        <footer className="app-footer"><span>PowerFlow <span aria-hidden="true">/</span> Electricity market intelligence</span><span>Frontend foundation · No live data connected</span></footer>
+        <footer className="app-footer"><span>PowerFlow <span aria-hidden="true">/</span> Electricity market intelligence</span><span>Read-only API integration · Account not connected</span></footer>
       </div>
     </div>
   )

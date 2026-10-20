@@ -1,7 +1,9 @@
+import { ForecastingPage } from './pages/ForecastingPage'
+import { PipelinePage } from './pages/PipelinePage'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
 import { MarketOverview } from './pages/MarketOverview'
-import { AnalyticsPage, ForecastingPage, ModelsPage, PipelinePage, ProfilePage } from './pages/WorkspacePages'
+import { AnalyticsPage, ModelsPage, ProfilePage } from './pages/WorkspacePages'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 export default function App() {

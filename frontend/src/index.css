@@ -128,3 +128,22 @@ body:has(.mobile-dialog[open]) { overflow: hidden; }
 @media (max-width: 767px) { .overview-grid, .detail-grid, .profile-grid { grid-template-columns: 1fr; } .explore-grid { grid-template-columns: 1fr; } .topbar { padding-inline: 14px; gap: 10px; } .topbar-workspace, .topbar-divider, .account-link span, .foundation-badge { display: none; } .account-link { border: 0; padding: 8px; } .main-content { padding: 20px 18px 30px; } .heading-row { align-items: flex-start; } .outline-badge { display: none; } .page-heading p { font-size: 14px; } .app-footer { padding-inline: 18px; } .metric-card { padding: 17px; } .panel-heading { padding: 20px; } .integration-notice { margin-top: 22px; } }
 @media (max-width: 380px) { .metric-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.api-content { padding: 22px 24px; }
+.data-note, .chart-description { font-size: 12px; line-height: 1.85; color: #607485; margin: 18px 0; }
+.facts { font-size: 12px; }
+.facts > div { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid #e9eef2; }
+.facts dt { color: #647888; }
+.facts dd { font-weight: 550; overflow-wrap: anywhere; text-align: right; min-width: 0; }
+.availability { background: #f4f7fa; border: 1px solid #d6e1e8; border-left: 4px solid #577a90; border-radius: 6px; padding: 17px 20px; margin: 20px 0; }
+.availability strong { font-size: 14px; }
+.availability p { font-size: 12px; line-height: 1.8; color: #526c7e; margin-top: 7px; }
+.forecast-chart { height: 310px; width: 100%; min-width: 0; font-size: 11px; }
+.forecast-table { font-size: 12px; margin-top: 18px; }
+.forecast-table summary { cursor: pointer; padding: 12px 0; color: #087f74; }
+.table-scroll { overflow-x: auto; }
+.table-scroll table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.table-scroll td, .table-scroll th { padding: 12px; border-bottom: 1px solid #e4eaf0; white-space: nowrap; }
+.table-scroll th { background: #f4f7fa; font-weight: 550; }
+button:disabled { cursor: wait; opacity: .55; }
+@media (max-width: 600px) { .api-content { padding: 16px; } .facts > div { flex-direction: column; gap: 6px; } .facts dd { text-align: left; } }

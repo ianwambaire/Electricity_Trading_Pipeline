@@ -1,3 +1,4 @@
+import { AnomaliesPage } from './pages/AnomaliesPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { ModelsPage } from './pages/ModelsPage'
 import { ForecastingPage } from './pages/ForecastingPage'
@@ -12,6 +13,7 @@ export default function App() {
   return <BrowserRouter><Routes><Route element={<AppLayout />}>
     <Route index element={<MarketOverview />} />
     <Route path="forecasting" element={<ForecastingPage />} />
+    <Route path="anomalies" element={<AnomaliesPage />} />
     <Route path="analytics" element={<AnalyticsPage />} />
     <Route path="pipeline" element={<PipelinePage />} />
     <Route path="models" element={<ModelsPage />} />

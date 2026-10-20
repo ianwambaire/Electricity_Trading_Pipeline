@@ -38,7 +38,7 @@ export function AnalyticsPage() {
     if (a && (Date.parse(a)>Date.parse(b) || Date.parse(b)-Date.parse(a)>366*86400000)) { setFormError('Choose an ordered range of at most 366 days.'); return }
     setFormError(''); setOffset(0); setRange({start:a,end:b})
   }
-  return <><PageHeading title="Market Analytics" description="Historical DE-LU price, load, and generation observations from the persisted Silver dataset."/>
+  return <><PageHeading title="Market Intelligence" description="Historical DE-LU price, load, and generation observations from the persisted Silver dataset."/>
     <p className="data-note">These observations are historical, not live market readings or forecasts. Missing values remain missing. All date filters and chart times use UTC.</p>
     <ApiPanel title="Dataset coverage" state={coverage}>{data=><><Facts items={[["Source",data.source],['Market',data.market_area],['Available hourly rows',data.row_count],['First observation',formatTime(data.first_observation)],['Latest observation',formatTime(data.latest_observation)],['Missing hours within span',data.missing_hours_in_span]]}/><p className="data-note">{data.renewable_definition}</p></>}</ApiPanel>
     <form className="filter-form" onSubmit={apply}><label>From date (UTC)<input name="start" type="date" min="1970-01-01" max="2100-12-31"/></label><label>Through date (UTC)<input name="end" type="date" min="1970-01-01" max="2100-12-31"/></label><button className="secondary-button" type="submit">Apply date range</button><p>Leave both blank for the seven-day window ending at the latest persisted hour.</p>{formError && <p role="alert">{formError}</p>}</form>

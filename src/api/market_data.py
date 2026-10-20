@@ -213,3 +213,98 @@ class MarketStore:
                     renewable_share=renewable / total if total is not None and total > 0 else None,
                 ))
             return MarketHistory(coverage=coverage, start=start, end=end, matched_rows=matched, row_count=len(observations), limit=limit, offset=offset, next_offset=offset + len(observations) if offset + len(observations) < matched else None, observations=observations)
+
+
+class MarketChartPoint(PublicModel):
+    timestamp: datetime
+    price_eur_mwh: float | None
+    load_mw: float | None
+    wind_solar_mw: float | None
+    gap_before: bool
+
+
+class MarketSummary(PublicModel):
+    coverage: MarketCoverage
+    matched_rows: int
+    latest_observation: MarketChartPoint | None
+    mean_load_mw: float | None
+    minimum_price: float | None
+    maximum_price: float | None
+    average_price: float | None
+    sample_price_std: float | None
+    recent: list[MarketChartPoint]
+
+
+class MarketChart(PublicModel):
+    coverage: MarketCoverage
+    matched_rows: int
+    row_count: int
+    sampling: str = "Per chronological bucket: first, last, minimum-price and maximum-price observations; exact original values, no averages."
+    points: list[MarketChartPoint]
+
+
+def _chart_point(row, gap=False):
+    if row[3] is not None and row[4] is not None and not math.isfinite(row[3] + row[4]):
+        raise HTTPException(503, "Market observations contain invalid derived totals.")
+    return MarketChartPoint(timestamp=datetime.fromtimestamp(row[0], timezone.utc), price_eur_mwh=row[1], load_mw=row[2],
+                            wind_solar_mw=row[3] + row[4] if row[3] is not None and row[4] is not None else None,
+                            gap_before=gap)
+
+
+def market_summary(store: MarketStore, start=None, end=None) -> MarketSummary:
+    from .anomalies import date_bounds
+    date_bounds(start, end)
+    with store._lock:
+        store._refresh()
+        where = "WHERE (? IS NULL OR timestamp >= ?) AND (? IS NULL OR timestamp <= ?)"
+        a, b = start.timestamp() if start else None, end.timestamp() if end else None
+        args = (a, a, b, b)
+        connection = store._connection
+        count, mean_load, lo, hi, mean_price = connection.execute(
+            "SELECT COUNT(*), AVG(load_mw), MIN(price_eur_mwh), MAX(price_eur_mwh), AVG(price_eur_mwh) FROM observations " + where, args
+        ).fetchone()
+        # Centered second pass avoids cancellation from E[x²] - E[x]².
+        n, squared = connection.execute("SELECT COUNT(price_eur_mwh), SUM((price_eur_mwh-?)*(price_eur_mwh-?)) FROM observations " + where, (mean_price, mean_price, *args)).fetchone()
+        if any(value is not None and not math.isfinite(value) for value in (mean_load, mean_price, squared)):
+            raise HTTPException(503, "Market summary contains invalid derived values.")
+        recent = connection.execute("SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw FROM observations " + where + " ORDER BY timestamp DESC LIMIT 10", args).fetchall()
+        return MarketSummary(coverage=store._coverage, matched_rows=count, latest_observation=_chart_point(recent[0]) if recent else None,
+                             mean_load_mw=mean_load, minimum_price=lo, maximum_price=hi, average_price=mean_price,
+                             sample_price_std=math.sqrt(squared/(n-1)) if n > 1 else None, recent=[_chart_point(row) for row in recent])
+
+
+def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> MarketChart:
+    from .anomalies import date_bounds
+    date_bounds(start, end)
+    with store._lock:
+        store._refresh()
+        where = "WHERE (? IS NULL OR timestamp >= ?) AND (? IS NULL OR timestamp <= ?)"
+        a, b = start.timestamp() if start else None, end.timestamp() if end else None
+        args = (a, a, b, b)
+        connection = store._connection
+        count = connection.execute("SELECT COUNT(*) FROM observations " + where, args).fetchone()[0]
+        bucket_size = max(1, math.ceil(count / max(1, max_points // 4)))
+        rows = connection.execute("""
+            WITH ranked AS (
+              SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw,
+                     ROW_NUMBER() OVER (ORDER BY timestamp) AS rn FROM observations
+            """ + where + """), binned AS (
+              SELECT *, (rn-1)/? AS bucket FROM ranked
+            ), selected AS (
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY price_eur_mwh IS NULL, price_eur_mwh, timestamp) AS lo,
+                        ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY price_eur_mwh IS NULL, price_eur_mwh DESC, timestamp) AS hi,
+                        MIN(rn) OVER (PARTITION BY bucket) AS first,
+                        MAX(rn) OVER (PARTITION BY bucket) AS last FROM binned
+            ) SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw FROM selected
+              WHERE lo=1 OR hi=1 OR rn=first OR rn=last ORDER BY timestamp
+            """, (*args, bucket_size)).fetchall()
+        points = []
+        previous = None
+        for row in rows:
+            gap = False
+            if previous is not None:
+                present = connection.execute("SELECT COUNT(*) FROM observations WHERE timestamp>? AND timestamp<?", (previous, row[0])).fetchone()[0]
+                gap = present < (row[0]-previous)//3600-1
+            points.append(_chart_point(row, gap))
+            previous = row[0]
+        return MarketChart(coverage=store._coverage, matched_rows=count, row_count=len(points), points=points)

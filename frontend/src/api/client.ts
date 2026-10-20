@@ -1,3 +1,4 @@
+import { parseAnomalySummary, parseAnomalyEvents, parseMarketSummary, parseMarketChart, parseOperations } from './restoration.ts'
 import { parseCoverage, parseMarketHistory, parseModels } from './publicData.ts'
 import { parseHealth, parseNext24, parseOneHour, parsePipeline, parseReadiness, parseVintages } from './contracts.ts'
 
@@ -20,6 +21,11 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
 }
 
 export const api = {
+  marketSummary: (signal?: AbortSignal) => request('/market/summary', parseMarketSummary, signal),
+  marketChart: (query: string, signal?: AbortSignal) => request(`/market/chart${query ? `?${query}` : ''}`, parseMarketChart, signal),
+  anomalySummary: (query: string, signal?: AbortSignal) => request(`/anomalies/summary${query ? `?${query}` : ''}`, parseAnomalySummary, signal),
+  anomalyEvents: (query: string, signal?: AbortSignal) => request(`/anomalies/events?${query}`, parseAnomalyEvents, signal),
+  operations: (signal?: AbortSignal) => request('/operations/summary', parseOperations, signal),
   marketCoverage: (signal?: AbortSignal) => request('/market/coverage', parseCoverage, signal),
   marketHistory: (query: string, signal?: AbortSignal) => request(`/market/history${query ? `?${query}` : ''}`, parseMarketHistory, signal),
   models: (signal?: AbortSignal) => request('/models/summary', parseModels, signal),

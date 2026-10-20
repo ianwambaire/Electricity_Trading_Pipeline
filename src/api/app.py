@@ -17,7 +17,10 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 
-from .market_data import MarketCoverage, MarketHistory, MarketStore
+from .market_data import MarketChart, MarketSummary, market_chart, market_summary, MarketCoverage, MarketHistory, MarketStore
+from .anomalies import AnomalySummary, AnomalyEvents, anomaly_summary, anomaly_events
+from .operations_summary import OperationsSummary, operations_summary
+from typing import Literal
 from .model_summaries import ModelsResponse, model_summaries
 
 
@@ -38,6 +41,7 @@ class APISettings:
     exogenous_readiness: Path
     market_silver: Path | None = None
     public_metadata_root: Path | None = None
+    anomaly_report: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "APISettings":
@@ -45,6 +49,7 @@ class APISettings:
         return cls(
             market_silver=root / "data/processed/silver_electricity_market_data.csv",
             public_metadata_root=root,
+            anomaly_report=root / "data/reports/detected_anomalies.csv",
             operational_database=root / "database/electricity_trading.db",
             next24_forecast=root / "data/reports/next24h_forecast.csv",
             one_hour_forecast=root / "data/reports/actual_vs_predicted.csv",
@@ -365,6 +370,34 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
     @application.get("/models/summary", response_model=ModelsResponse)
     def public_model_summaries() -> ModelsResponse:
         return model_summaries(configured.public_metadata_root)
+
+    @application.get("/anomalies/summary", response_model=AnomalySummary)
+    def public_anomaly_summary(start: datetime | None = None, end: datetime | None = None):
+        return anomaly_summary(configured.anomaly_report, start, end)
+
+    @application.get("/anomalies/events", response_model=AnomalyEvents)
+    def public_anomaly_events(start: datetime | None = None, end: datetime | None = None,
+                              order: Literal["price_desc", "time_asc", "time_desc"] = "price_desc",
+                              limit: int = Query(default=100, ge=1, le=1000), offset: int = Query(default=0, ge=0, le=100000)):
+        return anomaly_events(configured.anomaly_report, start, end, order, limit, offset)
+
+    @application.get("/market/summary", response_model=MarketSummary)
+    def public_market_summary(start: datetime | None = None, end: datetime | None = None):
+        return market_summary(market_store, start, end)
+
+    @application.get("/market/chart", response_model=MarketChart)
+    def public_market_chart(start: datetime | None = None, end: datetime | None = None,
+                            max_points: int = Query(default=1600, ge=4, le=2000)):
+        return market_chart(market_store, start, end, max_points)
+
+    @application.get("/operations/summary", response_model=OperationsSummary)
+    def public_operations_summary():
+        issue, invalid = None, False
+        try:
+            issue = _next24_report(configured.next24_forecast).forecasts[0].issue_time
+        except HTTPException as error:
+            invalid = error.status_code != 404
+        return operations_summary(configured, issue, invalid)
 
     return application
 

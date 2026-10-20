@@ -1,0 +1,25 @@
+import { Activity, ChartNoAxesCombined, CircleUserRound, Fingerprint, Network, ScanLine, ShieldCheck } from 'lucide-react'
+import { PageHeading } from '../components/ui/PageHeading'
+import { Panel } from '../components/ui/Panel'
+import { EmptyState } from '../components/ui/States'
+import { IntegrationNotice } from '../components/ui/IntegrationNotice'
+
+export function ForecastingPage() {
+  return <><PageHeading title="Forecast Intelligence" description="Understand the next forecast, its inputs, and the confidence its evidence supports." /><IntegrationNotice /><Panel title="Forecast workspace" description="Forecast issue time, target hours, and freshness will be shown together."><EmptyState icon={Activity} title="No forecast report connected" description="No forecast has been requested. Model predictions and availability will appear after backend integration." /></Panel><div className="detail-grid"><Panel title="Forecast reliability"><EmptyState icon={ShieldCheck} title="Evaluation pending connection" description="Release-specific performance and limitations will be sourced from actual reports." /></Panel><Panel title="Input provenance"><EmptyState icon={Fingerprint} title="No input metadata loaded" description="Required inputs, source timestamps, and withholding reasons will be displayed when available." /></Panel></div></>
+}
+
+export function AnalyticsPage() {
+  return <><PageHeading title="Market Analytics" description="Explore the relationships between electricity prices, demand, and generation." /><IntegrationNotice /><Panel title="Historical market analysis" description="Date filtering and source-backed comparisons are planned for integration."><EmptyState icon={ChartNoAxesCombined} title="No historical observations loaded" description="Charts will use actual market observations. No sample price or generation series is shown in this preview." /></Panel><div className="detail-grid"><Panel title="Generation mix"><EmptyState title="Generation data not connected" description="Generation by source and renewable context will appear here." /></Panel><Panel title="Market events"><EmptyState title="Event reports not connected" description="Detected anomalies and their historical context will appear here." /></Panel></div></>
+}
+
+export function PipelinePage() {
+  return <><PageHeading category="Platform" title="Pipeline Operations" description="Follow data freshness, processing stages, and operational incidents." /><IntegrationNotice /><Panel title="Operational overview" description="Execution status and forecast availability will remain distinct."><EmptyState icon={Network} title="Monitoring is not connected" description="This preview has not checked the pipeline. Run status, stage timings, and source health are currently unavailable." /></Panel><div className="detail-grid"><Panel title="Run history"><EmptyState title="No run history retrieved" description="Recorded pipeline executions will be listed after integration." /></Panel><Panel title="Incidents & data quality"><EmptyState title="No incident report retrieved" description="No health or quality conclusion can be drawn until monitoring reports are connected." /></Panel></div></>
+}
+
+export function ModelsPage() {
+  return <><PageHeading category="Platform" title="Model Insights" description="Make model selection, evaluation, and limitations easier to understand." /><IntegrationNotice /><Panel title="Model release workspace" description="Each release will retain its own purpose, horizon, and evaluation evidence."><EmptyState icon={ScanLine} title="No model metadata connected" description="Verified release details will appear here. This frontend does not load, train, or change model artifacts." /></Panel><div className="detail-grid"><Panel title="Evaluation & baselines"><EmptyState title="Performance reports not loaded" description="Metrics will identify the evaluated release, period, and comparison baseline." /></Panel><Panel title="Feature influence"><EmptyState title="Explanation reports not loaded" description="Explanations will be tied to the model they describe, with their limitations stated." /></Panel></div></>
+}
+
+export function ProfilePage() {
+  return <><PageHeading category="Account" title="My Profile" description="Your identity, access, and workspace preferences in one place." /><div className="profile-grid"><Panel title="Account"><EmptyState icon={CircleUserRound} title="No account connected" description="Authentication is not enabled in this frontend. No user identity, email, or access role is assumed." /></Panel><Panel title="Account services"><div className="profile-info"><span className="state-icon"><ShieldCheck size={25} aria-hidden="true" /></span><h3>Your identity stays with your identity provider</h3><p>Profile details and account actions will be introduced after the authentication integration is approved.</p><dl><div><dt>Identity</dt><dd>Not connected</dd></div><div><dt>Access permissions</dt><dd>Not available</dd></div><div><dt>Account management</dt><dd>Planned</dd></div></dl></div></Panel></div></>
+}

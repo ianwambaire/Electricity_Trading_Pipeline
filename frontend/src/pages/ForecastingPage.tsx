@@ -14,7 +14,7 @@ export function ForecastingPage() {
   const pipeline = useApi(api.pipeline)
   const oneHour = useApi(api.oneHour)
   return <><PageHeading title="Forecast Intelligence" description="Inspect persisted model predictions, target times, and availability evidence." />
-    <p className="data-note">No model is run in this browser. The API supplies stored reports; it does not expose the actual generation time, model metrics, detailed withholding causes, or its configurable freshness threshold.</p>
+    <p className="data-note">No model is run in this browser. These forecast endpoints supply stored reports without actual generation time, evaluation metrics, detailed withholding causes, or the configured freshness threshold. Release-specific evaluation is available in Model Insights.</p>
     <ForecastSummary report={next24.data} pipeline={pipeline} />
     {pipeline.error && <button className="secondary-button mb-4" onClick={pipeline.retry}>Retry availability check</button>}
     <ApiPanel title="24-hour forecast report" description="Report issue time and target hours determine whether values are recent, stale, or historical." state={next24}>{data => <Suspense fallback={<LoadingState label="Loading chart…" />}><ForecastChart rows={data.forecasts} /></Suspense>}</ApiPanel>

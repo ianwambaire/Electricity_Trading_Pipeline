@@ -64,8 +64,12 @@ Unknown URLs show a recovery page. BrowserRouter supports browser history; a fut
 - All elapsed targets are historical; older issue times with future targets are stale; partly elapsed windows are identified. One-hour reports are labeled historical and do not inherit next24h model identity or metrics.
 - Monitoring parsers select known statuses, source identifiers, timestamps and numeric counts only. They discard paths, raw reasons, unknown fields and credentials. Error responses are generic and do not render server bodies. These filters are presentation measures, not authorization.
 - Recharts renders only validated returned values; exact values have an accessible table. Historical charts show the latest 168 available rows, not a claim of continuous seven-day coverage.
-- Market Analytics still needs market history/generation/anomaly endpoints. Model Insights needs release/evaluation/explanation endpoints. Profile remains disconnected pending separately approved authentication. Current market metrics are not exposed by the six existing endpoints.
+- Market Analytics now uses `/market/coverage` and `/market/history` with real date-filtered observations and bounded pagination. Model Insights uses `/models/summary` with separate release-specific metrics and provenance. Anomaly reports and detailed model explanations still need endpoints. Profile remains disconnected pending separately approved authentication. The overview’s existing current-market tiles remain explicit placeholders; this phase adds historical analytics, not live market data.
 - No Python, models, pipeline, Streamlit, authentication, infrastructure or production configuration is changed. No login or What-if Lab is implemented. No fake responses or fallback data are shipped. Synthetic contract fixtures exist only under `tests/` and are not imported by the application.
+
+## Phase 3 data readiness
+
+See [data-readiness.md](docs/data-readiness.md) for the three 404 root causes, legitimate local report-generation prerequisites, API query contracts, caching/limits, and model evidence. None of the missing reports was fabricated or generated in this phase.
 
 ## Code organization
 

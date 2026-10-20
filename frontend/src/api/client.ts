@@ -1,3 +1,4 @@
+import { parseCoverage, parseMarketHistory, parseModels } from './publicData.ts'
 import { parseHealth, parseNext24, parseOneHour, parsePipeline, parseReadiness, parseVintages } from './contracts.ts'
 
 export class ApiError extends Error {
@@ -19,6 +20,9 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
 }
 
 export const api = {
+  marketCoverage: (signal?: AbortSignal) => request('/market/coverage', parseCoverage, signal),
+  marketHistory: (query: string, signal?: AbortSignal) => request(`/market/history${query ? `?${query}` : ''}`, parseMarketHistory, signal),
+  models: (signal?: AbortSignal) => request('/models/summary', parseModels, signal),
   health: (signal?: AbortSignal) => request('/health', parseHealth, signal),
   pipeline: (signal?: AbortSignal) => request('/pipeline/status', parsePipeline, signal),
   next24: (signal?: AbortSignal) => request('/forecast/next24', parseNext24, signal),

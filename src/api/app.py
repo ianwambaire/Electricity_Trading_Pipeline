@@ -7,14 +7,18 @@ import json
 import math
 import re
 import sqlite3
-from contextlib import closing
+from contextlib import asynccontextmanager, closing
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
+
+
+from .market_data import MarketCoverage, MarketHistory, MarketStore
+from .model_summaries import ModelsResponse, model_summaries
 
 
 APPLICATION_NAME = "PowerFlow API"
@@ -32,11 +36,15 @@ class APISettings:
     one_hour_forecast: Path
     forecast_vintage_health: Path
     exogenous_readiness: Path
+    market_silver: Path | None = None
+    public_metadata_root: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "APISettings":
         root = Path(root)
         return cls(
+            market_silver=root / "data/processed/silver_electricity_market_data.csv",
+            public_metadata_root=root,
             operational_database=root / "database/electricity_trading.db",
             next24_forecast=root / "data/reports/next24h_forecast.csv",
             one_hour_forecast=root / "data/reports/actual_vs_predicted.csv",
@@ -295,10 +303,18 @@ def _one_hour_report(path: Path) -> OneHourForecastResponse:
 def create_app(settings: APISettings | None = None) -> FastAPI:
     """Create the service with explicit read-only paths for safe testing."""
     configured = settings or APISettings.from_root(PROJECT_ROOT)
+    market_store = MarketStore(configured.market_silver)
+
+    @asynccontextmanager
+    async def lifespan(_application):
+        yield
+        market_store.close()
+
     application = FastAPI(
         title=APPLICATION_NAME,
         description="Read-only access to persisted PowerFlow outputs.",
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     @application.get("/health", response_model=HealthResponse)
@@ -332,6 +348,23 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
         return _read_json_report(
             configured.exogenous_readiness, "Exogenous readiness report"
         )
+
+    @application.get("/market/coverage", response_model=MarketCoverage)
+    def market_coverage() -> MarketCoverage:
+        return market_store.coverage()
+
+    @application.get("/market/history", response_model=MarketHistory)
+    def market_history(
+        start: datetime | None = None,
+        end: datetime | None = None,
+        limit: int = Query(default=1000, ge=1, le=2000),
+        offset: int = Query(default=0, ge=0, le=2_000_000),
+    ) -> MarketHistory:
+        return market_store.history(start, end, limit, offset)
+
+    @application.get("/models/summary", response_model=ModelsResponse)
+    def public_model_summaries() -> ModelsResponse:
+        return model_summaries(configured.public_metadata_root)
 
     return application
 

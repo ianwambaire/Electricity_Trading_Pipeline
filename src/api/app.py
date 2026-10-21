@@ -330,8 +330,11 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     try:
         identity_settings = security_settings or SecuritySettings.from_environment()
         application.state.cognito_verifier = CognitoVerifier(identity_settings)
+        from .account_service import AccountGateway
+        application.state.account_gateway = AccountGateway(identity_settings.issuer)
     except ValueError:
         application.state.cognito_verifier = None
+        application.state.account_gateway = None
 
     @application.get("/auth/me", response_model=AccountResponse, tags=["Authenticated account"])
     def authenticated_account(user: CurrentUser = Depends(require_authenticated_user)):
@@ -450,6 +453,9 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
                      dependencies=[Depends(require_admin)], tags=["Admin reports"])
     def admin_operations_route():
         return admin_operations(configured.operational_database)
+
+    from .account_routes import router as account_router
+    application.include_router(account_router)
 
     return application
 

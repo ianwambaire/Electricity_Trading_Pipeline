@@ -30,6 +30,8 @@ def _admin_client(root: Path) -> TestClient:
     key = jwk.RSAKey.generate_key(2048, parameters={'kid':'test-key','alg':'RS256','use':'sig'})
     app = create_app(_settings(root), security_settings=settings)
     app.state.cognito_verifier = CognitoVerifier(settings, JwksCache(settings.jwks_url, fetch=lambda _: {'keys':[key.as_dict(private=False)]}))
+    from types import SimpleNamespace
+    app.state.account_gateway = SimpleNamespace(assert_active=lambda _token, _scopes, subject: {'sub':subject})
     now = int(time.time())
     value = jwt.encode({'alg':'RS256','kid':'test-key'}, dict(iss=settings.issuer, sub='01234567-89ab-4def-8123-0123456789ab', client_id='testclient', token_use='access', iat=now-1, exp=now+3600, scope='openid', **{'cognito:groups':['powerflow-admins']}), key)
     return TestClient(app, headers={'Authorization':'Bearer '+value})

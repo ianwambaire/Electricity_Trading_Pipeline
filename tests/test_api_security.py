@@ -38,6 +38,8 @@ def client(root, key, settings=SETTINGS, fetch=None):
     app = create_app(APISettings.from_root(root), security_settings=settings)
     cache = JwksCache(settings.jwks_url, fetch=fetch or (lambda _url: {'keys':[public(key)]}))
     app.state.cognito_verifier = CognitoVerifier(settings, cache)
+    from types import SimpleNamespace
+    app.state.account_gateway = SimpleNamespace(assert_active=lambda _token, _scopes, subject: {'sub':subject})
     return TestClient(app)
 
 

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryWebStorage, OidcClient, User, UserManager } from 'oidc-client-ts'
 import { readAuthConfig, safeDestination, cognitoLogoutUrl } from '../src/auth/config.ts'
-import { oidcSettings } from '../src/auth/oidcSettings.ts'
+import { ACCOUNT_SCOPES, accountSigninRequest, oidcSettings } from '../src/auth/oidcSettings.ts'
 import { identityFromProfile, sessionUsable, authGateState } from '../src/auth/identity.ts'
 import { logoutSession } from '../src/auth/logout.ts'
 import { bindApiSession } from '../src/api/accessToken.ts'
@@ -54,7 +54,7 @@ test('actual OIDC library creates S256 PKCE + nonce, consumes callback once and 
  const storage=new InMemoryWebStorage()
  const settings=oidcSettings(config,storage)
  assert.equal(settings.response_type,'code');assert.equal(settings.disablePKCE,false)
- assert.equal(settings.scope,'openid email profile');assert.equal(settings.client_secret,undefined)
+ assert.equal(settings.scope,'openid email profile');assert.equal(ACCOUNT_SCOPES,'openid email profile aws.cognito.signin.user.admin');assert.equal(settings.client_secret,undefined)
  const metadata={issuer:config.authority,authorization_endpoint:config.domain+'/oauth2/authorize',token_endpoint:config.domain+'/oauth2/token'}
  const client=new OidcClient({...settings,metadata})
  const login=await client.createSigninRequest({nonce:'test-nonce',state:{returnTo:'/anomalies'}})
@@ -129,4 +129,24 @@ test('code exchange sends verifier with no client secret; library checks nonce a
   expectedChallenge=new URL(second.url).searchParams.get('code_challenge')
   await assert.rejects(client.processSigninResponse(config.redirectUri+'?code=test-code&state='+new URL(second.url).searchParams.get('state')),/nonce/i)
  } finally { globalThis.fetch=original }
+})
+
+
+test('account reconnection explicitly requests four scopes with a fresh PKCE interaction',async()=>{
+ const metadata={issuer:config.authority,authorization_endpoint:config.domain+'/oauth2/authorize',token_endpoint:config.domain+'/oauth2/token'}
+ const client=new OidcClient({...oidcSettings(config,new InMemoryWebStorage()),metadata})
+ const first=accountSigninRequest(),second=accountSigninRequest()
+ assert.notEqual(first.nonce,second.nonce)
+ assert.equal(first.prompt,'login');assert.deepEqual(first.state,{returnTo:'/profile'})
+ const a=new URL((await client.createSigninRequest(first)).url)
+ const b=new URL((await client.createSigninRequest(second)).url)
+ assert.equal(a.searchParams.get('scope'),ACCOUNT_SCOPES)
+ assert.equal(a.searchParams.get('client_id'),config.clientId)
+ assert.equal(a.searchParams.get('redirect_uri'),config.redirectUri)
+ assert.equal(a.searchParams.get('response_type'),'code')
+ assert.equal(a.searchParams.get('code_challenge_method'),'S256')
+ assert.equal(a.searchParams.get('prompt'),'login')
+ assert.notEqual(a.searchParams.get('state'),b.searchParams.get('state'))
+ assert.notEqual(a.searchParams.get('code_challenge'),b.searchParams.get('code_challenge'))
+ assert.equal(oidcSettings(config,new InMemoryWebStorage()).scope,'openid email profile')
 })

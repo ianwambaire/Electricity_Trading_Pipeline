@@ -66,6 +66,8 @@ class CurrentUser:
     role: Literal["Admin", "Analyst"]
     email: str | None = None
     display_name: str | None = None
+    scopes: frozenset[str] = frozenset()
+    auth_time: int | None = None
 
 
 def fetch_jwks(url: str) -> dict:
@@ -179,12 +181,15 @@ class CognitoVerifier:
                 raise ValueError("Wrong resource binding")
             if not self.settings.required_scopes.issubset(claims["scope"].split()):
                 raise ValueError("Insufficient OAuth scope")
+            auth_time = claims.get('auth_time')
+            if auth_time is not None and (type(auth_time) is not int or not 0 <= auth_time <= claims['iat']):
+                raise ValueError('Invalid authentication time')
             groups = claims.get("cognito:groups", [])
             admin = isinstance(groups, list) and all(isinstance(v, str) for v in groups) and ADMIN_GROUP in groups
             def optional(field):
                 v = claims.get(field)
                 return v if isinstance(v, str) and 0 < len(v) <= 320 and not any(ord(c) < 32 for c in v) else None
-            return CurrentUser(claims["sub"], "Admin" if admin else "Analyst", optional("email"), optional("name"))
+            return CurrentUser(claims["sub"], "Admin" if admin else "Analyst", optional("email"), optional("name"), frozenset(claims["scope"].split()), auth_time)
         except HTTPException:
             raise
         except (JoseError, ValueError, TypeError, KeyError, OverflowError):
@@ -199,7 +204,12 @@ def get_current_user(request: Request, response: Response,
     verifier = request.app.state.cognito_verifier
     if verifier is None:
         raise unavailable()
-    return verifier.verify(credential.credentials)
+    user = verifier.verify(credential.credentials)
+    gateway = getattr(request.app.state, 'account_gateway', None)
+    if gateway is None:
+        raise unavailable()
+    request.state.cognito_user = gateway.assert_active(credential.credentials, user.scopes, user.subject)
+    return user
 
 
 require_authenticated_user = get_current_user

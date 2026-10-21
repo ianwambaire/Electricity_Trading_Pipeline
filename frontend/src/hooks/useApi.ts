@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../api/client'
 
 export interface ApiState<T> { data: T | null; loading: boolean; error: ApiError | null; receivedAt: string | null }
-export function useApi<T>(load: (signal: AbortSignal) => Promise<T>) {
+export function useApi<T>(load: (signal: AbortSignal) => Promise<T>, refreshInterval = 60000) {
   const [state, setState] = useState<ApiState<T>>({ data: null, loading: true, error: null, receivedAt: null })
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => setAttempt(n => n + 1), [])
@@ -18,8 +18,8 @@ export function useApi<T>(load: (signal: AbortSignal) => Promise<T>) {
       }
     }
     void refresh()
-    const interval = window.setInterval(() => { void refresh() }, 60000)
-    return () => { controller.abort(); window.clearInterval(interval) }
-  }, [load, attempt])
+    const interval = refreshInterval > 0 ? window.setInterval(() => { void refresh() }, refreshInterval) : null
+    return () => { controller.abort(); if (interval !== null) window.clearInterval(interval) }
+  }, [load, attempt, refreshInterval])
   return { ...state, retry }
 }

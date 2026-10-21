@@ -1,6 +1,14 @@
 import { WebStorageStateStore, type UserManagerSettings } from 'oidc-client-ts'
 import type { AuthConfig } from './config.ts'
 
+export const ACCOUNT_SCOPES = 'openid email profile aws.cognito.signin.user.admin'
+
+// A refresh of an older session cannot acquire additional scopes. Start an
+// explicit code + PKCE interaction; retain library-owned state/nonce validation.
+export function accountSigninRequest() {
+  return { scope: ACCOUNT_SCOPES, prompt: 'login', nonce: crypto.randomUUID(), state: { returnTo: '/profile' } }
+}
+
 export function oidcSettings(config: AuthConfig, store: Storage): UserManagerSettings {
   return {
     authority: config.authority, client_id: config.clientId,

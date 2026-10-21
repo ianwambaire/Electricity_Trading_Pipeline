@@ -1,0 +1,75 @@
+{
+  "review_only_not_an_update_request": true,
+  "status": "approved_applied_saved_configuration_verified_google_native_profile_authorization_passed_password_pending",
+  "target": {
+    "UserPoolId": "us-east-1_NLoYFRvex",
+    "ClientId": "4t8s6a673a18qhbauqac8rhdcf"
+  },
+  "current": {
+    "ReadAttributes": null,
+    "WriteAttributes": null
+  },
+  "proposed": {
+    "ReadAttributes": [
+      "sub",
+      "email",
+      "email_verified",
+      "name",
+      "preferred_username",
+      "identities"
+    ],
+    "WriteAttributes": [
+      "email",
+      "name",
+      "preferred_username"
+    ]
+  },
+  "preserve_all_other_client_settings": true,
+  "no_pool_idp_streamlit_or_user_changes": true,
+  "residual_required_email_is_writable": true,
+  "other_client_keeps_broad_default_permissions": true,
+  "applied_at_nairobi": "2026-10-21T12:41:53.149+03:00",
+  "saved": {
+    "ReadAttributes": [
+      "email",
+      "email_verified",
+      "identities",
+      "name",
+      "preferred_username",
+      "sub"
+    ],
+    "WriteAttributes": [
+      "email",
+      "name",
+      "preferred_username"
+    ]
+  },
+  "post_change_native_verification": {
+    "profile_retrieval": "passed",
+    "preferred_username_update_and_restore": "passed",
+    "server_role": "Analyst",
+    "admin_endpoint_denials": 7,
+    "admin_endpoint_status": 403,
+    "current_session_sign_out_and_profile_gate": "passed",
+    "password_change_recovery": "not_repeated_after_allowlist",
+    "google_acceptance": "passed_in_separate_google_verification"
+  },
+  "post_change_google_verification": {
+    "fresh_sign_in": "passed",
+    "four_scope_reauthentication": "passed",
+    "profile_retrieval": "passed",
+    "server_role": "Admin",
+    "preferred_username_update_and_restore": "passed",
+    "admin_statuses": [
+      404,
+      404,
+      404,
+      200,
+      200,
+      404,
+      404
+    ],
+    "current_session_sign_out_and_profile_gate": "passed"
+  },
+  "live_saved_client_recheck": "exact_approved_attributes_and_other_settings_match_after_normalization"
+}

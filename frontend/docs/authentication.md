@@ -1,5 +1,7 @@
 # Phase 4A — React Cognito authentication
 
+> Historical Phase 4A record. Current account management, four-scope sign-in, server-side authorization and live revocation checks are described in [Phase 4D](phase4d-account-security.md). Earlier scope, profile and public-API statements below describe Phase 4A only.
+
 Implemented on `feature/react-frontend`. This phase adds real Cognito OIDC integration to React using the existing public SPA client. It does not change Streamlit, its confidential client, any backend route, Cognito/AWS settings, models, data or deployment. Nothing was committed, pushed, merged or deployed.
 
 ## Packages

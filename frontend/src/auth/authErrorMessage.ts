@@ -4,6 +4,9 @@ export function authErrorMessage(error: unknown): string {
   if(!error||typeof error!=='object')return generic
   const value=error as {error?:unknown;error_description?:unknown;message?:unknown}
   if(value.error==='invalid_scope'||(value.error==='invalid_request'&&typeof value.error_description==='string'&&value.error_description.includes('Client is not allowed to request these scopes')))return 'The sign-in provider did not accept the requested account permissions. Contact the application administrator.'
+  if(value.error==='invalid_grant')return 'Your sign-in or renewal request is no longer valid. Sign in again below.'
+  if(value.error==='temporarily_unavailable'||value.error==='server_error')return 'The sign-in service is temporarily unavailable. Try again later.'
+  if(value.error==='consent_required')return 'Account permission approval requires a new sign-in. Continue below.'
   if(value.error==='access_denied')return 'Sign-in was declined. Try again when you are ready.'
   if(value.error==='login_required'||value.error==='interaction_required')return 'Your session needs a new sign-in. Continue below.'
   const message=typeof value.message==='string'?value.message.toLowerCase():''

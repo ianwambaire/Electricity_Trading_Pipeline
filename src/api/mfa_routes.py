@@ -88,7 +88,7 @@ def verify(body: Verify, request: Request, account=Depends(eligible)):
     store = request.app.state.mfa_enrollments
     ticket = body.setup_ticket.get_secret_value()
     with store.use(user.subject, ticket, user.auth_time) as entry:
-        if mfa_status(raw) == 'enabled':
+        if mfa_status(raw) == 'enabled' and entry.verified and raw.get('PreferredMfaSetting') == 'SOFTWARE_TOKEN_MFA':
             store.discard(user.subject, ticket)
             return {'status': 'mfa_enabled'}
         if mfa_status(raw) != 'not_enabled':
@@ -114,5 +114,5 @@ def verify(body: Verify, request: Request, account=Depends(eligible)):
 def cancel(body: Ticket, request: Request, account=Depends(own_account)):
     user, _raw = account
     # Discards only ephemeral setup metadata; never disables/replaces a factor.
-    request.app.state.mfa_enrollments.discard(user.subject, body.setup_ticket.get_secret_value())
+    request.app.state.mfa_enrollments.discard(user.subject, body.setup_ticket.get_secret_value(), require_idle=True)
     return {'status': 'setup_cancelled'}

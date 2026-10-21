@@ -2,7 +2,7 @@ import { parseProfile, parseAccountAction, accountErrorMessages } from './profil
 import { parseMfaSetup, parseMfaAction } from './mfa.ts'
 import { parseInfluence, parseContext, parseExploration, parseRealized, parseAdminOperations, parsePriceComparison, parseForecastProvenance } from './parity.ts'
 import { parseAccount } from './account.ts'
-import { apiAuthorization, rejectApiSession } from './accessToken.ts'
+import { captureApiSession } from './accessToken.ts'
 import { parseAnomalySummary, parseAnomalyEvents, parseMarketSummary, parseMarketChart, parseOperations } from './restoration.ts'
 import { parseCoverage, parseMarketHistory, parseModels } from './publicData.ts'
 import { parseHealth, parseNext24, parseOneHour, parsePipeline, parseReadiness, parseVintages } from './contracts.ts'
@@ -15,8 +15,9 @@ export class ApiError extends Error {
 
 export async function request<T>(path: string, parse: (value: unknown) => T, signal?: AbortSignal, change?: { method: 'PATCH' | 'POST'; body?: unknown }): Promise<T> {
   try {
-    const response = await fetch(`/api${path}`, { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(path.startsWith('/account/') ? 30000 : 15000)]), method: change?.method ?? 'GET', body: change?.body === undefined ? undefined : JSON.stringify(change.body), headers: { Accept: 'application/json', ...(change?.body === undefined ? {} : {'Content-Type':'application/json'}), ...apiAuthorization() }, cache: 'no-store', credentials: 'omit' })
-    if (response.status === 401) { rejectApiSession(); throw new ApiError('Your session is no longer accepted. Sign in again.', 401) }
+    const session = captureApiSession()
+    const response = await fetch(`/api${path}`, { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(path.startsWith('/account/') ? 30000 : 15000)]), method: change?.method ?? 'GET', body: change?.body === undefined ? undefined : JSON.stringify(change.body), headers: { Accept: 'application/json', ...(change?.body === undefined ? {} : {'Content-Type':'application/json'}), ...session.headers }, cache: 'no-store', credentials: 'omit' })
+    if (response.status === 401) { session.reject(); throw new ApiError('Your session is no longer accepted. Sign in again.', 401) }
     if (!response.ok && path.startsWith('/account/')) {
       let code: string | null = null
       try { const body = await response.json(); const candidate = body?.detail?.code; if (typeof candidate === 'string' && Object.hasOwn(accountErrorMessages,candidate)) code = candidate } catch { /* Never display a raw response body. */ }

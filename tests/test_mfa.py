@@ -195,3 +195,41 @@ def test_gateway_cannot_target_accounts_or_remove_factors(operation,payload):
     gateway=AccountGateway(ISSUER)
     with pytest.raises(HTTPException) as error:gateway.call(operation,'fixture',**payload)
     assert error.value.status_code==422
+
+
+def test_busy_setup_cannot_be_cancelled_or_replaced():
+    store = EnrollmentStore()
+    entry = store.begin('owner', 10)
+    with store.use('owner', entry.ticket, 10):
+        with pytest.raises(HTTPException) as error:
+            store.discard('owner', entry.ticket, require_idle=True)
+        assert error.value.status_code == 409
+        with pytest.raises(HTTPException):
+            store.begin('owner', 10)
+    store.discard('owner', entry.ticket, require_idle=True)
+    assert store.begin('owner', 10)
+
+
+def test_external_factor_change_cannot_confirm_unverified_setup(account_client):
+    c, h, calls, state = ready(account_client)
+    started = setup(c, h)
+    state['mfa'] = {'UserMFASettingList': ['SOFTWARE_TOKEN_MFA'], 'PreferredMfaSetting': 'SOFTWARE_TOKEN_MFA'}
+    result = c.post('/account/mfa/verify', headers=h, json={'setup_ticket': started['setup_ticket'], 'code': '123456'})
+    assert result.status_code == 409
+    assert not any(op == 'VerifySoftwareToken' for op, _ in calls)
+
+
+@pytest.mark.parametrize('provider_error, status, code', [
+    ('CodeMismatchException', 400, 'MFA_INVALID_CODE'),
+    ('ExpiredCodeException', 400, 'MFA_CODE_EXPIRED'),
+    ('EnableSoftwareTokenMFAException', 409, 'MFA_CONFIRMATION_REQUIRED'),
+])
+def test_mfa_errors_are_safe_and_distinguish_expiration(account_client, provider_error, status, code):
+    c, h, calls, state = ready(account_client)
+    started = setup(c, h)
+    state['errors']['VerifySoftwareToken'] = {'__type': provider_error, 'message': 'private-provider-detail'}
+    response = c.post('/account/mfa/verify', headers=h, json={'setup_ticket': started['setup_ticket'], 'code': '123456'})
+    assert response.status_code == status
+    assert response.json()['detail']['code'] == code
+    assert 'private-provider-detail' not in response.text
+    assert not any(op == 'SetUserMFAPreference' for op, _ in calls)

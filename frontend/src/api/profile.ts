@@ -21,6 +21,7 @@ export const accountErrorMessages: Record<string, string> = {
   MFA_ALREADY_CONFIGURED: 'An authentication factor is already configured. Refresh your security settings.',
   MFA_SETUP_IN_PROGRESS: 'A setup is already in progress. Finish it, cancel it, or wait five minutes before starting again.',
   MFA_SETUP_EXPIRED: 'This setup has expired or cannot be resumed. Refresh your security settings before starting again.',
+  MFA_CODE_EXPIRED: 'The code has expired. Wait for a new authenticator code and try again.',
   MFA_INVALID_CODE: 'The code was not accepted. Check your authenticator and device time, then try a new six-digit code.',
   MFA_CONFIRMATION_REQUIRED: 'The change could not be confirmed. Refresh your security settings before trying again.',
   ACCOUNT_ACTION_REJECTED: 'Your sign-in provider rejected this action. Your session has been preserved.',

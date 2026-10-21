@@ -62,14 +62,18 @@ class AccountGateway:
                     'not authorized to write', 'does not have write access',
                 )) and not any(word in message for word in ('token', 'expired', 'revoked')):
                     raise account_error(403, 'ATTRIBUTE_NOT_WRITABLE')
-                if operation == 'ChangePassword' and not any(word in message for word in ['token', 'expired', 'revoked']):
+                if operation == 'ChangePassword' and 'incorrect password' in message and not any(word in message for word in ['token', 'expired', 'revoked', 'disabled']):
                     raise account_error(400, 'INCORRECT_PASSWORD')
                 raise unauthorized()
             if error in {'PasswordResetRequiredException', 'UserNotConfirmedException'}:
                 raise account_error(409, 'ACCOUNT_RECOVERY_REQUIRED')
             if error in {'TooManyRequestsException', 'LimitExceededException', 'TooManyFailedAttemptsException'} or status == 429:
                 raise account_error(429, 'ACCOUNT_RATE_LIMITED')
-            if error in {'CodeMismatchException', 'ExpiredCodeException', 'EnableSoftwareTokenMFAException'}:
+            if error == 'ExpiredCodeException':
+                raise account_error(400, 'MFA_CODE_EXPIRED')
+            if error == 'EnableSoftwareTokenMFAException':
+                raise account_error(409, 'MFA_CONFIRMATION_REQUIRED')
+            if error == 'CodeMismatchException':
                 raise account_error(400, 'MFA_INVALID_CODE')
             if error == 'ConcurrentModificationException':
                 raise account_error(409, 'MFA_SETUP_IN_PROGRESS')

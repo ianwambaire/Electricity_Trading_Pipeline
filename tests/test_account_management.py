@@ -270,3 +270,12 @@ def test_gateway_never_exposes_administration_linking_or_account_deletion(operat
     with pytest.raises(HTTPException) as result:
         gateway.call(operation, 'fixture', Username='someone-else')
     assert result.value.status_code == 409
+
+
+@pytest.mark.parametrize('message', ['User is disabled.', 'Unknown authorization failure', 'Access token has expired'])
+def test_password_authorization_failure_is_not_misreported_as_wrong_password(account_client, message):
+    c, headers, calls, state = account_client()
+    state['errors']['ChangePassword'] = {'__type': 'NotAuthorizedException', 'message': message}
+    result = c.post('/account/password', headers=headers, json={'current_password':'Previous!1','new_password':'NewPassword!2'})
+    assert result.status_code == 401
+    assert message not in result.text

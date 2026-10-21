@@ -76,8 +76,10 @@ class EnrollmentStore:
             with self._lock:
                 entry.busy = False
 
-    def discard(self, subject, ticket):
+    def discard(self, subject, ticket, *, require_idle=False):
         with self._lock:
             entry = self._entries.get(subject)
             if entry and secrets.compare_digest(entry.ticket, ticket):
+                if require_idle and entry.busy:
+                    raise account_error(409, 'MFA_SETUP_IN_PROGRESS')
                 self._entries.pop(subject)

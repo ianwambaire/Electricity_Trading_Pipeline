@@ -1,3 +1,6 @@
+import { useAuth } from 'react-oidc-context'
+import { identityFromProfile } from '../../auth/identity'
+import { SignOutButton } from '../../auth/SignOutButton'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, CircleUserRound, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
@@ -6,6 +9,8 @@ import { Brand } from './Brand'
 import { Navigation } from './Navigation'
 
 export function AppLayout() {
+  const auth = useAuth()
+  const identity = identityFromProfile(auth.user?.profile ?? {})
   const [collapsed, setCollapsed] = useState(false)
   const mobileDialog = useRef<HTMLDialogElement>(null)
   const main = useRef<HTMLElement>(null)
@@ -59,11 +64,11 @@ export function AppLayout() {
           </div>
           <div className="flex shrink-0 items-center gap-4">
             <span className="foundation-badge"><span aria-hidden="true" />Read-only workspace</span>
-            <Link to="/profile" className="account-link" aria-label="My Profile — no account connected"><CircleUserRound size={23} aria-hidden="true" /><span>My account</span></Link>
+            <Link to="/profile" className="account-link" aria-label="My Profile"><CircleUserRound size={23} aria-hidden="true" /><span className="account-identity">{identity.name ?? identity.email ?? 'My account'}<small>{identity.role}</small></span></Link><div className="topbar-signout"><SignOutButton /></div>
           </div>
         </header>
         <main id="main-content" ref={main} tabIndex={-1} className="main-content"><Outlet /></main>
-        <footer className="app-footer"><span>PowerFlow <span aria-hidden="true">/</span> Electricity market intelligence</span><span>Read-only API integration · Account not connected</span></footer>
+        <footer className="app-footer"><span>PowerFlow <span aria-hidden="true">/</span> Electricity market intelligence</span><span>Authenticated workspace · Read-only data access</span></footer>
       </div>
     </div>
   )

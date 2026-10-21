@@ -1,6 +1,10 @@
 # PowerFlow frontend
 
-React + TypeScript frontend with read-only FastAPI integration, using Vite, Tailwind CSS v4 through `@tailwindcss/vite`, React Router, and Lucide React. No new dependencies were needed.
+React + TypeScript frontend with read-only FastAPI integration, using Vite, Tailwind CSS v4 through `@tailwindcss/vite`, React Router, and Lucide React. Phase 4A adds `oidc-client-ts` and `react-oidc-context` for managed Cognito authentication; see the [authentication guide](docs/authentication.md).
+
+## Authentication (Phase 4A)
+
+The seven workspace routes now require real Cognito sign-in. Use `http://localhost:5175/` and the public settings in `.env.example` (copy to `.env.local` if absent). The public SPA client is separate from Streamlit. FastAPI endpoints remain unchanged pending Phase 4B; frontend roles do not grant server authorization. Restricted feature influence and detailed operations stay deferred. See [authentication.md](docs/authentication.md) for exact setup, tests, every changed file and account verification steps.
 
 ## Local development
 
@@ -17,10 +21,10 @@ In terminal 2, from the repository root:
 ```sh
 cd frontend
 npm ci # only if dependencies are not already installed
-npm run dev -- --host 127.0.0.1
+npm run dev -- --host localhost --port 5175 --strictPort
 ```
 
-Open the local URL printed by Vite (normally http://127.0.0.1:5173).
+Open the local URL printed by Vite (http://localhost:5175).
 
 ```sh
 npm test # Node 22.6+; built-in test runner, no added libraries
@@ -65,8 +69,8 @@ Unknown URLs show a recovery page. BrowserRouter supports browser history; a fut
 - All elapsed targets are historical; older issue times with future targets are stale; partly elapsed windows are identified. One-hour reports are labeled historical and do not inherit next24h model identity or metrics.
 - Monitoring parsers select known statuses, source identifiers, timestamps and numeric counts only. They discard paths, raw reasons, unknown fields and credentials. Error responses are generic and do not render server bodies. These filters are presentation measures, not authorization.
 - Recharts renders only validated returned values; exact values have an accessible table. The one-hour chart shows the latest 500 available rows, not a claim of continuous seven-day coverage.
-- Market Analytics now uses `/market/coverage` and `/market/history` with real date-filtered observations and bounded pagination. Model Insights uses `/models/summary` with separate release-specific metrics and provenance. Anomaly Detection uses the active persisted report through `/anomalies/summary` and `/anomalies/events`. Executive Overview uses `/market/summary` and `/market/chart`; Pipeline Operations adds `/operations/summary`. Profile and restricted feature influence remain pending server-side authentication.
-- Phase 5 adds read-only Python API modules and tests; models, pipeline, Streamlit, authentication, infrastructure and production configuration remain unchanged. No login or What-if Lab is implemented. No fake responses or fallback data are shipped. Synthetic contract fixtures exist only under `tests/` and are not imported by the application.
+- Market Analytics now uses `/market/coverage` and `/market/history` with real date-filtered observations and bounded pagination. Model Insights uses `/models/summary` with separate release-specific metrics and provenance. Anomaly Detection uses the active persisted report through `/anomalies/summary` and `/anomalies/events`. Executive Overview uses `/market/summary` and `/market/chart`; Pipeline Operations adds `/operations/summary`. My Profile now shows the OIDC identity; restricted feature influence remains pending server-side authorization.
+- Phase 5 adds read-only Python API modules and tests; models, pipeline, Streamlit, infrastructure and production configuration remain unchanged. React authentication is covered separately below. Cognito login is implemented only in React; no What-if Lab is implemented. No fake responses or fallback data are shipped. Synthetic contract fixtures exist only under `tests/` and are not imported by the application.
 
 ## Phase 3 data readiness
 

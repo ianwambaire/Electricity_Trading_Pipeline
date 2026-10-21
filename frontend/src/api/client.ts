@@ -1,3 +1,4 @@
+import { apiAuthorization, rejectApiSession } from './accessToken.ts'
 import { parseAnomalySummary, parseAnomalyEvents, parseMarketSummary, parseMarketChart, parseOperations } from './restoration.ts'
 import { parseCoverage, parseMarketHistory, parseModels } from './publicData.ts'
 import { parseHealth, parseNext24, parseOneHour, parsePipeline, parseReadiness, parseVintages } from './contracts.ts'
@@ -9,7 +10,9 @@ export class ApiError extends Error {
 
 export async function request<T>(path: string, parse: (value: unknown) => T, signal?: AbortSignal): Promise<T> {
   try {
-    const response = await fetch(`/api${path}`, { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(15000)]), headers: { Accept: 'application/json' }, cache: 'no-store', credentials: 'omit' })
+    const response = await fetch(`/api${path}`, { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(15000)]), headers: { Accept: 'application/json', ...apiAuthorization() }, cache: 'no-store', credentials: 'omit' })
+    if (response.status === 401) { rejectApiSession(); throw new ApiError('Your session is no longer accepted. Sign in again.', 401) }
+    if (response.status === 403) throw new ApiError('Your account does not have permission for this information.', 403)
     // Do not surface raw server/proxy bodies: operational details may be sensitive.
     if (!response.ok) throw new ApiError(response.status === 404 ? 'This report is not available from the API.' : response.status === 503 ? 'The backend report is unavailable or invalid.' : `API request failed (HTTP ${response.status}).`, response.status)
     try { return parse(await response.json()) } catch { throw new ApiError('The API returned an unexpected or invalid response.') }

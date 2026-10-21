@@ -31,7 +31,7 @@ class QualityCheck(PublicModel):
 
 class ProductSummary(PublicModel):
     product: str
-    status: Literal["available", "missing", "pending_authentication"]
+    status: Literal["available", "missing", "pending_authentication", "restricted"]
 
 
 class OperationsSummary(PublicModel):
@@ -176,7 +176,7 @@ def operations_summary(settings, forecast_issue=None, forecast_invalid=False):
         ("One-hour release metadata", "artifacts/models/final_model_release_manifest.json"), ("24-hour release metadata", "artifacts/models/releases/next24h/next24h_release_manifest.json"),
         ("One-hour evaluation", "data/reports/final_holdout_metrics.csv"), ("One-hour predictions", "data/reports/actual_vs_predicted.csv"),
         ("24-hour predictions", "data/reports/next24h_forecast.csv"), ("Anomaly report", "data/reports/detected_anomalies.csv")]]
-    products.append(ProductSummary(product="Linear feature influence", status="pending_authentication"))
+    products.append(ProductSummary(product="Linear feature influence", status="restricted"))
     return OperationsSummary(assessed_at=now, health=health["label"], explanation=health["reason"],
         health_rules="Streamlit display rules: degraded for failed runs/current quality checks, missing releases/core sources, or >6-hour run/core-source age; warning for >2-hour success age, >3-hour source/forecast age, withholding, or continuity warnings. Archive weather is excluded. Unknown evidence never establishes health; this is not an issuance attestation.",
         latest_run_status=run_status, latest_run_time=_time(run[0]) if run else None, latest_success_time=success,
@@ -185,5 +185,5 @@ def operations_summary(settings, forecast_issue=None, forecast_invalid=False):
         recent_checks_passed=counts["passed"] if counts else None, recent_checks_failed=counts["failed"] if counts else None,
         recent_checks_warning=counts["warning"] if counts else None, continuity_warning_sources=gap_count,
         quality_history=history, sources=sources, products=products,
-        incident_evidence="Pending authentication" if "operational_incidents" in tables else "Missing local evidence; details require authentication",
-        timing_evidence="Pending authentication" if "pipeline_stage_timings" in tables else "Missing local evidence; details require authentication")
+        incident_evidence="Admin-only recorded evidence" if "operational_incidents" in tables else "Missing local evidence; details require authentication",
+        timing_evidence="Admin-only recorded evidence" if "pipeline_stage_timings" in tables else "Missing local evidence; details require authentication")

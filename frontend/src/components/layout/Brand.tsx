@@ -1,11 +1,9 @@
-import { Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand({ compact = false, subtitle = true }: { compact?: boolean; subtitle?: boolean }) {
   return (
     <Link to="/" className="brand" aria-label="PowerFlow home" title="PowerFlow home">
-      <span className="brand-mark"><Zap size={23} fill="currentColor" aria-hidden="true" /></span>
-      {!compact && <span>PowerFlow<span className="brand-caption">ENERGY INTELLIGENCE</span></span>}
+      <span>{compact ? 'PF' : 'PowerFlow'}{!compact && subtitle && <span className="brand-caption">Electricity Trading Intelligence</span>}</span>
     </Link>
   )
 }

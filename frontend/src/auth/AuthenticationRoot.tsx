@@ -1,3 +1,4 @@
+import { ServerAccountProvider } from './ServerAccountProvider'
 import { useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { AuthProvider, useAuth } from 'react-oidc-context'
 import { bindApiSession } from '../api/accessToken'
@@ -25,7 +26,7 @@ function SessionLifecycle({ children }: { children: ReactNode }) {
     }
   }, [events, removeUser])
   useEffect(() => { if (error) cleanCallbackUrl() }, [error])
-  return children
+  return <ServerAccountProvider>{children}</ServerAccountProvider>
 }
 
 export function AuthenticationRoot({ children }: { children: ReactNode }) {

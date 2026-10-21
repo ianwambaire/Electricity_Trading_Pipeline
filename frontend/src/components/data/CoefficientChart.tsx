@@ -1,0 +1,5 @@
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from 'recharts'
+import type { Coefficient } from '../../api/parity'
+export function CoefficientChart({ rows }: { rows: Coefficient[] }) {
+  return <div className="coefficient-chart" role="img" aria-label="Top 15 one-hour Linear Regression coefficients by absolute magnitude. Blue is positive; amber is negative. Exact signed values and sign labels follow in the table."><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout="vertical" margin={{left:10,right:30,top:10,bottom:20}}><CartesianGrid stroke="var(--border)" horizontal={false}/><XAxis type="number" tick={{fontSize:12}}/><YAxis type="category" dataKey="feature" width={185} tick={{fontSize:12}}/><Tooltip/><ReferenceLine x={0} stroke="var(--text-secondary)"/><Bar dataKey="signed_coefficient" name="Signed standardized coefficient" isAnimationActive={false}>{rows.map(r=><Cell key={r.feature} fill={r.signed_coefficient<0?'var(--chart-share)':'var(--chart-price)'}/>)}</Bar></BarChart></ResponsiveContainer></div>
+}

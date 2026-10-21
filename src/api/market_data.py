@@ -36,6 +36,7 @@ class Generation(PublicModel):
 
 
 GENERATION_FIELDS = tuple(Generation.model_fields)
+WEATHER_FIELDS = ("temperature_2m", "wind_speed_10m", "relative_humidity_2m", "cloud_cover", "shortwave_radiation")
 VALUE_FIELDS = ("price_eur_mwh", "load_mw", *GENERATION_FIELDS)
 
 
@@ -125,7 +126,7 @@ class MarketStore:
             connection = sqlite3.connect(":memory:", check_same_thread=False)
             connection.execute(
                 "CREATE TABLE observations (timestamp INTEGER PRIMARY KEY, "
-                + ", ".join(f"{name} REAL" for name in VALUE_FIELDS) + ")"
+                + ", ".join(f"{name} REAL" for name in (*VALUE_FIELDS, *WEATHER_FIELDS)) + ")"
             )
             with self.path.open(encoding="utf-8", newline="") as handle:
                 reader = csv.DictReader(handle)
@@ -140,9 +141,9 @@ class MarketStore:
                         if previous is not None and timestamp <= previous:
                             raise ValueError("Unordered or duplicate timestamp")
                         previous = timestamp
-                        yield (timestamp, *(_number(row.get(name)) for name in VALUE_FIELDS))
+                        yield (timestamp, *(_number(row.get(name)) for name in (*VALUE_FIELDS, *WEATHER_FIELDS)))
                 connection.executemany(
-                    "INSERT INTO observations VALUES (" + ",".join("?" for _ in range(1 + len(VALUE_FIELDS))) + ")", rows()
+                    "INSERT INTO observations VALUES (" + ",".join("?" for _ in range(1 + len(VALUE_FIELDS) + len(WEATHER_FIELDS))) + ")", rows()
                 )
             after = self.path.stat()
             if version != (after.st_mtime_ns, after.st_size):

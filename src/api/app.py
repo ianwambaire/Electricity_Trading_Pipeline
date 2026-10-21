@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -23,6 +23,9 @@ from .operations_summary import OperationsSummary, operations_summary
 from typing import Literal
 from .model_summaries import ModelsResponse, model_summaries
 
+
+from .security import CognitoVerifier, SecuritySettings, CurrentUser, require_authenticated_user, require_admin
+from .restricted_reports import ForecastProvenance, forecast_provenance, AccountResponse, VintageDiagnostics, ReadinessDiagnostics, LinearInfluence, vintage_diagnostics, readiness_diagnostics, linear_influence
 
 APPLICATION_NAME = "PowerFlow API"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -305,7 +308,7 @@ def _one_hour_report(path: Path) -> OneHourForecastResponse:
     return OneHourForecastResponse(row_count=len(forecasts), forecasts=forecasts)
 
 
-def create_app(settings: APISettings | None = None) -> FastAPI:
+def create_app(settings: APISettings | None = None, *, security_settings: SecuritySettings | None = None) -> FastAPI:
     """Create the service with explicit read-only paths for safe testing."""
     configured = settings or APISettings.from_root(PROJECT_ROOT)
     market_store = MarketStore(configured.market_silver)
@@ -321,6 +324,34 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+
+    # Missing/invalid auth configuration never opens protected routes. Market
+    # summaries stay public; legacy monitoring requires Admin. Startup uses no network.
+    try:
+        identity_settings = security_settings or SecuritySettings.from_environment()
+        application.state.cognito_verifier = CognitoVerifier(identity_settings)
+    except ValueError:
+        application.state.cognito_verifier = None
+
+    @application.get("/auth/me", response_model=AccountResponse, tags=["Authenticated account"])
+    def authenticated_account(user: CurrentUser = Depends(require_authenticated_user)):
+        return AccountResponse(subject=user.subject, role=user.role, email=user.email, display_name=user.display_name)
+
+    @application.get("/admin/forecast/provenance", response_model=ForecastProvenance, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_forecast_provenance():
+        return forecast_provenance(configured.public_metadata_root, _next24_report(configured.next24_forecast).forecasts)
+
+    @application.get("/admin/monitoring/forecast-vintages", response_model=VintageDiagnostics, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_vintages():
+        return vintage_diagnostics(configured.forecast_vintage_health)
+
+    @application.get("/admin/monitoring/exogenous-readiness", response_model=ReadinessDiagnostics, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_readiness():
+        return readiness_diagnostics(configured.exogenous_readiness)
+
+    @application.get("/admin/models/linear-feature-influence", response_model=LinearInfluence, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_linear_influence():
+        return linear_influence(configured.public_metadata_root)
 
     @application.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -342,17 +373,13 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
     def one_hour_forecast() -> OneHourForecastResponse:
         return _one_hour_report(configured.one_hour_forecast)
 
-    @application.get("/monitoring/forecast-vintages", response_model=dict[str, Any])
+    @application.get("/monitoring/forecast-vintages", response_model=VintageDiagnostics, dependencies=[Depends(require_admin)], deprecated=True, tags=["Deprecated Admin aliases"])
     def forecast_vintage_monitoring() -> dict[str, Any]:
-        return _read_json_report(
-            configured.forecast_vintage_health, "Forecast-vintage health report"
-        )
+        return vintage_diagnostics(configured.forecast_vintage_health)
 
-    @application.get("/monitoring/exogenous-readiness", response_model=dict[str, Any])
+    @application.get("/monitoring/exogenous-readiness", response_model=ReadinessDiagnostics, dependencies=[Depends(require_admin)], deprecated=True, tags=["Deprecated Admin aliases"])
     def exogenous_readiness() -> dict[str, Any]:
-        return _read_json_report(
-            configured.exogenous_readiness, "Exogenous readiness report"
-        )
+        return readiness_diagnostics(configured.exogenous_readiness)
 
     @application.get("/market/coverage", response_model=MarketCoverage)
     def market_coverage() -> MarketCoverage:
@@ -398,6 +425,31 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
         except HTTPException as error:
             invalid = error.status_code != 404
         return operations_summary(configured, issue, invalid)
+
+    from .feature_parity import MarketExploration, ForecastContext, RealizedEvaluation, PriceComparison, market_exploration, forecast_context, realized_evaluation, price_comparison
+    from .admin_operations import AdminOperations, admin_operations
+
+    @application.get("/market/exploration", response_model=MarketExploration)
+    def market_exploration_route(start: datetime | None = None, end: datetime | None = None,
+                                 max_points: int = Query(default=1000, ge=4, le=2000)):
+        return market_exploration(market_store, start, end, max_points)
+
+    @application.get("/market/price-comparison", response_model=PriceComparison)
+    def price_comparison_route():
+        return price_comparison(configured.public_metadata_root)
+
+    @application.get("/forecast/context", response_model=ForecastContext)
+    def forecast_context_route(issue_time: datetime):
+        return forecast_context(market_store, issue_time)
+
+    @application.get("/forecast/realized-evaluation", response_model=RealizedEvaluation)
+    def realized_evaluation_route():
+        return realized_evaluation(configured.public_metadata_root)
+
+    @application.get("/admin/operations", response_model=AdminOperations,
+                     dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_operations_route():
+        return admin_operations(configured.operational_database)
 
     return application
 

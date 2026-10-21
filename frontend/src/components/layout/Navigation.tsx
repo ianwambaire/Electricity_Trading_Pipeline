@@ -12,7 +12,7 @@ export function Navigation({ compact = false, onNavigate }: { compact?: boolean;
               <li key={path}>
                 <NavLink to={path} end={path === '/'} onClick={onNavigate} title={compact ? label : undefined}
                   aria-label={compact ? label : undefined} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                  <Icon size={19} aria-hidden="true" />
+                  {compact && <Icon size={18} aria-hidden="true" />}
                   {!compact && <span>{label}</span>}
                 </NavLink>
               </li>

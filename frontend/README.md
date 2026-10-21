@@ -93,3 +93,11 @@ Visit every route and an unknown URL. Test sidebar collapse/expand, active links
 ## Phase 5 P0 restoration
 
 See [the implementation report](docs/phase5-restoration.md) for the parity checklist, every changed file, endpoint bounds, validation evidence, remaining authentication dependencies and P1 work. No additional dependencies were installed.
+
+## Phase 4B — server authorization
+
+FastAPI now verifies Cognito access tokens for `/auth/me` and new Admin report endpoints. Navigation/profile use the server-confirmed role. React monitoring requests use `/admin/monitoring/...` and never fall back to public legacy reports. API identity environment variables must be exported before starting FastAPI; see the [complete backend security runbook](../docs/api_authentication.md) for startup commands, endpoint matrix, tests and the unresolved legacy monitoring migration. Existing public market/forecast contracts and Streamlit behavior are unchanged. Coefficient visualization and detailed operations restoration remain separate work.
+
+## Phase 4C feature parity and security
+
+See [the source-backed audit and acceptance matrix](docs/phase4c-parity.md) for restored market/weather, coefficient, forecast evaluation and administrative operations views, endpoint access rules, legacy monitoring migration, data availability, exact startup commands and test results. Both legacy monitoring URLs now require server-verified Admin authorization. No production deployment has occurred.

@@ -1,3 +1,5 @@
+import { parseInfluence, parseContext, parseExploration, parseRealized, parseAdminOperations, parsePriceComparison, parseForecastProvenance } from './parity.ts'
+import { parseAccount } from './account.ts'
 import { apiAuthorization, rejectApiSession } from './accessToken.ts'
 import { parseAnomalySummary, parseAnomalyEvents, parseMarketSummary, parseMarketChart, parseOperations } from './restoration.ts'
 import { parseCoverage, parseMarketHistory, parseModels } from './publicData.ts'
@@ -24,6 +26,15 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
 }
 
 export const api = {
+  forecastProvenance: (signal?: AbortSignal) => request('/admin/forecast/provenance', parseForecastProvenance, signal),
+  influence: (signal?: AbortSignal) => request('/admin/models/linear-feature-influence', parseInfluence, signal),
+  adminOperations: (signal?: AbortSignal) => request('/admin/operations', parseAdminOperations, signal),
+  exploration: (query: string, signal?: AbortSignal) => request(`/market/exploration${query ? `?${query}` : ''}`, parseExploration, signal),
+  forecastContext: (issue: string, signal?: AbortSignal) => request(`/forecast/context?${new URLSearchParams({issue_time: issue})}`, parseContext, signal),
+  priceComparison: (signal?: AbortSignal) => request('/market/price-comparison', parsePriceComparison, signal),
+  realized: (signal?: AbortSignal) => request('/forecast/realized-evaluation', parseRealized, signal),
+  me: (signal?: AbortSignal) => request('/auth/me', parseAccount, signal),
+  marketStatistics: (query: string, signal?: AbortSignal) => request(`/market/summary${query ? `?${query}` : ''}`, parseMarketSummary, signal),
   marketSummary: (signal?: AbortSignal) => request('/market/summary', parseMarketSummary, signal),
   marketChart: (query: string, signal?: AbortSignal) => request(`/market/chart${query ? `?${query}` : ''}`, parseMarketChart, signal),
   anomalySummary: (query: string, signal?: AbortSignal) => request(`/anomalies/summary${query ? `?${query}` : ''}`, parseAnomalySummary, signal),
@@ -36,6 +47,6 @@ export const api = {
   pipeline: (signal?: AbortSignal) => request('/pipeline/status', parsePipeline, signal),
   next24: (signal?: AbortSignal) => request('/forecast/next24', parseNext24, signal),
   oneHour: (signal?: AbortSignal) => request('/forecast/one-hour', parseOneHour, signal),
-  vintages: (signal?: AbortSignal) => request('/monitoring/forecast-vintages', parseVintages, signal),
-  readiness: (signal?: AbortSignal) => request('/monitoring/exogenous-readiness', parseReadiness, signal),
+  vintages: (signal?: AbortSignal) => request('/admin/monitoring/forecast-vintages', parseVintages, signal),
+  readiness: (signal?: AbortSignal) => request('/admin/monitoring/exogenous-readiness', parseReadiness, signal),
 }

@@ -20,6 +20,21 @@ def _client(root: Path) -> TestClient:
     return TestClient(create_app(_settings(root)))
 
 
+
+def _admin_client(root: Path) -> TestClient:
+    # Real verifier, ephemeral RSA key and mocked JWKS; never a production token.
+    from joserfc import jwk, jwt
+    from api.security import CognitoVerifier, JwksCache, SecuritySettings
+    import time
+    settings = SecuritySettings('https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TestPool', frozenset({'testclient'}))
+    key = jwk.RSAKey.generate_key(2048, parameters={'kid':'test-key','alg':'RS256','use':'sig'})
+    app = create_app(_settings(root), security_settings=settings)
+    app.state.cognito_verifier = CognitoVerifier(settings, JwksCache(settings.jwks_url, fetch=lambda _: {'keys':[key.as_dict(private=False)]}))
+    now = int(time.time())
+    value = jwt.encode({'alg':'RS256','kid':'test-key'}, dict(iss=settings.issuer, sub='01234567-89ab-4def-8123-0123456789ab', client_id='testclient', token_use='access', iat=now-1, exp=now+3600, scope='openid', **{'cognito:groups':['powerflow-admins']}), key)
+    return TestClient(app, headers={'Authorization':'Bearer '+value})
+
+
 def _write_next24(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -86,6 +101,8 @@ def _write_monitoring_reports(settings: APISettings) -> None:
         json.dumps(
             {
                 "dataset_status": "NOT_READY",
+                "generated_at_utc": ISSUE.isoformat(),
+                "distinct_issue_cycles": 0, "distinct_calendar_days": 0, "complete_issue_cycles": 0, "horizon_coverage_count": 0,
                 "output_rows": 0,
                 "leakage_check": {"passed": True},
             }
@@ -158,7 +175,7 @@ def test_one_hour_endpoint_exposes_only_existing_report(tmp_path):
 
 
 def test_missing_and_invalid_reports_have_clear_status_codes(tmp_path):
-    client = _client(tmp_path)
+    client = _admin_client(tmp_path)
     assert client.get("/forecast/next24").status_code == 404
     assert client.get("/forecast/one-hour").status_code == 404
     assert client.get("/monitoring/forecast-vintages").status_code == 404
@@ -170,7 +187,7 @@ def test_missing_and_invalid_reports_have_clear_status_codes(tmp_path):
     settings.exogenous_readiness.write_text("not-json", encoding="utf-8")
     response = client.get("/monitoring/exogenous-readiness")
     assert response.status_code == 503
-    assert response.json()["detail"] == "Exogenous readiness report is invalid or unreadable."
+    assert response.json()["detail"] == "The restricted report is invalid or unreadable."
 
 
 def test_monitoring_endpoints_return_reports_and_redact_sensitive_keys(tmp_path):
@@ -179,18 +196,18 @@ def test_monitoring_endpoints_return_reports_and_redact_sensitive_keys(tmp_path)
     payload = json.loads(settings.forecast_vintage_health.read_text())
     payload["api_token"] = "must-not-be-returned"
     settings.forecast_vintage_health.write_text(json.dumps(payload), encoding="utf-8")
-    client = _client(tmp_path)
+    client = _admin_client(tmp_path)
 
     health = client.get("/monitoring/forecast-vintages")
     readiness = client.get("/monitoring/exogenous-readiness")
 
     assert health.status_code == 200
     assert health.json()["overall_status"] == "HEALTHY"
-    assert health.json()["api_token"] == "[REDACTED]"
+    assert "api_token" not in health.json()
     assert "must-not-be-returned" not in health.text
     assert readiness.status_code == 200
     assert readiness.json()["dataset_status"] == "NOT_READY"
-    assert readiness.json()["leakage_check"] == {"passed": True}
+    assert readiness.json()["leakage_check_passed"] is True
 
 
 def test_requests_do_not_write_or_modify_any_source_file(tmp_path):
@@ -210,7 +227,7 @@ def test_requests_do_not_write_or_modify_any_source_file(tmp_path):
         path: (hashlib.sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns)
         for path in paths
     }
-    client = _client(tmp_path)
+    client = _admin_client(tmp_path)
 
     for route in (
         "/pipeline/status",

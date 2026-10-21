@@ -18,10 +18,9 @@ export function SignInScreen({ returnTo = '/', error = false, expired = false }:
       await auth.signinRedirect({ state: { returnTo: safeDestination(returnTo) }, nonce: crypto.randomUUID() })
     } catch { setFailed(true); setStarting(false) }
   }
-  return <main className="auth-page"><section className="auth-card" aria-labelledby="signin-title"><Brand /><p className="auth-eyebrow">POWERFLOW WORKSPACE</p><h1 id="signin-title">Sign in to PowerFlow</h1><p>Access electricity market analysis, forecasts, anomaly detection and pipeline monitoring.</p>
+  return <main className="auth-page"><section className="auth-card" aria-labelledby="signin-title"><Brand subtitle={false} /><h1 id="signin-title">Sign in</h1><p>Sign in to access your dashboard.</p>
     {(error || failed) && <p className="notice notice-error" role="alert">Sign-in could not be completed or the session could not be renewed. Start again using the button below.</p>}
     {(expired || sessionHasEnded()) && !error && <p className="notice notice-warning" role="status">Your session has ended. Sign in again to continue.</p>}
-    {!correctOrigin ? <p className="notice notice-warning">Use the configured application address for secure callback handling. <a href={authConfig?.logoutUri}>Open PowerFlow at the configured address</a>.</p> : <button className="auth-primary" disabled={starting || !!auth.activeNavigator} onClick={() => void signIn()}>{starting || auth.activeNavigator ? 'Opening secure sign-in…' : 'Sign In'}</button>}
-    <p className="auth-help">Choose Google or email on Amazon Cognito’s managed sign-in page. Registration and password recovery are available there only if enabled for your account.</p><p className="auth-footnote">Passwords are handled by your identity provider. PowerFlow does not collect or store them.</p>
+    {!correctOrigin ? <p className="notice notice-warning">Use the configured application address for secure callback handling. <a href={authConfig?.logoutUri}>Open PowerFlow at the configured address</a>.</p> : <button className="auth-primary" disabled={starting || !!auth.activeNavigator} onClick={() => void signIn()}>{starting || auth.activeNavigator ? 'Opening secure sign-in…' : 'Continue to sign in'}</button>}
   </section></main>
 }

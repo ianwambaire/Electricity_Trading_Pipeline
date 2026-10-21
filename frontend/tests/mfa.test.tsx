@@ -29,7 +29,7 @@ test('native enrollment uses authenticated client, enables after code submission
  const view=mount();await begin(view)
  assert.equal(start.mock.callCount(),1)
  const input=view.getByRole('textbox',{name:'Authenticator code'}) as HTMLInputElement
- assert.equal(document.activeElement,input)
+ await waitFor(()=>assert.ok(!input.disabled&&document.activeElement===input, 'The enabled authenticator code field receives focus'))
  fireEvent.change(input,{target:{value:'123456'}});fireEvent.submit(view.getByRole('form',{name:'Verify authenticator'}))
  await waitFor(()=>assert.equal(view.refresh.mock.callCount(),1))
  assert.equal(verify.mock.calls[0].arguments[0],setup.setup_ticket);assert.equal(verify.mock.calls[0].arguments[1],'123456')
@@ -149,4 +149,18 @@ test('setup expires locally and sensitive output is removed',async()=>{
  await act(async()=>expire())
  assert.equal(view.queryByText(setup.secret),null)
  assert.match(view.getByRole('status').textContent??'',/expired/)
+})
+
+test('delayed setup focuses the code field only after it becomes interactive',async()=>{
+ let resolve!:(value:typeof setup)=>void
+ mock.method(api,'startMfa',()=>new Promise<typeof setup>(done=>{resolve=done}))
+ const view=mount()
+ fireEvent.click(view.getByRole('button',{name:'Set up authenticator'}))
+ fireEvent.click(view.getByRole('button',{name:'Continue setup'}))
+ assert.ok((view.getByRole('button',{name:'Starting…'}) as HTMLButtonElement).disabled)
+ assert.equal(view.queryByRole('textbox',{name:'Authenticator code'}),null)
+ await act(async()=>resolve(setup))
+ const field=view.getByRole('textbox',{name:'Authenticator code'}) as HTMLInputElement
+ assert.equal(field.disabled,false)
+ assert.ok(document.activeElement===field,'Code input receives focus after setup finishes')
 })

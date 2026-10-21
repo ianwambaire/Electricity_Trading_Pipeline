@@ -21,7 +21,6 @@ export function MfaSettings({profile,onRefresh,onReauthenticate}:{profile:Accoun
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;active.current?.abort();ticket.current=null}},[])
   useEffect(()=>{
     if(!setupTicket||!setupLifetime)return
-    input.current?.focus()
     function clear(){
       // Erase the key/code when hidden, but retain the memory-only ticket and
       // original expiry so returning from an authenticator can finish setup.
@@ -39,6 +38,10 @@ export function MfaSettings({profile,onRefresh,onReauthenticate}:{profile:Accoun
     clear()
     return()=>{window.clearTimeout(timer);document.removeEventListener('visibilitychange',clear)}
   },[setupTicket,setupLifetime])
+
+  // Setup can render while the request is still busy. A disabled input cannot
+  // receive focus; move focus only once the code field becomes interactive.
+  useEffect(()=>{if(setupTicket&&!busy)input.current?.focus()},[setupTicket,busy])
 
   function failure(error:unknown){
     setFresh(error instanceof ApiError&&error.code==='FRESH_SIGN_IN_REQUIRED')

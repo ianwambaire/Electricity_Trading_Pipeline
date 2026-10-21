@@ -12,6 +12,7 @@ import { PageHeading } from '../components/ui/PageHeading'
 import { AccountSection, AccountField } from '../components/account/AccountSection'
 import { ProfileEditor } from '../components/account/ProfileEditor'
 import { PasswordForm } from '../components/account/PasswordForm'
+import { MfaSettings } from '../components/account/MfaSettings'
 
 export function ProfilePage() {
   const auth=useAuth()
@@ -68,7 +69,7 @@ export function ProfilePage() {
         <AccountSection title="Sign-in and security">
           {account&&<><div className="account-security-row"><div><h3>Password</h3><p>{account.password_configured===true?'Manage your PowerFlow password.':account.password_configured===false&&profile.googleConnected?'Your Google password is managed by Google.':'Password availability could not be confirmed. Use sign-in options for recovery.'}</p></div>{account.password_configured===true&&!changingPassword&&<button className="secondary-button" onClick={()=>{setChangingPassword(true);setNotice('')}}>Change password</button>}</div>{changingPassword&&account.password_configured===true&&<PasswordForm onChanged={()=>{setChangingPassword(false);setNotice('Your password has been changed.')}} onCancel={()=>setChangingPassword(false)}/>}</>}
           <div className="account-security-row"><div><h3>Sign-in and recovery</h3><p>Open secure sign-in for the recovery options available to your account.</p></div><button className="secondary-button" disabled={opening||!!auth.activeNavigator} onClick={()=>void openManagedLogin()}>{opening?'Opening sign-in…':'Open sign-in options'}</button></div>
-          <div className="account-security-row"><div><h3>Two-step verification</h3><p>Not enabled for PowerFlow. Google account protection is managed separately.</p></div></div>
+          {account?<MfaSettings profile={account} onRefresh={state.retry} onReauthenticate={()=>void openManagedLogin()}/>:<div className="account-security-row"><div><h3>Two-step verification</h3><p>Open account settings to check your security options.</p></div></div>}
           <div className="account-security-row"><div><h3>This browser</h3><p>Sign out of your current PowerFlow session.</p></div><div className="account-signout"><SignOutButton/></div></div>
           {account&&<div className="account-security-row"><div><h3>Other devices</h3><p>Sign out across all PowerFlow sessions, including this browser.</p></div>{!confirmingSignOut?<button className="secondary-button" onClick={()=>setConfirmingSignOut(true)}>Sign out across devices</button>:<div className="account-confirmation" aria-label="Confirm sign-out across devices"><p>All PowerFlow sessions will need to sign in again. Your Google session is separate.</p>{reauthRequired?<button className="account-primary" disabled={opening} onClick={()=>void openManagedLogin()}>Confirm identity</button>:<button className="account-primary" disabled={revoking} onClick={()=>void revokeSessions()}>{revoking?'Signing out…':'Confirm sign-out'}</button>}<button className="secondary-button" disabled={revoking} onClick={()=>{setConfirmingSignOut(false);setReauthRequired(false)}}>Cancel</button></div>}</div>}
         </AccountSection>

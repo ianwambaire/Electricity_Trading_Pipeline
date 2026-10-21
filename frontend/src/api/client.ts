@@ -1,4 +1,5 @@
 import { parseProfile, parseAccountAction, accountErrorMessages } from './profile.ts'
+import { parseMfaSetup, parseMfaAction } from './mfa.ts'
 import { parseInfluence, parseContext, parseExploration, parseRealized, parseAdminOperations, parsePriceComparison, parseForecastProvenance } from './parity.ts'
 import { parseAccount } from './account.ts'
 import { apiAuthorization, rejectApiSession } from './accessToken.ts'
@@ -33,6 +34,9 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
 }
 
 export const api = {
+  startMfa: (signal?: AbortSignal) => request('/account/mfa/setup', parseMfaSetup, signal, {method:'POST'}),
+  verifyMfa: (setup_ticket:string, code:string, signal?: AbortSignal) => request('/account/mfa/verify', parseMfaAction, signal, {method:'POST',body:{setup_ticket,code}}),
+  cancelMfa: (setup_ticket:string, signal?: AbortSignal) => request('/account/mfa/cancel', parseMfaAction, signal, {method:'POST',body:{setup_ticket}}),
   accountProfile: (signal?: AbortSignal) => request('/account/profile', parseProfile, signal),
   updateProfile: (body: {name?:string;preferred_username?:string}, signal?: AbortSignal) => request('/account/profile', parseAccountAction, signal, {method:'PATCH',body}),
   changePassword: (body: {current_password:string;new_password:string}, signal?: AbortSignal) => request('/account/password', parseAccountAction, signal, {method:'POST',body}),

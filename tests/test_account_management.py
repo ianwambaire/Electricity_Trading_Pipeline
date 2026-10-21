@@ -33,12 +33,18 @@ def account_client(tmp_path, signing):
             calls.append((operation,body))
             if state['revoked']:return httpx.Response(400,json={'__type':'NotAuthorizedException','message':'Access Token has been revoked'})
             if operation in state['errors']:return httpx.Response(400,json=state['errors'][operation])
-            if operation=='GetUser':return httpx.Response(200,json={'Username':'internal-user-id','UserAttributes':[{'Name':k,'Value':v} for k,v in attributes.items()]})
+            if operation=='GetUser':return httpx.Response(200,json={'Username':'internal-user-id','UserAttributes':[{'Name':k,'Value':v} for k,v in attributes.items()],**state.get('mfa',{})})
             if operation=='GetUserAuthFactors':
                 if factor_error:return httpx.Response(400,json={'__type':factor_error})
                 return httpx.Response(200,json={'Username':'internal-user-id','ConfiguredUserAuthFactors':state['factors']})
             if operation=='UpdateUserAttributes':
                 for row in body['UserAttributes']:attributes[row['Name']]=row['Value']
+            elif operation=='AssociateSoftwareToken' and state.get('mfa_test'):
+                return httpx.Response(200,json=state.get('setup_result',{'SecretCode':'JBSWY3DPEHPK3PXP'}))
+            elif operation=='VerifySoftwareToken' and state.get('mfa_test'):
+                return httpx.Response(200,json=state.get('verify_result',{'Status':'SUCCESS'}))
+            elif operation=='SetUserMFAPreference' and state.get('mfa_test'):
+                state['mfa']={'UserMFASettingList':['SOFTWARE_TOKEN_MFA'],'PreferredMfaSetting':'SOFTWARE_TOKEN_MFA'}
             elif operation=='GlobalSignOut':state['revoked']=True
             elif operation!='ChangePassword':raise AssertionError('Unexpected provider mutation')
             return httpx.Response(200,json={})
@@ -59,7 +65,8 @@ def test_profile_retrieval_native_and_google_never_invent_password(account_clien
         assert data['password_configured'] is expected and data['role']=='Analyst'
         assert data['name_editable'] is (not google)
         assert data['connected_providers']==(['Google'] if google else [])
-        assert data['email_editable'] is False and data['mfa_management']=='not_enabled'
+        assert data['email_editable'] is False and data['mfa_management']==('provider_managed' if google else 'unavailable')
+        assert data['mfa_status']=='not_enabled'
         assert all(value not in response.text for value in ['internal-user-id','internal-linked-id','never-display',SUB,'AccessToken'])
         assert [op for op,_ in calls]==['GetUser','GetUserAuthFactors']
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import re
 import sqlite3
 from contextlib import asynccontextmanager, closing
@@ -324,6 +325,16 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         version="1.0.0",
         lifespan=lifespan,
     )
+    from .mfa_service import EnrollmentStore
+    application.state.mfa_enrollments = EnrollmentStore()
+    # Separate release gate from pool enablement: live enrollment needs its own
+    # approval. Defaults closed; no runtime IAM/DescribeUserPool permission.
+    application.state.account_totp_enabled = os.environ.get('POWERFLOW_ACCOUNT_TOTP_ENABLED') == 'true'
+    target = os.environ.get('POWERFLOW_ACCOUNT_TOTP_TEST_SUBJECT', '').strip()
+    application.state.account_totp_test_subject = target or None
+    if target and not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', target):
+        # A typo must never broaden a dedicated-account test to all local users.
+        application.state.account_totp_enabled = False
 
     # Missing/invalid auth configuration never opens protected routes. Market
     # summaries stay public; legacy monitoring requires Admin. Startup uses no network.
@@ -456,6 +467,8 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
 
     from .account_routes import router as account_router
     application.include_router(account_router)
+    from .mfa_routes import router as mfa_router
+    application.include_router(mfa_router)
 
     return application
 

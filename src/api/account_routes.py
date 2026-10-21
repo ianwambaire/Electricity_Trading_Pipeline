@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, SecretStr, field_validator, model_va
 from starlette.requests import Request as StarletteRequest
 from .security import CurrentUser, require_authenticated_user, NO_STORE
 from .account_service import SELF_SERVICE_SCOPE, account_error, attributes_from_user
+from .mfa_service import mfa_status, enrollment_available
 
 
 class AccountRoute(APIRoute):
@@ -92,7 +93,8 @@ class AccountProfile(BaseModel):
     preferred_username_editable: Literal[True] = True
     email_editable: Literal[False] = False
     password_configured: bool | None
-    mfa_management: Literal['not_enabled'] = 'not_enabled'
+    mfa_management: Literal['available', 'provider_managed', 'unavailable']
+    mfa_status: Literal['not_enabled', 'enabled', 'other_factor', 'unknown']
 
 
 def own_account(request: Request, user: CurrentUser = Depends(require_authenticated_user)):
@@ -148,11 +150,16 @@ def profile_response(request, user, raw):
         value = attributes.get(name)
         return value if isinstance(value,str) and 0<len(value)<=320 and not any(ord(c)<32 or ord(c)==127 for c in value) else None
     providers = connected_providers(attributes)
+    password = password_configured(request, current_token(request))
+    management = 'provider_managed' if linked_identities(attributes) else 'available' if (
+        enrollment_available(request, user) and password is True
+        and attributes.get('email_verified') == 'true' and mfa_status(raw) in {'not_enabled', 'enabled'}
+    ) else 'unavailable'
     return AccountProfile(name=text('name'), email=text('email'),
         email_verified={'true':True,'false':False}.get(attributes.get('email_verified')),
         preferred_username=text('preferred_username'), role=user.role,
         connected_providers=providers, name_editable=not linked_identities(attributes),
-        password_configured=password_configured(request, current_token(request)))
+        password_configured=password, mfa_management=management, mfa_status=mfa_status(raw))
 
 
 @router.get('/profile', response_model=AccountProfile)

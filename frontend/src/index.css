@@ -325,3 +325,6 @@ button:disabled { cursor: wait; opacity: .55; }
 .account-confirmation { width: 100%; padding: 12px; background: var(--page); border: 1px solid var(--border); border-radius: 6px; }
 .account-confirmation p { margin-bottom: 12px; }
 .account-confirmation button + button { margin-left: 10px; }
+.account-mfa { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.account-mfa .account-security-row { border-bottom: 0; }
+.account-setup-key { display: block; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); overflow-wrap: anywhere; user-select: all; font-variant-numeric: tabular-nums; }

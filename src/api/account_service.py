@@ -69,6 +69,14 @@ class AccountGateway:
                 raise account_error(409, 'ACCOUNT_RECOVERY_REQUIRED')
             if error in {'TooManyRequestsException', 'LimitExceededException', 'TooManyFailedAttemptsException'} or status == 429:
                 raise account_error(429, 'ACCOUNT_RATE_LIMITED')
+            if error in {'CodeMismatchException', 'ExpiredCodeException', 'EnableSoftwareTokenMFAException'}:
+                raise account_error(400, 'MFA_INVALID_CODE')
+            if error == 'ConcurrentModificationException':
+                raise account_error(409, 'MFA_SETUP_IN_PROGRESS')
+            if error == 'SoftwareTokenMFANotFoundException':
+                raise account_error(409, 'MFA_UNAVAILABLE')
+            if error == 'ForbiddenException':
+                raise account_error(403, 'ACCOUNT_ACTION_REJECTED')
             if error in {'InvalidPasswordException', 'PasswordHistoryPolicyViolationException'}:
                 raise account_error(422, 'PASSWORD_POLICY')
             if error in {'InvalidParameterException', 'AliasExistsException'}:
@@ -82,8 +90,22 @@ class AccountGateway:
 
     def call(self, operation, token, **payload):
         # No user identifier or administrative API can be selected by the caller.
-        if operation not in {'GetUser', 'GetUserAuthFactors', 'UpdateUserAttributes', 'ChangePassword', 'GlobalSignOut'}:
+        if operation not in {'GetUser', 'GetUserAuthFactors', 'UpdateUserAttributes', 'ChangePassword', 'GlobalSignOut',
+                             'AssociateSoftwareToken', 'VerifySoftwareToken', 'SetUserMFAPreference'}:
             raise account_error(409, 'ACTION_UNAVAILABLE')
+        if operation == 'AssociateSoftwareToken' and payload:
+            raise account_error(422, 'INVALID_ACCOUNT_INPUT')
+        if operation == 'VerifySoftwareToken' and (set(payload) != {'UserCode'}
+            or not isinstance(payload['UserCode'], str) or len(payload['UserCode']) != 6
+            or any(c not in '0123456789' for c in payload['UserCode'])):
+            raise account_error(422, 'INVALID_ACCOUNT_INPUT')
+        if operation == 'SetUserMFAPreference' and (set(payload) != {'SoftwareTokenMfaSettings'}
+            or not isinstance(payload['SoftwareTokenMfaSettings'], dict)
+            or set(payload['SoftwareTokenMfaSettings']) != {'Enabled', 'PreferredMfa'}
+            or any(v is not True for v in payload['SoftwareTokenMfaSettings'].values())):
+            # This gateway supports enabling verified TOTP only, never disabling
+            # another factor, administrative recovery or arbitrary preferences.
+            raise account_error(422, 'INVALID_ACCOUNT_INPUT')
         if operation == 'UpdateUserAttributes':
             rows = payload.get('UserAttributes')
             if (set(payload) != {'UserAttributes'} or not isinstance(rows, list) or not 1 <= len(rows) <= 2

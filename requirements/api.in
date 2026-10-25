@@ -1,0 +1,11 @@
+# API only: no MLflow/Prefect/Streamlit or model execution dependencies.
+# Python 3.14 baseline; resolve with constraints/shared.txt.
+-c shared.txt
+fastapi==0.136.3
+uvicorn==0.48.0
+httpx==0.28.1
+joserfc==1.7.7
+cryptography==46.0.7
+pydantic==2.13.4
+numpy==2.4.6
+pandas==2.3.3

@@ -1,5 +1,7 @@
 # PowerFlow EC2 runtime (Python 3.14, Amazon Linux 2023 x86_64)
-# Direct production dependencies only. Transitive dependencies are resolved by pip.
+# Pipeline/Streamlit runtime only; research tracking has a separate environment.
+# Prefect 3.7.5 requires Starlette >=1.0.1; API/research use separate environments.
+-c requirements/orchestration.txt
 Authlib==1.9.1
 awscrt==0.36.0
 boto3==1.43.98

@@ -38,6 +38,9 @@ class SecuritySettings:
     def __post_init__(self):
         if not re.fullmatch(r"https://cognito-idp\.[a-z0-9-]+\.amazonaws\.com/[a-z0-9-]+_[A-Za-z0-9]+", self.issuer):
             raise ValueError("Invalid API identity configuration")
+        issuer_region = self.issuer.split('.')[1]
+        if self.issuer.rsplit('/', 1)[1].split('_', 1)[0] != issuer_region:
+            raise ValueError('Invalid API identity configuration')
         if not self.client_ids or any(not re.fullmatch(r"[a-z0-9]{1,128}", v) for v in self.client_ids):
             raise ValueError("Invalid API identity configuration")
         if "openid" not in self.required_scopes or any(not re.fullmatch(r"[\x21-\x7e]{1,256}", v) for v in self.required_scopes):

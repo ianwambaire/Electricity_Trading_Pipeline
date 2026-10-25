@@ -1,5 +1,12 @@
 # PowerFlow API deployment on EC2
 
+> Phase 5B.1: this is the historical EC2 installation runbook, not approval to
+> deploy the hardened API. Use the isolated proposal in `deploy/staging/README.md`
+> and the API-only lock for a new staging runtime. The legacy unit below does not
+> provide the new staging/production configuration and must not be installed as-is
+> for that purpose. Never combine the Prefect3.7.5 runtime with MLflow dependencies.
+> Production changes, user/permission creation and service activation need separate approval.
+
 The PowerFlow FastAPI application is a separate, read-only service. Uvicorn
 listens only on `127.0.0.1:8000`; Nginx is the sole public entry point and
 publishes it beneath the existing HTTPS `/api/` path. Do not add port 8000 to

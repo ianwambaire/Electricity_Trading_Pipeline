@@ -1,0 +1,40 @@
+# Proposal only: do not install without separate staging approval.
+[Unit]
+Description=PowerFlow isolated staging API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=powerflow-api
+Group=powerflow-api
+WorkingDirectory=/opt/powerflow/current
+EnvironmentFile=/etc/powerflow/api.env
+Environment=PYTHONPATH=/opt/powerflow/current/src
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/powerflow/current/.venv-api/bin/uvicorn api.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log --proxy-headers --forwarded-allow-ips=127.0.0.1 --limit-concurrency 32 --timeout-keep-alive 5 --timeout-graceful-shutdown 20
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=/srv/powerflow/published
+CapabilityBoundingSet=
+TasksMax=64
+MemoryMax=768M
+CPUQuota=100%
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

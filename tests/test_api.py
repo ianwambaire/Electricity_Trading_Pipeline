@@ -1,3 +1,4 @@
+import pytest
 import hashlib
 import json
 import sqlite3
@@ -247,6 +248,7 @@ def test_requests_do_not_write_or_modify_any_source_file(tmp_path):
     assert after == before
 
 
+@pytest.mark.model_runtime
 def test_api_never_invokes_production_inference(tmp_path, monkeypatch):
     settings = _settings(tmp_path)
     _write_next24(settings.next24_forecast)

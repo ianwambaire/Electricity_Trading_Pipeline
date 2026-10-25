@@ -8,13 +8,20 @@ import math
 import os
 import re
 import sqlite3
-from contextlib import asynccontextmanager, closing
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from .runtime import RuntimeSettings, SafeRequestMiddleware, SafeExceptionMiddleware, event
+from .readiness import Readiness
+from .database import read_snapshot
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -177,8 +184,7 @@ def _latest_pipeline_status(path: Path) -> PipelineStatusResponse:
             status_code=503, detail="Operational metadata is not available."
         )
     try:
-        uri = f"{path.resolve().as_uri()}?mode=ro"
-        with closing(sqlite3.connect(uri, uri=True)) as connection:
+        with read_snapshot(path) as connection:
             table = connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pipeline_runs'"
             ).fetchone()
@@ -309,22 +315,49 @@ def _one_hour_report(path: Path) -> OneHourForecastResponse:
     return OneHourForecastResponse(row_count=len(forecasts), forecasts=forecasts)
 
 
-def create_app(settings: APISettings | None = None, *, security_settings: SecuritySettings | None = None) -> FastAPI:
+def create_app(settings: APISettings | None = None, *, security_settings: SecuritySettings | None = None, runtime_settings: RuntimeSettings | None = None) -> FastAPI:
     """Create the service with explicit read-only paths for safe testing."""
-    configured = settings or APISettings.from_root(PROJECT_ROOT)
+    runtime = runtime_settings or RuntimeSettings.from_environment()
+    data_root = os.environ.get('POWERFLOW_API_DATA_ROOT')
+    if settings is None and ((runtime.deployed and not data_root) or (data_root is not None and not Path(data_root).is_absolute())):
+        raise ValueError('An absolute published data root is required for the deployed API')
+    configured = settings or APISettings.from_root(Path(data_root) if data_root else PROJECT_ROOT)
     market_store = MarketStore(configured.market_silver)
 
     @asynccontextmanager
     async def lifespan(_application):
-        yield
-        market_store.close()
+        event('application_started', environment=runtime.environment)
+        try:
+            yield
+        finally:
+            market_store.close()
+            event('application_stopped')
 
     application = FastAPI(
         title=APPLICATION_NAME,
         description="Read-only access to persisted PowerFlow outputs.",
         version="1.0.0",
         lifespan=lifespan,
+        docs_url=None if runtime.deployed else '/docs',
+        redoc_url=None if runtime.deployed else '/redoc',
+        openapi_url=None if runtime.deployed else '/openapi.json',
     )
+    application.state.runtime_settings = runtime
+    application.state.readiness = Readiness(configured)
+    application.add_middleware(SafeExceptionMiddleware)
+    # Safe logging wraps CORS and host rejections as well as application errors.
+    if runtime.cors_origins:
+        application.add_middleware(CORSMiddleware, allow_origins=list(runtime.cors_origins),
+                                   allow_credentials=False, allow_methods=['GET', 'POST', 'PATCH'],
+                                   allow_headers=['Authorization', 'Content-Type'], expose_headers=['X-Request-ID'])
+    application.add_middleware(TrustedHostMiddleware, allowed_hosts=list(runtime.allowed_hosts), www_redirect=False)
+    application.add_middleware(SafeRequestMiddleware)
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_error(_request: Request, _error):
+        # FastAPI's default body can echo rejected secrets or attacker strings.
+        return JSONResponse({'detail': 'Invalid request parameters.'}, status_code=422)
+
     from .mfa_service import EnrollmentStore
     application.state.mfa_enrollments = EnrollmentStore()
     # Separate release gate from pool enablement: live enrollment needs its own
@@ -336,6 +369,9 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         # A typo must never broaden a dedicated-account test to all local users.
         application.state.account_totp_enabled = False
 
+    if runtime.deployed and application.state.account_totp_enabled:
+        raise ValueError('MFA enrollment is not released for deployed API runtimes')
+
     # Missing/invalid auth configuration never opens protected routes. Market
     # summaries stay public; legacy monitoring requires Admin. Startup uses no network.
     try:
@@ -344,6 +380,8 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         from .account_service import AccountGateway
         application.state.account_gateway = AccountGateway(identity_settings.issuer)
     except ValueError:
+        if runtime.deployed:
+            raise ValueError('Valid identity configuration is required for deployed API runtimes') from None
         application.state.cognito_verifier = None
         application.state.account_gateway = None
 
@@ -366,6 +404,11 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     @application.get("/admin/models/linear-feature-influence", response_model=LinearInfluence, dependencies=[Depends(require_admin)], tags=["Admin reports"])
     def admin_linear_influence():
         return linear_influence(configured.public_metadata_root)
+
+    @application.get('/ready', tags=['Health'])
+    def readiness():
+        result = application.state.readiness.check(application.state.cognito_verifier is not None and application.state.account_gateway is not None)
+        return JSONResponse(result, status_code=200 if result['status'] == 'ready' else 503)
 
     @application.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 import sqlite3
-from contextlib import closing
+from .database import read_snapshot
 from datetime import datetime
 from typing import Literal
 from fastapi import HTTPException
@@ -72,8 +72,7 @@ def admin_operations(path):
     if not path.is_file():
         return AdminOperations(**result)
     try:
-        with closing(sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True, timeout=2)) as db:
-            db.execute('BEGIN')  # One consistent read snapshot, never a write transaction.
+        with read_snapshot(path) as db:
             tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             if 'pipeline_runs' in tables:
                 rows = db.execute('SELECT run_time,status,records_processed,substr(message,1,65537) FROM pipeline_runs ORDER BY id DESC LIMIT 100').fetchall()

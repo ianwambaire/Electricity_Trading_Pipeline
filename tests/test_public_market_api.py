@@ -170,6 +170,7 @@ def test_real_persisted_values_and_artifact_integrity_match():
             assert model["metadata_status"] == "available", key
 
 
+@pytest.mark.model_runtime
 def test_artifact_mismatch_and_model_metadata_do_not_unpickle(tmp_path, monkeypatch):
     copy_metadata(tmp_path)
     directory = tmp_path / "artifacts/models/releases/next24h"

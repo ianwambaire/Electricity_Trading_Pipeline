@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
-from contextlib import closing
+from .database import read_snapshot
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -133,7 +133,7 @@ def operations_summary(settings, forecast_issue=None, forecast_invalid=False):
     tables = set()
     if settings.operational_database.is_file():
         try:
-            with closing(sqlite3.connect(settings.operational_database.resolve().as_uri()+"?mode=ro", uri=True)) as connection:
+            with read_snapshot(settings.operational_database) as connection:
                 tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                 if "pipeline_runs" in tables:
                     run = connection.execute("SELECT run_time, status, message FROM pipeline_runs ORDER BY id DESC LIMIT 1").fetchone()

@@ -258,6 +258,7 @@ def test_config_rejects_wildcards_unknown_hosts_and_missing_identity():
     assert config.jwks_url==ISSUER+'/.well-known/jwks.json'
 
 
+@pytest.mark.model_runtime
 def test_actual_linear_report_parity_without_unpickling_or_source_writes(tmp_path,signing):
     import csv
     import hashlib

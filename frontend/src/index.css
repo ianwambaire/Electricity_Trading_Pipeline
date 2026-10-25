@@ -328,3 +328,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .account-mfa { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .account-mfa .account-security-row { border-bottom: 0; }
 .account-setup-key { display: block; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--page); overflow-wrap: anywhere; user-select: all; font-variant-numeric: tabular-nums; }
+
+/* Keep data tables keyboard-scrollable and content readable at narrow widths/zoom. */
+.table-scroll:focus-visible { outline-offset: -3px; }
+.account-security-row > div { min-width: 0; }
+button { overflow-wrap: anywhere; }

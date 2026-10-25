@@ -1,5 +1,8 @@
 # Phase 5A — production architecture and infrastructure audit
 
+> **Architecture decision update —25 October2026:** The owner now intends React + FastAPI to replace Streamlit completely at **https://powerflowenergy.dev**, with one permanent EC2 host if measured capacity/security checks permit. Earlier distinct-hostname/parallel-operation recommendations below are historical migration proposals, not the final target. The current budget, same-domain cutover, rollback and separately approved Streamlit decommission roadmap are in [Phase5B.2, sections8–13](phase5b2-infrastructure-readiness.md#8-final-production-architecture-and-capacity-decision). Shared pipeline/ML functions remain; no decommission or infrastructure action is authorized by this note.
+
+
 22 October 2026, Africa/Nairobi. Branch `feature/react-frontend`; baseline `fcb89eb`. **Audit and roadmap only. Phase 5B is not started.** No AWS, Cognito, deployment, account, database or production-data changes; no restarts, staging, commits, pushes, merges or Git history changes.
 
 ## Decision summary

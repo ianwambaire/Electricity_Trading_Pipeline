@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Reviewed public production example only; real environment files stay ignored.
+!.env.production.example

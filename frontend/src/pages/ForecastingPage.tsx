@@ -21,7 +21,7 @@ export function ForecastingPage() {
   const models = useApi(api.models)
   const next24 = useApi(api.next24)
   const pipeline = useApi(api.pipeline)
-  const oneHour = useApi(api.oneHour)
+  const oneHour = useApi(api.oneHour, 0)
   return <><PageHeading title="Forecast Intelligence" description="Inspect persisted model predictions, target times, and availability evidence." />
     <p className="data-note">No model is run in this browser. Forecast reports are persisted evidence, not a browser model run. Exact issue-hour context and realized evaluation are separate read-only reports; missing evidence is never substituted. Frozen release evaluation is also available in Model Insights.</p>
     {operations.data?.forecast_reason && <div className="notice notice-warning"><strong>Recorded forecast availability</strong><p>{operations.data.forecast_reason}</p><p>{operations.data.forecast_reason_provenance}</p></div>}

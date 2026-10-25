@@ -16,7 +16,9 @@ export class ApiError extends Error {
 export async function request<T>(path: string, parse: (value: unknown) => T, signal?: AbortSignal, change?: { method: 'PATCH' | 'POST'; body?: unknown }): Promise<T> {
   try {
     const session = captureApiSession()
-    const response = await fetch(`/api${path}`, { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(path.startsWith('/account/') ? 30000 : 15000)]), method: change?.method ?? 'GET', body: change?.body === undefined ? undefined : JSON.stringify(change.body), headers: { Accept: 'application/json', ...(change?.body === undefined ? {} : {'Content-Type':'application/json'}), ...session.headers }, cache: 'no-store', credentials: 'omit' })
+    const response = await fetch(`/api${path}`, { signal: AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(path.startsWith('/account/') ? 30000 : 15000)]), method: change?.method ?? 'GET', body: change?.body === undefined ? undefined : JSON.stringify(change.body), headers: { Accept: 'application/json', ...(change?.body === undefined ? {} : {'Content-Type':'application/json'}), ...session.headers }, cache: 'no-store', credentials: 'omit', redirect: 'error' })
+    const assertCurrent = () => { if (!session.isCurrent()) throw new ApiError('Your session changed. Refresh this section to continue.') }
+    assertCurrent()
     if (response.status === 401) { session.reject(); throw new ApiError('Your session is no longer accepted. Sign in again.', 401) }
     if (!response.ok && path.startsWith('/account/')) {
       let code: string | null = null
@@ -26,11 +28,13 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
     if (response.status === 403) throw new ApiError('Your account does not have permission for this information.', 403)
     // Do not surface raw server/proxy bodies: operational details may be sensitive.
     if (!response.ok) throw new ApiError(response.status === 404 ? 'This report is not available from the API.' : response.status === 503 ? 'The backend report is unavailable or invalid.' : `API request failed (HTTP ${response.status}).`, response.status)
-    try { return parse(await response.json()) } catch { throw new ApiError('The API returned an unexpected or invalid response.') }
+    const value = await response.json().catch(() => { throw new ApiError('The API returned an unexpected or invalid response.') })
+    assertCurrent()
+    try { return parse(value) } catch { throw new ApiError('The API returned an unexpected or invalid response.') }
   } catch (error) {
     if (signal?.aborted) throw error
     if (error instanceof ApiError) throw error
-    throw new ApiError('Could not reach the API, or the request timed out. Check the local backend and try again.')
+    throw new ApiError('Could not reach the API, or the request timed out. Check your connection and try again.')
   }
 }
 

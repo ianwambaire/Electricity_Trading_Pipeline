@@ -296,7 +296,7 @@ def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> M
                         ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY price_eur_mwh IS NULL, price_eur_mwh DESC, timestamp) AS hi,
                         MIN(rn) OVER (PARTITION BY bucket) AS first,
                         MAX(rn) OVER (PARTITION BY bucket) AS last FROM binned
-            ) SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw FROM selected
+            ) SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw, rn FROM selected
               WHERE lo=1 OR hi=1 OR rn=first OR rn=last ORDER BY timestamp
             """, (*args, bucket_size)).fetchall()
         points = []
@@ -304,8 +304,7 @@ def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> M
         for row in rows:
             gap = False
             if previous is not None:
-                present = connection.execute("SELECT COUNT(*) FROM observations WHERE timestamp>? AND timestamp<?", (previous, row[0])).fetchone()[0]
-                gap = present < (row[0]-previous)//3600-1
-            points.append(_chart_point(row, gap))
-            previous = row[0]
+                gap = (row[0] - previous[0]) // 3600 > row[-1] - previous[-1]
+            points.append(_chart_point(row[:5], gap))
+            previous = row
         return MarketChart(coverage=store._coverage, matched_rows=count, row_count=len(points), points=points)

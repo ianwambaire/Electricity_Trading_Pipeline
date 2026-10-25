@@ -45,12 +45,17 @@ def market_exploration(store, start, end, max_points):
         where = " WHERE (? IS NULL OR timestamp>=?) AND (? IS NULL OR timestamp<=?)"
         a, b = start.timestamp() if start else None, end.timestamp() if end else None
         args = (a, a, b, b)
-        count = db.execute("SELECT COUNT(*) FROM observations"+where, args).fetchone()[0]
         # Same eight sources as Streamlit; total wind does not double-count components.
         keys = [k for k in GENERATION_FIELDS if k not in {"wind_offshore_mw", "wind_onshore_mw"}]
+        # Aggregate the same source columns in one scan instead of eight scans.
+        aggregates = db.execute(
+            "SELECT COUNT(*), " + ", ".join(f"AVG({key}), COUNT({key})" for key in keys)
+            + " FROM observations" + where, args,
+        ).fetchone()
+        count = aggregates[0]
         generation = []
-        for key in keys:
-            mean, n = db.execute(f"SELECT AVG({key}), COUNT({key}) FROM observations"+where, args).fetchone()
+        for i, key in enumerate(keys):
+            mean, n = aggregates[1 + 2*i:3 + 2*i]
             if mean is not None and not math.isfinite(mean):
                 raise HTTPException(503, "Market aggregates contain invalid values.")
             generation.append(GenerationAverage(source=key, average_mw=mean, observations=n))
@@ -61,15 +66,14 @@ def market_exploration(store, start, end, max_points):
             selected AS (SELECT *, MIN(rn) OVER(PARTITION BY bucket) first, MAX(rn) OVER(PARTITION BY bucket) last,
             ROW_NUMBER() OVER(PARTITION BY bucket ORDER BY temperature_2m IS NULL,temperature_2m,timestamp) lo,
             ROW_NUMBER() OVER(PARTITION BY bucket ORDER BY temperature_2m IS NULL,temperature_2m DESC,timestamp) hi FROM binned)
-            SELECT timestamp,temperature_2m,wind_speed_10m FROM selected WHERE rn=first OR rn=last OR lo=1 OR hi=1 ORDER BY timestamp""", (*args, bucket)).fetchall()
+            SELECT timestamp,temperature_2m,wind_speed_10m,rn FROM selected WHERE rn=first OR rn=last OR lo=1 OR hi=1 ORDER BY timestamp""", (*args, bucket)).fetchall()
         weather, previous = [], None
-        for stamp, temperature, wind in rows:
+        for stamp, temperature, wind, rank in rows:
             gap = False
             if previous is not None:
-                n = db.execute("SELECT COUNT(*) FROM observations WHERE timestamp>? AND timestamp<?", (previous, stamp)).fetchone()[0]
-                gap = n < (stamp-previous)//3600-1
+                gap = (stamp - previous[0]) // 3600 > rank - previous[1]
             weather.append(WeatherPoint(timestamp=datetime.fromtimestamp(stamp, timezone.utc), temperature_2m=temperature, wind_speed_10m=wind, gap_before=gap))
-            previous = stamp
+            previous = (stamp, rank)
         return MarketExploration(coverage=store._coverage, matched_rows=count, generation=generation, weather=weather)
 
 
@@ -98,7 +102,7 @@ def forecast_context(store, issue):
     if issue.minute or issue.second or issue.microsecond:
         raise HTTPException(422, "Issue time must be an exact hour.")
     import pandas as pd
-    from dashboard_data import build_model_input_context
+    from shared.market_context import build_model_input_context
     with store._lock:
         store._refresh()
         keys = (*VALUE_FIELDS, *WEATHER_FIELDS)
@@ -141,7 +145,7 @@ class RealizedEvaluation(PublicModel):
 
 @lru_cache(maxsize=1)
 def _realized_rows(path, version):
-    from models.next24h_monitoring import REALIZED_COLUMNS
+    from shared.forecast_evaluation import REALIZED_COLUMNS
     if version[1] > 64*1024*1024:
         raise ValueError("Report size limit")
     rows, identities = [], set()
@@ -194,8 +198,8 @@ def realized_evaluation(root: Path | None):
         raise HTTPException(404, "Realized evaluation report is not available.")
     try:
         import pandas as pd
-        from models.next24h_monitoring import summarize_realized_performance
-        from dashboard_health import model_performance_state
+        from shared.forecast_evaluation import summarize_realized_performance
+        from shared.operational_health import model_performance_state
         rows, digest = _realized_rows(path, (path.stat().st_mtime_ns, path.stat().st_size))
         now = datetime.now(timezone.utc)
         releases = []
@@ -225,7 +229,7 @@ class PriceComparison(PublicModel):
 @lru_cache(maxsize=4)
 def _price_comparison(path, version):
     import pandas as pd
-    from dashboard_data import summarize_clean_price_history
+    from shared.market_context import summarize_clean_price_history
     if version[1] > 64*1024*1024:
         raise ValueError('Price source size limit')
     frame = pd.read_csv(path, usecols=lambda key: key in {'timestamp','price_eur_mwh','source_resolution'}, nrows=400001)

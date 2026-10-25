@@ -88,7 +88,7 @@ jobs:
       - run: python -m pip check
       - run: python scripts/check_api_runtime.py
       - name: Run API authorization and runtime regressions without research packages
-        run: python -m pytest -q -m "not model_runtime" tests/test_api.py tests/test_api_security.py tests/test_account_management.py tests/test_mfa.py tests/test_backend_hardening.py tests/test_public_market_api.py
+        run: python -m pytest -q -m "not model_runtime" tests/test_api.py tests/test_api_security.py tests/test_account_management.py tests/test_mfa.py tests/test_backend_hardening.py tests/test_public_market_api.py tests/test_api_deployment.py tests/test_phase5_restoration.py tests/test_streamlit_decoupling.py
 
   orchestration-runtime:
     name: Separate production orchestration imports
@@ -106,3 +106,24 @@ jobs:
       - run: python -m pip install -r requirements-prod.txt
       - run: python -m pip check
       - run: python scripts/check_production_imports.py
+
+  frontend:
+    name: React tests and production artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+      - run: node scripts/check-build.mjs
+      - run: npm audit --audit-level=high

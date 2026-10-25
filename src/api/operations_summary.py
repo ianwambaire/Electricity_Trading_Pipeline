@@ -97,7 +97,7 @@ def _csv_summary(path, version):
 def operations_summary(settings, forecast_issue=None, forecast_invalid=False):
     # These presentation helpers do not execute jobs, write files, or resolve
     # secrets. Do not call alert_configuration_status from a public endpoint.
-    from dashboard_health import assess_operational_health, source_freshness_state, latest_quality_state
+    from shared.operational_health import assess_operational_health, source_freshness_state, latest_quality_state
     import pandas as pd
 
     now = datetime.now(timezone.utc)

@@ -26,7 +26,7 @@ function SessionLifecycle({ children }: { children: ReactNode }) {
     }
   }, [events, removeUser])
   useEffect(() => { if (error) cleanCallbackUrl() }, [error])
-  return <ServerAccountProvider>{children}</ServerAccountProvider>
+  return <ServerAccountProvider key={user?.profile.sub ?? 'signed-out'}>{children}</ServerAccountProvider>
 }
 
 export function AuthenticationRoot({ children }: { children: ReactNode }) {

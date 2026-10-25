@@ -8,9 +8,11 @@ export function bindApiSession(read: () => string | null, expire: () => void): (
 }
 export function captureApiSession() {
   const binding = current
+  const rejected = binding?.rejected
   const token = binding && !binding.rejected ? binding.read() : null
   return {
     headers: token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>,
+    isCurrent() { return current === binding && (!binding || (binding.rejected === rejected && (binding.rejected ? null : binding.read()) === token)) },
     reject() {
       // Late responses and renewed tokens must never invalidate a newer session.
       if (binding && current === binding && !binding.rejected && binding.read() === token) {

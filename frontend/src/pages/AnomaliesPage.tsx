@@ -11,7 +11,7 @@ import { EmptyState, LoadingState } from '../components/ui/States'
 import { DateRangeFilter } from '../components/ui/DateRangeFilter'
 import { KpiGrid } from '../components/ui/KpiGrid'
 const HistoricalChart=lazy(()=>import('../components/data/HistoricalChart').then(m=>({default:m.HistoricalChart})))
-function EventsTable({rows}:{rows:AnomalyEvent[]}){return <div className="table-scroll"><table><thead><tr><th>Event time (UTC)</th><th>Price (EUR/MWh)</th><th>Load (MW)</th></tr></thead><tbody>{rows.map(row=><tr key={row.timestamp}><td>{formatTime(row.timestamp)}</td><td>{numberLabel(row.price_eur_mwh,20)}</td><td>{numberLabel(row.load_mw,20)}</td></tr>)}</tbody></table></div>}
+function EventsTable({rows}:{rows:AnomalyEvent[]}){return <div className="table-scroll" tabIndex={0}><table><thead><tr><th>Event time (UTC)</th><th>Price (EUR/MWh)</th><th>Load (MW)</th></tr></thead><tbody>{rows.map(row=><tr key={row.timestamp}><td>{formatTime(row.timestamp)}</td><td>{numberLabel(row.price_eur_mwh,20)}</td><td>{numberLabel(row.load_mw,20)}</td></tr>)}</tbody></table></div>}
 export function AnomaliesPage(){
  const [query,setQuery]=useState('');const [offset,setOffset]=useState(0)
  const summary=useApi(useCallback(signal=>api.anomalySummary(query,signal),[query]))

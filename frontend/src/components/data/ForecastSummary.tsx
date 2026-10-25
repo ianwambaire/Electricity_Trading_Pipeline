@@ -1,3 +1,4 @@
+import { downloadCsvText } from '../../api/csv'
 import { numberLabel } from '../../api/numberLabel'
 import { forecastStatistics, forecastCsv } from '../../api/forecastPresentation'
 import { KpiGrid } from '../ui/KpiGrid'
@@ -28,6 +29,6 @@ export function ForecastSummary({ report, pipeline }: { report: ForecastReport<N
       {label:'First-to-last change · EUR/MWh',value:numberLabel(statistics.change)}, {label:'Negative-price hours',value:String(statistics.negative)},
       {label:'Hours ≥ 200 EUR/MWh',value:String(statistics.elevated)}, {label:'Horizon',value:'h+1 to h+24'},
     ]}/>{(statistics.negative>0||statistics.elevated>0)&&<p className="notice notice-warning">This retained report includes {statistics.negative} negative-price hours and {statistics.elevated} hours at or above 200 EUR/MWh. Interpret these values with the availability label above.</p>}
-    <button className="secondary-button" onClick={()=>{const url=URL.createObjectURL(new Blob([forecastCsv(report,state.label)],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=`powerflow_${state.label.toLowerCase().replace(/[^a-z0-9]+/g,'_')}_${first!.issue_time.slice(0,10)}.csv`;link.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000)}}>Download displayed report — {state.label}</button></>}
+    <button className="secondary-button" onClick={()=>downloadCsvText(`powerflow_${state.label.toLowerCase().replace(/[^a-z0-9]+/g,'_')}_${first!.issue_time.slice(0,10)}.csv`,forecastCsv(report,state.label))}>Download displayed report — {state.label}</button></>}
   </>
 }

@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / 'src'))
 
 class ExcludeResearch(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] in {'mlflow', 'streamlit', 'prefect', 'sklearn', 'boto3'}:
+        if fullname.split('.')[0] in {'mlflow', 'streamlit', 'prefect', 'sklearn', 'joblib', 'boto3'}:
             raise ImportError('API attempted a non-API runtime import')
         return None
 

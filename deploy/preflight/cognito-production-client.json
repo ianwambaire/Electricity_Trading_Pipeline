@@ -1,0 +1,21 @@
+{
+  "UserPoolId": "us-east-1_NLoYFRvex",
+  "ClientName": "powerflow-react-production",
+  "GenerateSecret": false,
+  "RefreshTokenValidity": 5,
+  "AccessTokenValidity": 60,
+  "IdTokenValidity": 60,
+  "TokenValidityUnits": {"AccessToken": "minutes", "IdToken": "minutes", "RefreshToken": "days"},
+  "ReadAttributes": ["email", "email_verified", "identities", "name", "preferred_username", "sub"],
+  "WriteAttributes": ["email", "name", "preferred_username"],
+  "ExplicitAuthFlows": ["ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_AUTH", "ALLOW_USER_SRP_AUTH"],
+  "SupportedIdentityProviders": ["COGNITO", "Google"],
+  "CallbackURLs": ["https://powerflowenergy.dev/auth/callback"],
+  "LogoutURLs": ["https://powerflowenergy.dev/"],
+  "AllowedOAuthFlows": ["code"],
+  "AllowedOAuthScopes": ["openid", "email", "profile", "aws.cognito.signin.user.admin"],
+  "AllowedOAuthFlowsUserPoolClient": true,
+  "PreventUserExistenceErrors": "ENABLED",
+  "EnableTokenRevocation": true,
+  "AuthSessionValidity": 3
+}

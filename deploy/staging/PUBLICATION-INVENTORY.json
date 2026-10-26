@@ -1,0 +1,174 @@
+{
+  "scope": "LOCAL inventory only, not production publication approval or remote file verification",
+  "files": [
+    {
+      "relative_path": "data/processed/silver_electricity_market_data.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/processed/silver_electricity_market_data.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/processed/silver_electricity_market_data.csv",
+      "destination": "/srv/powerflow/published/data/processed/silver_electricity_market_data.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "market observations",
+      "exists_locally": true,
+      "bytes": 11447294,
+      "local_sha256": "9c806daa13c10ea2c50dd3a8b3390a34d721a395a8919f55e244decf55ed7ea9"
+    },
+    {
+      "relative_path": "data/features/gold_model_features.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/features/gold_model_features.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/features/gold_model_features.csv",
+      "destination": "/srv/powerflow/published/data/features/gold_model_features.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "market observations",
+      "exists_locally": true,
+      "bytes": 20598161,
+      "local_sha256": "1e5c105b5bda87de79fdc4d7783f92c20a76b4444725518b9a460c685ce40a82"
+    },
+    {
+      "relative_path": "data/raw/entsoe/prices.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/raw/entsoe/prices.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/prices.csv",
+      "destination": "/srv/powerflow/published/data/raw/entsoe/prices.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "market observations",
+      "exists_locally": true,
+      "bytes": 2978739,
+      "local_sha256": "c80fff2feb1b7f229d8016d8058bb9147d53a65a46d2d51a1117e247fa1336dc"
+    },
+    {
+      "relative_path": "data/raw/entsoe/load.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/raw/entsoe/load.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/load.csv",
+      "destination": "/srv/powerflow/published/data/raw/entsoe/load.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "market observations",
+      "exists_locally": true,
+      "bytes": 9560961,
+      "local_sha256": "4489af456204d3b226563f3805d60fee60efb9ca42b51b488900dd2664c64101"
+    },
+    {
+      "relative_path": "data/raw/entsoe/generation.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/raw/entsoe/generation.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/generation.csv",
+      "destination": "/srv/powerflow/published/data/raw/entsoe/generation.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "market observations",
+      "exists_locally": true,
+      "bytes": 40589455,
+      "local_sha256": "ff0bbd07d96a60569e05f89a7768ef74ce6606d9777f40f3b159c0b11904b622"
+    },
+    {
+      "relative_path": "data/raw/weather/open_meteo_weather.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/raw/weather/open_meteo_weather.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/weather/open_meteo_weather.csv",
+      "destination": "/srv/powerflow/published/data/raw/weather/open_meteo_weather.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "market observations",
+      "exists_locally": true,
+      "bytes": 3124192,
+      "local_sha256": "7cdd411aa800388536999ba66c8ecc0dc8aac70dc06e7a25fba0e5e48d28f2af"
+    },
+    {
+      "relative_path": "data/reports/actual_vs_predicted.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/reports/actual_vs_predicted.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/actual_vs_predicted.csv",
+      "destination": "/srv/powerflow/published/data/reports/actual_vs_predicted.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "model/evaluation metadata: private source review required; API response allowlists remain mandatory",
+      "exists_locally": true,
+      "bytes": 771640,
+      "local_sha256": "a7dbc56d78738763354c4936dfd26c12147e647ab107fadf1036fb8dd31bd204"
+    },
+    {
+      "relative_path": "data/reports/detected_anomalies.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/reports/detected_anomalies.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/detected_anomalies.csv",
+      "destination": "/srv/powerflow/published/data/reports/detected_anomalies.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "model/evaluation metadata: private source review required; API response allowlists remain mandatory",
+      "exists_locally": true,
+      "bytes": 112210,
+      "local_sha256": "a117c0f9f6cbeda97e6a40610c03122083f6a86c5ea46c3ba41d44894c4fbf9a"
+    },
+    {
+      "relative_path": "data/reports/final_holdout_metrics.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/reports/final_holdout_metrics.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/final_holdout_metrics.csv",
+      "destination": "/srv/powerflow/published/data/reports/final_holdout_metrics.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "model/evaluation metadata: private source review required; API response allowlists remain mandatory",
+      "exists_locally": true,
+      "bytes": 540,
+      "local_sha256": "60c1830414df97f68c6a2de67c242305427014d5049bc2945bbd8f29e545d0ba"
+    },
+    {
+      "relative_path": "data/reports/feature_importance.csv",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/data/reports/feature_importance.csv",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/feature_importance.csv",
+      "destination": "/srv/powerflow/published/data/reports/feature_importance.csv",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "model/evaluation metadata: private source review required; API response allowlists remain mandatory",
+      "exists_locally": true,
+      "bytes": 1671,
+      "local_sha256": "935e00ee045f485e607fd0429816747757ad4885d046d8e6bc062361c70fe466"
+    },
+    {
+      "relative_path": "artifacts/models/final_model_release_manifest.json",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/artifacts/models/final_model_release_manifest.json",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/artifacts/models/final_model_release_manifest.json",
+      "destination": "/srv/powerflow/published/artifacts/models/final_model_release_manifest.json",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "model/evaluation metadata: private source review required; API response allowlists remain mandatory",
+      "exists_locally": true,
+      "bytes": 2749,
+      "local_sha256": "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6"
+    },
+    {
+      "relative_path": "artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "local_source": "/Users/iannganga/Desktop/electricity-trading-pipeline/artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "proposed_ec2_source": "/home/ec2-user/Electricity_Trading_Pipeline/artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "destination": "/srv/powerflow/published/artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "permissions": "root:powerflow-api 0640; parents 0750",
+      "remote_verified": false,
+      "sensitivity": "model/evaluation metadata: private source review required; API response allowlists remain mandatory",
+      "exists_locally": true,
+      "bytes": 2774,
+      "local_sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650"
+    }
+  ],
+  "operational_snapshot": {
+    "source": "/home/ec2-user/powerflow-recovery-phase5d2-operational/20261026T022230.137446Z/electricity_trading.db",
+    "destination": "/srv/powerflow/published/database/electricity_trading.db",
+    "expected_sha256": "21fcb0e920ffaf13f214e39720e1176e012086d6ffa7b8a7ed736b6e4ab79690",
+    "bytes": 12115968,
+    "evidence": "previous A1/A2 verification, NOT rechecked now",
+    "sensitivity": "internal operational messages/incidents may contain sensitive details; not public static content; requires explicit publication approval",
+    "permissions": "root:powerflow-api 0640; parents 0750"
+  },
+  "local_files_total_bytes": 89190386,
+  "planned_bytes_if_identical_to_local_plus_existing_A1": 101306354,
+  "exclusions": [
+    "all .env/secrets/logs/user/account data",
+    "live operational DB/WAL/SHM",
+    "PostgreSQL/Prefect/MLflow stores",
+    "all model joblib binaries (availability honestly missing)",
+    "next24h_forecast.csv and forecast_history/provenance/realized-error reports pending separate validation",
+    "monitoring JSON pending private sensitivity review"
+  ],
+  "limitations": [
+    "Raw manifests may contain internal paths; no raw static serving allowed",
+    "Production files may differ; immutable publication requires a new consistency/hash inventory",
+    "Historical A1 operational data must be labelled historical; do not claim current pipeline freshness",
+    "Gold/raw data optional for expanded context/completeness, not process readiness"
+  ]
+}

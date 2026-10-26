@@ -160,3 +160,68 @@ def test_supervisor_escalates_group_even_when_leader_exits(monkeypatch):
     monkeypatch.setattr(bound.os,'killpg',lambda pid,sig:signals.append(sig))
     assert bound.run(['fixture'],seconds=0,grace=0)==124
     assert signals==[signal.SIGTERM,signal.SIGKILL]
+
+
+def valid_receipt():
+    return dict(account=a3.ACCOUNT,region=a3.REGION,backup_id=a3.BACKUP_ID,bucket=a3.BUCKET,
+                objects={a3.NAMES[0]:dict(key=a3.PREFIX+a3.NAMES[0],version='fixture-db-v1',bytes=a3.SIZE,sha256=a3.SHA),
+                         a3.NAMES[1]:dict(key=a3.PREFIX+a3.NAMES[1],version='fixture-manifest-v1',bytes=2,sha256=hashlib.sha256(b'{}').hexdigest())})
+
+
+@pytest.mark.parametrize('field,value', [('key','../escape'),('version','ACTUAL_APPROVED_VERSION'),('version','null'),('version',False),('version','line\nbreak'),('bytes',True),('bytes',0),('bytes',1024*1024+1),('sha256','not-a-checksum')])
+def test_bad_manifest_metadata_refused_before_either_get(tmp_path,field,value):
+    receipt=valid_receipt();receipt['objects'][a3.NAMES[1]][field]=value
+    s3=S3()
+    def unexpected(**kw): raise AssertionError('metadata must be fully checked before GET')
+    s3.get_object=unexpected
+    with pytest.raises(ValueError):a3.download(s3,receipt,tmp_path)
+    assert not list(tmp_path.iterdir())
+
+
+def test_receipt_is_bounded_private_hash_pinned_and_not_symlink(tmp_path):
+    a2=a3.validator()
+    path=tmp_path/'receipt.json';raw=json.dumps(valid_receipt()).encode();a3.write_new(path,raw)
+    checksum=hashlib.sha256(raw).hexdigest()
+    assert a3.load_receipt(path,checksum,a3.validator())==valid_receipt()
+    with pytest.raises(ValueError):a3.load_receipt(path,'0'*64,a3.validator())
+    with pytest.raises(ValueError):a3.load_receipt(path,'ACTUAL_APPROVED_RECEIPT_SHA256',a3.validator())
+    path.chmod(0o644)
+    with pytest.raises(a2.Refused):a3.load_receipt(path,checksum,a2)
+    path.chmod(0o600);link=tmp_path/'link';link.symlink_to(path)
+    with pytest.raises(a2.Refused):a3.load_receipt(link,checksum,a2)
+
+
+def test_partial_upload_journal_retains_verified_first_and_unknown_second(tmp_path):
+    path=tmp_path/'progress.jsonl';stream,record=a3.progress_writer(path)
+    class PartialS3(S3):
+        def put_object(self,**kw):
+            if kw['Key'].endswith('manifest.json'):raise TimeoutError('unknown remote outcome; do not retry')
+            return super().put_object(**kw)
+    with stream:
+        with pytest.raises(TimeoutError):a3.upload(PartialS3(),a3.BUCKET,dict(zip(a3.NAMES,(b'fixture',b'{}'))),record)
+    events=[json.loads(line) for line in path.read_text().splitlines()]
+    assert [event['state'] for event in events]==['put_attempting','put_returned','verified','put_attempting']
+    assert events[1]['version']=='v1' and events[-1]['name']=='manifest.json'
+    assert path.stat().st_mode & 0o777==0o600
+    with pytest.raises(FileExistsError):a3.progress_writer(path)
+
+
+@pytest.mark.parametrize('arn',['arn:aws:iam::'+a3.ACCOUNT+':role/PowerFlowEC2Role',
+                                'arn:aws:iam::'+a3.ACCOUNT+':role/EXACT_APPROVED_ROLE',
+                                'arn:aws:iam::'+a3.ACCOUNT+'/Role',
+                                'arn:aws:iam::'+a3.ACCOUNT+':role/path//Role'])
+def test_runtime_malformed_placeholder_role_rejected_before_sts(arn):
+    class STS:
+        def get_caller_identity(self):raise AssertionError('no AWS call for invalid expected identity')
+    with pytest.raises(ValueError):a3.guard_identity(STS(),arn)
+
+
+def test_output_parent_preflight_refuses_unwritable_or_existing(tmp_path):
+    path=tmp_path/'receipt.json'
+    tmp_path.chmod(0o700);a3.new_private_parent(path)
+    tmp_path.chmod(0o500)
+    try:
+        with pytest.raises(ValueError):a3.new_private_parent(path)
+    finally:tmp_path.chmod(0o700)
+    a3.write_new(path,b'fixture')
+    with pytest.raises(ValueError):a3.new_private_parent(path)

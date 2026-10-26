@@ -21,3 +21,10 @@ configuration/artifact. Local static guardrail tests do NOT parse Nginx/systemd 
 No native Nginx binary or running Docker engine was available for syntax testing here.
 No package installation or Docker start was attempted. Do not reload production until
 syntax, certificate, callback, proxy, data, role and rollback checks have passed.
+
+Local-only release preparation is now available in
+`scripts/prepare_web_release.py`; see `LOCAL-RELEASE.md`. It defaults to a non-writing
+dry run and can verify a separately requested private local package. It does not
+install, upload, switch releases, run services or authorize deployment. Public
+settings and outstanding TLS/capacity/recovery evidence templates are supplied;
+placeholders/null evidence do not pass as approved live configuration.

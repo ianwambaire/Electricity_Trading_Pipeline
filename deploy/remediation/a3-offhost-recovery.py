@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import time
 
@@ -55,7 +56,9 @@ def validate(directory, a2, expected_sha=SHA, expected_size=SIZE):
         db, mf = streams[NAMES[0]], streams[NAMES[1]]
         require(os.fstat(db.fileno()).st_size == expected_size, 'database_size')
         require(0 < os.fstat(mf.fileno()).st_size <= 1024*1024, 'manifest_size')
-        data = {name: stream.read() for name, stream in streams.items()}
+        limits = {NAMES[0]: expected_size, NAMES[1]: 1024*1024}
+        data = {name: stream.read(limits[name]+1) for name, stream in streams.items()}
+        require(all(0 < len(body) <= limits[name] for name, body in data.items()), 'input_grew_during_read')
         require(hashlib.sha256(data[NAMES[0]]).hexdigest() == expected_sha, 'database_hash')
         manifest = json.loads(data[NAMES[1]])
         require(manifest.get('backup_db') == NAMES[0] and manifest.get('sha256') == expected_sha
@@ -77,18 +80,78 @@ def checksum(data):
     return base64.b64encode(hashlib.sha256(data).digest()).decode('ascii')
 
 
+def approved_role(arn):
+    require(isinstance(arn, str) and re.fullmatch(
+        r'arn:aws:iam::'+ACCOUNT+r':role/(?:[A-Za-z0-9+=,.@_-]+/)*[A-Za-z0-9+=,.@_-]+', arn), 'expected_role_arn')
+    role_name = arn.rsplit('/', 1)[-1]
+    require(role_name != 'PowerFlowEC2Role', 'runtime_role_not_recovery_identity')
+    require(not any(word in role_name.upper() for word in ('PLACEHOLDER', 'EXACT_', 'APPROVED_', 'TBD')), 'role_placeholder')
+    return role_name
+
+
 def guard_identity(sts, expected_role_arn):
+    role_name = approved_role(expected_role_arn)
     identity = sts.get_caller_identity()
     require(identity['Account'] == ACCOUNT and not identity['Arn'].endswith(':root'), 'account_or_root_identity')
-    prefix = 'arn:aws:iam::'+ACCOUNT+':role/'
-    require(expected_role_arn.startswith(prefix), 'expected_role_account')
-    role_name = expected_role_arn[len(prefix):].split('/')[-1]
-    require(bool(role_name), 'expected_role_name')
-    # IAM role names are unique within an account, including across paths.
-    # STS assumed-role ARNs omit IAM role paths; the session name is not fixed.
+    # IAM role names are unique across paths; STS session ARNs omit IAM paths.
     assumed_prefix = 'arn:aws:sts::'+ACCOUNT+':assumed-role/'+role_name+'/'
     require(identity['Arn'].startswith(assumed_prefix)
             and bool(identity['Arn'][len(assumed_prefix):]), 'unapproved_role_identity')
+
+
+def version_id(value):
+    return (isinstance(value, str) and 0 < len(value) <= 1024 and value != 'null'
+            and all(33 <= ord(c) <= 126 for c in value)
+            and not any(word in value.upper() for word in ('PLACEHOLDER', 'ACTUAL_APPROVED', 'EXACT_RETURNED', 'TBD')))
+
+
+def validate_receipt(receipt):
+    require(type(receipt) is dict, 'receipt_type')
+    require(receipt.get('bucket') == BUCKET, 'unapproved_bucket')
+    require(receipt.get('account') == ACCOUNT and receipt.get('region') == REGION
+            and receipt.get('backup_id') == BACKUP_ID, 'receipt_identity')
+    objects = receipt.get('objects')
+    require(type(objects) is dict and set(objects) == set(NAMES), 'receipt_objects')
+    # Validate BOTH objects before any GET or output, even when manifest is bad.
+    for name in NAMES:
+        item = objects[name]
+        require(type(item) is dict, 'receipt_object_type')
+        require(item.get('key') == PREFIX+name and version_id(item.get('version')), 'receipt_key_version')
+        size = item.get('bytes')
+        require(type(size) is int and 0 < size <= (SIZE if name == NAMES[0] else 1024*1024), 'receipt_size')
+        require(isinstance(item.get('sha256'), str) and re.fullmatch('[0-9a-f]{64}', item['sha256']), 'receipt_checksum')
+        if name == NAMES[0]:
+            require(item['sha256'] == SHA and size == SIZE, 'receipt_database')
+    return receipt
+
+
+def load_receipt(path, expected_digest, a2):
+    require(isinstance(expected_digest, str) and re.fullmatch('[0-9a-f]{64}', expected_digest), 'receipt_digest_format')
+    with ExitStack() as stack:
+        stream, _ = a2.open_private_input(path, stack)
+        require(0 < os.fstat(stream.fileno()).st_size <= 64*1024, 'receipt_size_limit')
+        raw = stream.read(64*1024+1)
+    require(len(raw) <= 64*1024 and hashlib.sha256(raw).hexdigest() == expected_digest, 'receipt_hash')
+    return validate_receipt(json.loads(raw))
+
+
+def new_private_parent(path):
+    require(path.is_absolute() and path.parent.resolve(strict=True) == path.parent, 'output_parent_canonical')
+    parent = path.parent.stat()
+    require(parent.st_uid == os.geteuid() and parent.st_mode & 0o077 == 0, 'output_parent_private')
+    require(parent.st_mode & 0o300 == 0o300 and os.access(path.parent, os.W_OK | os.X_OK), 'output_parent_unwritable')
+    require(not os.path.lexists(path), 'output_exists')
+
+
+def progress_writer(path):
+    # New journal only; a partial upload never loses its known completed versions.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    stream = os.fdopen(fd, 'w')
+    def record(event):
+        stream.write(json.dumps(event)+'\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+    return stream, record
 
 
 def guard_bucket(s3, bucket):
@@ -102,38 +165,35 @@ def guard_bucket(s3, bucket):
     require(s3.get_bucket_ownership_controls(**args)['OwnershipControls']['Rules'] == [{'ObjectOwnership':'BucketOwnerEnforced'}], 'ownership')
 
 
-def upload(s3, bucket, data):
+def upload(s3, bucket, data, record=lambda event: None):
     require(bucket == BUCKET, 'unapproved_bucket')
     receipt = {'backup_id': BACKUP_ID, 'account': ACCOUNT, 'region': REGION, 'bucket': bucket, 'objects': {}}
     for name in NAMES:
         body = data[name]
         key = PREFIX + name
+        record({'state':'put_attempting','name':name,'key':key})
         put = s3.put_object(Bucket=bucket, Key=key, ExpectedBucketOwner=ACCOUNT,
                             Body=body, ContentLength=len(body), ServerSideEncryption='AES256',
                             ChecksumSHA256=checksum(body), IfNoneMatch='*')
         version = put.get('VersionId')
-        require(version and version != 'null', 'missing_version')
+        require(version_id(version), 'missing_version')
         # Emit each successful version immediately: an interrupted pair is not a valid recovery set.
         item = dict(key=key, version=version, bytes=len(body), sha256=hashlib.sha256(body).hexdigest())
         receipt['objects'][name] = item
+        record({'state':'put_returned','name':name,**item})
         print(json.dumps({'uploaded_object': name, **item}), flush=True)
         head = s3.head_object(Bucket=bucket, Key=key, VersionId=version,
                               ExpectedBucketOwner=ACCOUNT, ChecksumMode='ENABLED')
         require(head['ContentLength'] == len(body) and head.get('ChecksumSHA256') == checksum(body)
                 and head.get('ServerSideEncryption') == 'AES256' and head.get('VersionId') == version, 'uploaded_verification')
+        record({'state':'verified','name':name,**item})
     return receipt
 
 
 def download(s3, receipt, destination):
-    require(receipt['bucket'] == BUCKET, 'unapproved_bucket')
-    require(receipt['account'] == ACCOUNT and receipt['region'] == REGION and receipt['backup_id'] == BACKUP_ID, 'receipt_identity')
-    require(set(receipt['objects']) == set(NAMES), 'receipt_objects')
+    validate_receipt(receipt)
     for name in NAMES:
         item = receipt['objects'][name]
-        require(item['key'] == PREFIX+name and item['version'] and item['version'] != 'null', 'receipt_key_version')
-        require(type(item['bytes']) is int and 0 < item['bytes'] <= (SIZE if name == NAMES[0] else 1024*1024), 'receipt_size')
-        if name == NAMES[0]:
-            require(item['sha256'] == SHA and item['bytes'] == SIZE, 'receipt_database')
         obj = s3.get_object(Bucket=receipt['bucket'], Key=item['key'], VersionId=item['version'],
                             ExpectedBucketOwner=ACCOUNT, ChecksumMode='ENABLED')
         try:
@@ -159,7 +219,16 @@ def main():
     os.umask(0o077)
     started = time.monotonic()
     try:
+        approved_role(args.expected_role_arn)
         a2 = validator()
+        if args.action == 'upload':
+            require(args.bucket == BUCKET, 'unapproved_bucket')
+            new_private_parent(args.receipt)
+            progress_path = args.receipt.with_name(args.receipt.name+'.progress.jsonl')
+            new_private_parent(progress_path)
+            data = validate(args.source, a2)
+        else:
+            receipt = load_receipt(args.receipt, args.receipt_sha256, a2)
         import boto3
         from botocore.config import Config
         session = boto3.Session(region_name=REGION)
@@ -167,21 +236,14 @@ def main():
         guard_identity(session.client('sts', config=config), args.expected_role_arn)
         s3 = session.client('s3', config=config)
         if args.action == 'upload':
-            require(args.bucket == BUCKET, 'unapproved_bucket')
-            require(args.receipt.is_absolute() and args.receipt.parent.resolve(strict=True) == args.receipt.parent, 'receipt_parent_canonical')
-            parent = args.receipt.parent.stat()
-            require(parent.st_uid == os.geteuid() and parent.st_mode & 0o077 == 0, 'receipt_parent_private')
-            require(not os.path.lexists(args.receipt), 'receipt_exists')
-            data = validate(args.source, a2)
             guard_bucket(s3, args.bucket)
-            receipt = upload(s3, args.bucket, data)
+            stream, record = progress_writer(progress_path)
+            with stream:
+                receipt = upload(s3, args.bucket, data, record)
             raw = json.dumps(receipt, indent=2).encode()
             write_new(args.receipt, raw)
             print(json.dumps({'status':'passed','receipt_sha256':hashlib.sha256(raw).hexdigest()}))
         else:
-            raw = args.receipt.read_bytes()
-            require(hashlib.sha256(raw).hexdigest() == args.receipt_sha256, 'receipt_hash')
-            receipt = json.loads(raw)
             workspace = args.workspace
             require(workspace.is_absolute() and workspace.parent.resolve(strict=True) == workspace.parent, 'canonical_workspace')
             require(workspace.parent.stat().st_uid == os.geteuid() and workspace.parent.stat().st_mode & 0o022 == 0, 'workspace_parent')

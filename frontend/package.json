@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --import ./tests/register-tsx.mjs --test tests/*.test.ts tests/*.test.tsx"
+    "test": "node --import ./tests/register-tsx.mjs --test tests/*.test.ts tests/*.test.tsx",
+    "build:release": "node scripts/release-build.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -35,10 +35,10 @@ PostgreSQL, Prefect SQLite, MLflow, models, dataset directories, environments an
 
 | Local code | SHA-256 |
 |---|---|
-| `deploy/remediation/a3-offhost-recovery.py` | `bdfb245f1044938e0e9ed92d60060140fa555b2734e4cc6ae57a5c7f9ccabc0d` |
+| `deploy/remediation/a3-offhost-recovery.py` | `c3f428bc0f4f55c69253239285786366d6f9f6cbe14d1807ae10b5c4c3857ea4` |
 | `deploy/remediation/restore-operational-sqlite.py` (unchanged pinned validator) | `e0144438075b5219a2b03a7dad982bab14bde81d92d6c79cf11253c91284262c` |
 | `deploy/remediation/a3-bounded-local.py` (local180s/5s process-group supervisor) | `9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40` |
-| `tests/test_a3_offhost_recovery.py` (local fixtures only) | `0558caba30966bf37ba07075a0b9e75c5f4205fe7cb3c5077ab79facddf5833c` |
+| `tests/test_a3_offhost_recovery.py` (local fixtures only) | `f52ca748cb30ef5f081086056a779b02bea71dba9bced35e71879ee1188d6390` |
 
 The exact executable source is in those files, not an abbreviated inline rewrite. A3 verifies the A2 file hash before loading it. It uses existing boto3, already declared by the project; no new dependency or installation performed. Local interpreter must have boto3 and support conditional PutObject `IfNoneMatch`; otherwise STOP, do not install on production. Transport uses standard OpenSSH/SFTP; private key contents never read/displayed/copied by the agent.
 
@@ -213,3 +213,26 @@ The two separately authorized policy-list calls each ran once and exited0: inlin
 Current A3 code now **requires** an approved `--expected-role-arn` and validates the caller's STS assumed-role identity/account; no IAM user/root/other role is accepted. This replaces the earlier account/non-root-only gate. Names/ARNs of future uploader/reader roles must still be nominated and approved; placeholders are not executable authorization. The timeout supervisor now sends group KILL after the full five-second grace even if the leader exited, and the receipt-key test actually reaches key validation with a valid bucket. Current code/test hashes in section2 supersede earlier unexecuted proposals. Frozen A2 code is unchanged.
 
 Local validation: **701 Python tests passed in34.67s; 81 frontend tests passed; lint, production build and asset guard passed; pip check found no broken requirements** (a local pip-cache permission warning only). Asset guard:30JS chunks,376,359-byte entry,114,072-byte gzip entry,886,058totalJS bytes; zero source maps/test sources. No live S3 transfer/restore/IAM policy behavior is verified by mocks. No generated build was deployed.
+
+## Inline-policy findings and consolidated execution sequence — 26 October 2026
+
+The separately approved two inline-policy reads each exited0 and matched the requested role/policy names. Full bodies stay private off-repository. `PowerFlowEC2S3Access` grants bucket-level ListBucket/GetBucketLocation without prefix condition and GetObject/GetObjectVersion/PutObject/DeleteObject/DeleteObjectVersion on the entire known bucket object range. Thus the inspected identity grants cover write/delete/version-delete for A3 keys. `PowerFlowReadProductionParameters` grants only one scoped ssm:GetParameter; no parameter values were retrieved. Neither policy has conditions or explicit denies. No attached managed policies or boundary were found previously. These two bodies do not prove all effective account/resource/session permissions.
+
+The [latest consolidated plan](phase5d2-a3-and-react-readiness.md#latest-authorized-inline-policy-inspection--26-october-2026) includes exact upload/restore/SCP commands, new offline policy JSON generator, key-scoped protection changes, non-root identity blockers, costs, rollback and stop rules. The generator neither accesses AWS nor creates roles; actual non-root role/trusted-operator binding must precede mutation approval. Upload/restore remain unauthorized. No repeat inventory is needed solely to re-establish these completed policy reads.
+
+New local code hashes:
+
+| File | SHA-256 |
+|---|---|
+| deploy/remediation/prepare-a3-access.py | cccf83a6626af732410061d7cfa65146cfab9b5c59a16f038b166879dca060f8 |
+| tests/test_a3_access_proposal.py | 7c33a3dfa92ed68bf39aadc7489676bbac6d152921d4e47e1724527b7043fdc3 |
+| src/models/next24h_exogenous_evaluation.py | 459fe38016e43878fb34e060b6087c840e95ab3ded05ce215efc1433647fc862 |
+| tests/test_next24h_exogenous_evaluation.py | 76de9b48f86c0fc8d97bfb20b52816e2430badbefc462ab81db46f488b3bc8b8 |
+
+The forecasting module is local-only actual-issuance validation and purged horizon evaluation; no real input availability, accuracy or operational promotion is claimed. No existing pipeline/ML/production service path changed.
+
+Final local regression for this update: **724 Python tests passed in33.19s**. No new frontend code changed; earlier81-test/lint/build results are historical, not newly rerun claims. No real forecast/accuracy, IAM mutation, S3 transfer or independent live restoration was tested in this update.
+
+## Autonomous local implementation checkpoint — 26 October 2026
+
+See [local implementation checkpoint](local-implementation-checkpoint.md) for actual code, exact changed-file list,783Python/85frontend regression results, candidate build/package/rehearsal evidence and remaining gates. No AWS/SSH/external network, transfer, live restore or deployment ran in that work. New A3bytes supersede earlier unexecuted proposals: upload now preserves a private exclusive `upload-receipt.json.progress.jsonl` journal in addition to the final receipt; policy preparation produces `approval-metadata.json` in addition to three policy files. Both object entries are validated before any GET, receipts are bounded/private, and reader explicit denies cover current/latest and non-approved versions. Current hashes in the tables above must be reviewed before future execution; no earlier approval authorizes changed payloads. Non-root identity/trust and exact access-application approval remain blockers. Frozen A2hash is unchanged.

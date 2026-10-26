@@ -185,3 +185,84 @@ Further tasks that can be implemented/tested locally without AWS/SSH: frozen rel
 This preparation changed `deploy/remediation/a3-offhost-recovery.py`, `deploy/remediation/a3-bounded-local.py`, `tests/test_a3_offhost_recovery.py`, this readiness report and the full A3 execution review. Generated frontend build outputs are local verification artifacts, not deployed releases. Existing unrelated work was preserved. Current execution hashes are recorded in the full review and supersede prior unexecuted A3 hashes. No staging/commit/push/merge/history change was performed.
 
 Validation results for this completion: **701 Python tests passed in34.67s; 81 frontend tests passed; frontend lint/build passed; production asset guard passed; pip check found no broken requirements**, with a non-fatal local pip-cache permission warning. No newly claimed live authentication, S3 data transfer, Linux installed-runtime or production forecast test.
+
+## Latest authorized inline-policy inspection — 26 October 2026
+
+Both exact authorized `get-role-policy` commands ran once, sequentially, using the existing default profile and retries disabled. Each exited **0** and returned the requested RoleName/PolicyName. No extra AWS CLI/SDK/SSH calls or permission simulations ran. Full documents remain only in private0600 local files under `/tmp/powerflow-a3-inline-review/`; SSM parameter values were not read and parameter resource identifiers are omitted here.
+
+| Policy | Relevant grants | Scope / conditions |
+|---|---|---|
+| PowerFlowEC2S3Access | Allow ListBucket, GetBucketLocation | Exact known PowerFlow bucket ARN, **no prefix condition** on listing |
+| PowerFlowEC2S3Access | Allow GetObject, GetObjectVersion, PutObject, DeleteObject, DeleteObjectVersion | Same bucket's **entire `/*` object range**, including both A3 recovery keys; **no conditions** |
+| PowerFlowReadProductionParameters | Allow ssm:GetParameter only | One scoped parameter resource; no S3 grant; no value read |
+
+Neither policy contains an explicit Deny, NotAction or NotResource. Based on these inspected identity-policy grants, the EC2 runtime role **can write new versions/overwrite the current recovery objects, create deletion markers and permanently delete object versions**. It is bucket-scoped, but not recovery-prefix-isolated. Neither policy grants IAM or bucket-configuration administration. These findings do **not** prove complete effective AWS permissions: resource policies, session policies, SCPs and other account-level controls can constrain access. Prior bucket inspection found no bucket policy; no new resource/account-level policy check was authorized or performed.
+
+### Smallest protected workflow change
+
+Preserve unrelated pipeline permissions and all verified encryption/public/versioning/ownership settings. Add explicit bucket-policy denies on the **two fixed A3 keys only** for deletion by any principal, PutObject by anyone except an approved non-root uploader, reads by anyone except uploader/reader, insecure transport, non-AES256 writes and missing/wrong If-None-Match. Give a separate reader only exact-version reads after upload. This blocks the EC2 role at the protected keys even while its general bucket grants remain. No Object Lock, new bucket, KMS, lifecycle, permanent EC2 or root runtime is needed. Policy administrators can still remove ordinary denies; do not call this immutable/account-compromise protection.
+
+Working offline code: `deploy/remediation/prepare-a3-access.py` generates the exact bucket/uploader/reader policy JSON without AWS imports/calls. It rejects wrong-account/root/user/runtime-role identities, requires distinct recovery roles and writes only new private files. The initial reader proposal has **no read Allow** until both actual VersionIds exist; regenerating into a different new directory binds each exact version to its own key. The generated proposals are not applied or proof of live enforcement. Bucket policy currently absent; any intervening policy appearance requires reconciliation rather than replacement.
+
+Minimum unresolved identity dependency: owner-nominated existing non-root uploader/reader roles, or separate approval to establish scoped roles/trust. Suggested new names **PowerFlowA3Uploader** and **PowerFlowA3Reader** are proposed names only, not verified existing roles. An actual trusted non-root operator principal ARN/authentication method is required before final trust JSON and IAM mutation commands can be approved. Do not grant the EC2 role Mac trust, extract instance credentials, create long-lived keys or use root for data transfer to shortcut this gate.
+
+### One consolidated executable A3.2/A3.3 sequence — not executed
+
+These shell commands run from the repository on the encrypted Mac, sequentially with immediate stop on any nonzero exit. A real owner-approved role must replace each `APPROVED_*_ROLE_ARN`; receipt/version placeholders can only be filled from the real upload. Those bindings, FileVault/private-directory confirmation and separately approved protection application/readback are mandatory preconditions, so this package is **not currently authorized or ready to run live**. Unknown identities/versions are not fabricated.
+
+1. **Offline policy preparation** (all output paths new under an approved private parent; example directory is repository-local, contains policy JSON only, no database/secrets):
+
+```sh
+venv/bin/python -B deploy/remediation/prepare-a3-access.py --uploader-role-arn APPROVED_UPLOADER_ROLE_ARN --reader-role-arn APPROVED_READER_ROLE_ARN --output /Users/iannganga/Desktop/electricity-trading-pipeline/a3-access-proposal-initial
+```
+
+Review generated bucket-policy.json/uploader-policy.json/reader-policy.json and hashes, exact trust/IAM changes, original configuration capture and rollback before any AWS change. This generator does not create roles, credentials or apply policies. No old broad pipeline grant needs automatic removal.
+
+2. **A3.2 approved transfer/upload**: approve the two explicit source file reads and new private Mac destination as one bounded batch, including SDK calls described below. Do not run the upload if the SCP fails or paths already exist.
+
+```sh
+umask 077
+mkdir -m 700 /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- scp -F /dev/null -i /Users/iannganga/.ssh/powerflow-key.pem -o BatchMode=yes -o IdentitiesOnly=yes -o IdentityAgent=none -o StrictHostKeyChecking=yes -o UpdateHostKeys=no -o UserKnownHostsFile=/Users/iannganga/.ssh/known_hosts -o ForwardAgent=no -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 ec2-user@3.228.243.164:/home/ec2-user/powerflow-recovery-phase5d2-operational/20261026T022230.137446Z/electricity_trading.db ec2-user@3.228.243.164:/home/ec2-user/powerflow-recovery-phase5d2-operational/20261026T022230.137446Z/manifest.json /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/a3-offhost-recovery.py upload --source /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z --bucket powerflow-data-ian-2026-870755688674-us-east-1-an --receipt /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/upload-receipt.json --expected-role-arn APPROVED_UPLOADER_ROLE_ARN
+```
+
+Execute each line only after the preceding success, not an unconditional paste. Session providers must yield the approved non-root role; no credentials in commands. Review current source hashes before execution. Upload runtime scope: one STS identity guard, five bucket preflight configuration reads, two create-only checksum/AES256 PUTs and two exact-version HEADs, private receipt. No object list, other source tree, remote production database, extra SSH inspection, third uploaded file or automatic retry. Source SHA/size/manifest/integrity/schema/six-index/four-count checks gate the PUTs. Persist each successful returned version immediately; an interrupted pair is not a complete backup.
+
+3. **Bind reader permissions offline after actual upload**:
+
+```sh
+venv/bin/python -B deploy/remediation/prepare-a3-access.py --uploader-role-arn APPROVED_UPLOADER_ROLE_ARN --reader-role-arn APPROVED_READER_ROLE_ARN --db-version ACTUAL_DB_VERSION --manifest-version ACTUAL_MANIFEST_VERSION --output /Users/iannganga/Desktop/electricity-trading-pipeline/a3-access-proposal-version-bound
+```
+
+Apply only the separately reviewed actual-version reader-policy delta under its own bounded approval; do not reapply an obsolete bucket/uploader proposal. Record the receipt SHA256 off-host independently of EC2.
+
+4. **A3.3 independent restore**, separately approved after actual receipt digest and versions are known:
+
+```sh
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/a3-offhost-recovery.py restore --receipt /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/upload-receipt.json --receipt-sha256 ACTUAL_APPROVED_RECEIPT_SHA256 --workspace /Users/iannganga/powerflow-a3-independent-20261026T022230.137446Z --expected-role-arn APPROVED_READER_ROLE_ARN
+```
+
+Restore runtime: one STS role guard, two exact-version checksum-verified GetObject calls, new private download/restore/result files and full A2 read-only integrity/FK/schema/index/count/SHA/size checks. No EC2/SCP/source-volume fallback. No additional EC2 charge. Capture actual durations, key VersionIds, checksum, byte sizes and checks without printing data rows or credentials. No successful real transfer/recovery result is asserted here.
+
+**Expected incremental costs:** SSE-S3 Standard pair storage under$0.001 for two months; budget$0.01 request/transfer overhead for this one small exercise, excluding taxes and existing hosting. No KMS key/monthly charge, paid monitoring sink or second EC2. Credit eligibility/expiration remains grant-specific; no billing calls in this execution. Published rate/assumption detail is in the full A3 review, not a guaranteed bill.
+
+**Stop/failure/rollback:**180s per transfer/upload/restore invocation, TERM then5s group-KILL; SDK retries disabled. Stop on identity/owner/encryption/versioning/permissions mismatch, existing destination, checksum/schema/count/FK failure, incomplete version/checksum metadata, network uncertainty or timeout. No repair, overwrite, deletion, automatic retry or expanded diagnostics. Preserve partial outputs; an uncertain PUT outcome requires separate exact-key reconciliation, not rerun. Production state never changes in A3.2/A3.3, so rollback is stop/preserve. Access-policy rollback is a separately approved exact prior-state restoration: because original bucket policy was absent, removal of only the newly installed unchanged policy could restore that state but removes recovery protections; never perform it automatically. Do not delete roles/versions/artifacts or weaken encryption/versioning as a rollback shortcut. Retain pair/receipt through the two-month migration and until a newer independently verified recovery point is accepted; cleanup remains separately approved.
+
+**Next precise authorization dependency:** nominate the existing non-root uploader/reader role ARNs and trusted non-root operator/session method, or approve preparing trust configuration for the two proposed roles using that nominated principal. The two inline reads are now complete; repeating inventories adds no recovery value. No AWS mutations, source transfers or restore are authorized by this report.
+
+### Local next24 implementation and evidence limits
+
+Added `src/models/next24h_exogenous_evaluation.py` and its synthetic-fixture tests. It validates explicit timezone-aware actual issue times, completed observed-hour/recorded availability, six forecast-source acquisition/collection timestamps and ENTSO-E creation timestamps; rejects inputs acquired after issuance, missing/duplicate/nonfinite rows and inconsistent target calendar/issue snapshots. Requires all24horizons and purges whole issue windows crossing chronological validation/test boundaries. Fits24 independent caller-supplied estimators on training features/labels only and returns offline per-horizon metrics with `production_promoted=False` and `operational_predictions_validated=False`. No files, operational forecasts or trained artifacts are published.
+
+Important distinction: existing exogenous Silver uses logical collection-cycle hours, which may include acquisition later within the hour. Those cycle labels are not strict actual-issuance availability evidence. The new isolated evaluator refuses that inference and requires explicit real issue/availability evidence; no existing builder/withholding/production model logic was changed. Structural validation cannot authenticate provenance or guarantee supplied feature values were honestly recorded, so source acquisition evidence remains mandatory. Historical outcomes are labels only; future load/generation/weather features must come from actually acquired forecast vintages, never realized future observations.
+
+Fixed local prospective weather/load vintage inputs are missing. No genuine new metrics or operational forecast were generated. Existing API/UI still honestly retain missing/stale/historical/withheld behavior. Actual availability/completeness and out-of-time accuracy must be established with legitimate future-known inputs before any release proposal or operational display. Targeted forecast regression:71passed in16.18s. New policy generator plus A3/A2 local tests:52passed in1.37s; mocks/structural policy checks do not prove live IAM enforcement. Full Python regression follows below.
+
+Files changed this turn: `deploy/remediation/prepare-a3-access.py`, `tests/test_a3_access_proposal.py`, `src/models/next24h_exogenous_evaluation.py`, `tests/test_next24h_exogenous_evaluation.py`, this consolidated report and `frontend/docs/phase5d2-a3-offhost-recovery-review.md`. No production/API/UI/data/model artifact/authentication configuration changed. No policy application, upload, restoration, production-data acquisition, deployment or Git operation was performed.
+
+Final local regression for this update: **724 Python tests passed in33.19s**. No new frontend code changed; earlier81-test/lint/build results are historical, not newly rerun claims. No real forecast/accuracy, IAM mutation, S3 transfer or independent live restoration was tested in this update.
+
+## Autonomous local engineering completion
+
+The [local implementation checkpoint](local-implementation-checkpoint.md) supersedes earlier local test counts/code-readiness statements:783Python tests,85frontend tests, lint/TypeScript/build/asset guard,37-file deterministic build comparison,66-file real-build local package verification, offline API imports and seven-route synthetic HTTP rehearsal passed. Forecast evaluation/baselines/DST, release tooling and A3hardening are implemented; genuine prospective inputs, identity/trust/protected off-host restore and live infrastructure/staging evidence remain blocked. No AWS/SSH/production/Git operation occurred in this follow-on work.

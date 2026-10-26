@@ -1,0 +1,43 @@
+{
+  "status": "unverified-template-not-execution-approval",
+  "target": {
+    "account": "870755688674",
+    "region": "us-east-1",
+    "instance_id": null,
+    "candidate_api_port": 8010,
+    "existing_api_port_preserved": 8000
+  },
+  "tls": {
+    "certificate_hostname": null,
+    "verified_expiry_utc": null,
+    "existing_acme_method": null,
+    "existing_acme_webroot": null,
+    "renewal_mechanism": null,
+    "renewal_rehearsal_result": null,
+    "configuration_backup_reference": null,
+    "no_private_key_contents_collected": true
+  },
+  "capacity": {
+    "passive_scheduled_peak_evidence_reference": null,
+    "minimum_memory_reserve_percent": 25,
+    "minimum_disk_reserve_percent": 25,
+    "candidate_memory_limit_mib": 512,
+    "candidate_swap_limit_mib": 0,
+    "overlap_approved": false
+  },
+  "recovery_inventory": [
+    {"store": "operational_sqlite", "backup_id": "20261026T022230.137446Z", "isolated_restore": "passed-A2", "offhost_restore": "pending-A3"},
+    {"store": "prefect_metadata", "active_backend": null, "consistent_backup_reference": null, "isolated_restore_reference": null},
+    {"store": "postgresql", "active_role": null, "consistent_backup_reference": null, "isolated_restore_reference": null},
+    {"store": "mlflow_tracking_and_artifacts", "active_backend": null, "backup_reference": null, "isolated_restore_reference": null},
+    {"store": "frozen_models_and_required_datasets", "allowlisted_manifest_reference": null, "backup_reference": null, "isolated_restore_reference": null},
+    {"store": "private_configuration", "custodian_attestation_reference_only": null, "no_secret_values_in_report": true}
+  ],
+  "approvals": {
+    "ssh_inventory": false,
+    "configuration_changes": false,
+    "staging_activation": false,
+    "production_cutover": false,
+    "streamlit_retirement": false
+  }
+}

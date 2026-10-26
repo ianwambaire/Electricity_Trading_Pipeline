@@ -206,7 +206,7 @@ def download(s3, receipt, destination):
         write_new(destination/name, body)
 
 
-def main():
+def main(session=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
     up = sub.add_parser('upload'); up.add_argument('--source', type=Path, required=True); up.add_argument('--bucket', required=True)
@@ -231,7 +231,7 @@ def main():
             receipt = load_receipt(args.receipt, args.receipt_sha256, a2)
         import boto3
         from botocore.config import Config
-        session = boto3.Session(region_name=REGION)
+        session = session or boto3.Session(region_name=REGION)
         config = Config(connect_timeout=5, read_timeout=20, retries={'total_max_attempts':1})
         guard_identity(session.client('sts', config=config), args.expected_role_arn)
         s3 = session.client('s3', config=config)

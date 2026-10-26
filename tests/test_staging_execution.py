@@ -60,3 +60,21 @@ def test_shell_rejects_destination_escape_before_any_operation(script,bad):
     args=['bash',str(ROOT/'deploy/staging'/script),bad]
     if script=='switch-candidate.sh':args.append('safe-record')
     assert subprocess.run(args,capture_output=True).returncode==64
+
+
+def test_existing_tls_placeholder_is_replaced_and_acme_preserved():
+    conf=(ROOT/'deploy/staging/staging.powerflowenergy.dev.conf').read_text()
+    assert '/etc/letsencrypt-powerflow-staging/live/staging.powerflowenergy.dev/' in conf
+    assert '/etc/letsencrypt/live/' not in conf
+    assert 'location ^~ /.well-known/acme-challenge/' in conf
+    assert 'root /var/www/powerflow-staging-acme;' in conf
+    activate=(ROOT/'deploy/staging/activate-staging.sh').read_text()
+    rollback=(ROOT/'deploy/staging/rollback-staging.sh').read_text()
+    for source in (activate,rollback):
+        assert 'conf=/etc/nginx/conf.d/powerflow-staging-https.conf' in source
+        assert '85ad4c7ec303b638033831cb7ebfd5b73b669c80b249926c8e1446ba70124396' in source
+        assert 'previous-https.conf' in source
+    assert activate.index('sha256sum "$conf"') < activate.index('install -m 644')
+    assert activate.index('nginx -t') < activate.index('install -m 644')
+    assert 'disabled-staging.conf' in rollback
+    assert 'install -m 644 "$state/previous-https.conf" "$conf"' in rollback

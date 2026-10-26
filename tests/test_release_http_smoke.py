@@ -19,3 +19,10 @@ def test_candidate_routing_api_auth_and_readiness(tmp_path):
 def test_local_build_not_silently_treated_as_release(tmp_path):
     (tmp_path/'build-config.json').write_text(json.dumps(dict(apiBase='/api',releaseEligible=False)))
     with pytest.raises(ValueError):smoke.run(tmp_path)
+
+
+def test_existing_pages_and_other_apis_work_when_next24_is_unavailable(tmp_path):
+    (tmp_path/'index.html').write_text('<html><div id="root"></div></html>')
+    (tmp_path/'build-config.json').write_text(json.dumps(dict(apiBase='/api',releaseEligible=True,origin='https://candidate.example.test')))
+    result=smoke.run(tmp_path,next24_available=False)
+    assert result['pages']==7 and result['next24_available'] is False

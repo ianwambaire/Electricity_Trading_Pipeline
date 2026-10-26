@@ -16,10 +16,18 @@ state="/var/lib/powerflow-staging/$release"
 awk '/^MemAvailable:/ {ok=($2 >= 786432)} END {exit !ok}' /proc/meminfo
 [[ $(df -Pk /var/www/powerflow-staging | awk 'END {print $4}') -ge 2097152 ]] || exit 70
 [[ ! -e "$base/current.new" && ! -L "$base/current.new" ]] || exit 71
+# Replace only the exact verified staging placeholder, never add a duplicate vhost.
+conf=/etc/nginx/conf.d/powerflow-staging-https.conf
+[[ -f "$conf" && ! -L "$conf" ]] || exit 68
+[[ $(sha256sum "$conf" | awk '{print $1}') == 85ad4c7ec303b638033831cb7ebfd5b73b669c80b249926c8e1446ba70124396 ]] || exit 68
+[[ ! -e /etc/nginx/conf.d/powerflow-staging.conf && ! -L /etc/nginx/conf.d/powerflow-staging.conf ]] || exit 68
+[[ $(systemctl show powerflow-candidate-api.service --property=ActiveState --value) == inactive ]] || exit 73
+nginx -t
 mkdir -m 700 "$state"
+cp --no-clobber "$conf" "$state/previous-https.conf"
+sha256sum deploy/staging/staging.powerflowenergy.dev.conf | awk '{print $1}' > "$state/installed-https.sha256"
 if [[ -L "$base/current" ]]; then readlink "$base/current" > "$state/previous-static"; fi
-[[ ! -e /etc/nginx/conf.d/powerflow-staging.conf ]] || exit 68
-install -m 644 deploy/staging/staging.powerflowenergy.dev.conf /etc/nginx/conf.d/powerflow-staging.conf
+install -m 644 deploy/staging/staging.powerflowenergy.dev.conf "$conf"
 ln -s "$candidate" "$base/current.new"
 mv -Tf "$base/current.new" "$base/current"
 # No restart/reload of the old API or Streamlit.

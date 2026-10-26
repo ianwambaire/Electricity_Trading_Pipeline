@@ -55,12 +55,17 @@ def frontend_rehearsal(dist, backend):
     return Starlette(routes=[Route('/{path:path}',handle,methods=['GET','HEAD','POST','PATCH','DELETE','PUT'])])
 
 
-def run(dist):
+def run(dist, *, next24_available=True):
     manifest=json.loads((dist/'build-config.json').read_text())
     if manifest.get('apiBase')!='/api' or manifest.get('releaseEligible') is not True:
         raise ValueError('An explicit-origin release candidate is required')
     with tempfile.TemporaryDirectory(prefix='powerflow-release-smoke-') as temp:
         root=Path(temp)/'synthetic';fixture_data(root,Path(temp)/'absent')
+        if not next24_available:
+            (root/'data/reports/next24h_forecast.csv').unlink()  # This invocation's disposable synthetic file only.
+            import sqlite3
+            with sqlite3.connect(root/'database/electricity_trading.db') as database:
+                database.execute('UPDATE pipeline_runs SET message=?',(json.dumps({'next24h_forecast_status':'WITHHELD'}),))
         security=SecuritySettings('https://cognito-idp.us-east-1.amazonaws.com/us-east-1_OfflineTest',frozenset({'offlineclient'}))
         app=create_app(APISettings.from_root(root),security_settings=security,runtime_settings=RuntimeSettings('staging',('testserver',)))
         # Any attempted account/provider access must fail the rehearsal.
@@ -73,8 +78,12 @@ def run(dist):
                 assert result.status_code==200 and result.content==(dist/'index.html').read_bytes()
                 assert 'no-store' in result.headers['cache-control']
             for path in ('/api/health','/api/pipeline/status','/api/market/coverage','/api/market/summary','/api/models/summary','/api/anomalies/summary','/api/forecast/next24'):
-                response=web.get(path);assert response.status_code==200,path
+                response=web.get(path)
+                expected=404 if path=='/api/forecast/next24' and not next24_available else 200
+                assert response.status_code==expected,path
                 assert response.headers['cache-control']=='no-store'
+            if not next24_available:
+                assert web.get('/api/pipeline/status').json()['forecast_status']=='WITHHELD'
             assert web.get('/api/ready').status_code==404
             assert web.get('/api/docs').status_code==404
             assert web.get('/api/no-such-route').status_code==404
@@ -89,9 +98,9 @@ def run(dist):
             assert api.get('/health').status_code==200 and api.get('/ready').status_code==503
         return {'scope':'local in-process routing/API rehearsal; SYNTHETIC data, dependency-overridden Analyst; no live JWT/OIDC/Nginx proof',
                 'pages':len(ROUTES),'callback_fallback':True,'analyst_denials':len(ADMIN),'api_base':'/api',
-                'index_sha256':hashlib.sha256((dist/'index.html').read_bytes()).hexdigest(),'origin':manifest['origin'],'production_deployed':False}
+                'index_sha256':hashlib.sha256((dist/'index.html').read_bytes()).hexdigest(),'origin':manifest['origin'],'production_deployed':False,'next24_available':next24_available}
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--dist',type=Path,required=True)
-    args=parser.parse_args();print(json.dumps(run(args.dist.resolve()),indent=2))
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--dist',type=Path,required=True);parser.add_argument('--next24',choices=['available','unavailable'],default='available')
+    args=parser.parse_args();print(json.dumps(run(args.dist.resolve(),next24_available=args.next24=='available'),indent=2))

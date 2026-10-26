@@ -1,3 +1,5 @@
+> Post-HTTPS update: application activation and rollback below are superseded by `REACT-DEPLOYMENT-REVIEW.md`. Use the existing isolated staging certificate and replace the verified staging HTTPS placeholder; never install a duplicate staging vhost.
+
 # Bounded staging window — proposal, not executed
 
 Use `https://staging.powerflowenergy.dev` with Vite base `/`, root React Router and `/auth/callback`. A path prefix would require router/auth/build changes; apex assets cannot be reused because their OAuth origin is embedded. One DNS record pointing at the existing EC2 and a separately issued staging certificate are required. No second EC2. Existing apex server, DNS and Streamlit client stay unchanged.

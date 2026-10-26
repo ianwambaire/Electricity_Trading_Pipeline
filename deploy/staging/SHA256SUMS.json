@@ -1,10 +1,10 @@
 {
-  "deploy/staging/staging.powerflowenergy.dev.conf": "c5b53a6fe2ee3589d0e4378d99a4a50b4ffdb109ef982667d12bd58df75f2886",
+  "deploy/staging/staging.powerflowenergy.dev.conf": "ba9cc88e8a9b8f9401a713ccc2289f1c4375aa734745a6bfdbb431ce240e96ba",
   "deploy/staging/powerflow-candidate-api.service": "685ad17fbfdd39b04a0e114c469e0898aa042c3a80530a373adc0126311c7a2a",
   "deploy/staging/api.env.example": "ee1ea96ebd2aa9b1c15891fd4cb9adf1c6ee7d06d6177b99bb1f375419b36704",
-  "deploy/staging/activate-staging.sh": "810d43607e4598619f2a64108b93f50332c51cb59da05357fa01082c4515df3d",
-  "deploy/staging/rollback-staging.sh": "609d315bfec4439be7f82d34e83fa128f8a36c5faa4cbdb4f1a57877e6385382",
+  "deploy/staging/activate-staging.sh": "2ef00dbf43a26db8e99374c9121fb4be656f2219224bd51b249fb596519b3e1d",
+  "deploy/staging/rollback-staging.sh": "cc4c2a58206f98c8e1c3827cf78c4eb3a078439c74d6df4f2e031e3a2af57d2e",
   "deploy/staging/switch-candidate.sh": "80901bfb08ba14b996e40095ce7a18b51fe29f10c6546e3bdf79532bcb2b9ebe",
-  "deploy/staging/EXECUTION.md": "67039e2d089dbdbc21af1b4c899563bf2fe784a06f9f39c9dcfa33f0779c485d",
+  "deploy/staging/EXECUTION.md": "28f734c59019433dd15f178e9a3e3a873f6fc048055a83333496e8c70e277773",
   "scripts/smoke_staging.py": "d98545ccc668a2213d9d77359545010153a154ac128555d2852e65d3e22a7cd8"
 }

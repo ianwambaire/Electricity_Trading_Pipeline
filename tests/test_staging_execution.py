@@ -78,3 +78,15 @@ def test_existing_tls_placeholder_is_replaced_and_acme_preserved():
     assert activate.index('nginx -t') < activate.index('install -m 644')
     assert 'disabled-staging.conf' in rollback
     assert 'install -m 644 "$state/previous-https.conf" "$conf"' in rollback
+
+
+def test_proxy_inventory_matches_current_read_only_and_account_contract():
+    import re
+    conf=(ROOT/'deploy/staging/staging.powerflowenergy.dev.conf').read_text()
+    expression=re.search(r'if \(\$uri !~ "([^"]+)"\)',conf).group(1)
+    accepted=['/api/health','/api/market/history','/api/account/profile',
+              '/api/account/password','/api/auth/me',*('/api'+p for p in m.ADMIN)]
+    for path in accepted: assert re.fullmatch(expression,path),path
+    for path in ['/api/ready','/api/docs','/api/admin/new','/api/account/mfa/setup',
+                 '/api/private','/api/health/other']:
+        assert not re.fullmatch(expression,path),path

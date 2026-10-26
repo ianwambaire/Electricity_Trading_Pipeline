@@ -77,9 +77,18 @@ def checksum(data):
     return base64.b64encode(hashlib.sha256(data).digest()).decode('ascii')
 
 
-def guard_identity(sts):
+def guard_identity(sts, expected_role_arn):
     identity = sts.get_caller_identity()
     require(identity['Account'] == ACCOUNT and not identity['Arn'].endswith(':root'), 'account_or_root_identity')
+    prefix = 'arn:aws:iam::'+ACCOUNT+':role/'
+    require(expected_role_arn.startswith(prefix), 'expected_role_account')
+    role_name = expected_role_arn[len(prefix):].split('/')[-1]
+    require(bool(role_name), 'expected_role_name')
+    # IAM role names are unique within an account, including across paths.
+    # STS assumed-role ARNs omit IAM role paths; the session name is not fixed.
+    assumed_prefix = 'arn:aws:sts::'+ACCOUNT+':assumed-role/'+role_name+'/'
+    require(identity['Arn'].startswith(assumed_prefix)
+            and bool(identity['Arn'][len(assumed_prefix):]), 'unapproved_role_identity')
 
 
 def guard_bucket(s3, bucket):
@@ -144,6 +153,8 @@ def main():
     up.add_argument('--receipt', type=Path, required=True)
     down = sub.add_parser('restore'); down.add_argument('--receipt', type=Path, required=True)
     down.add_argument('--receipt-sha256', required=True); down.add_argument('--workspace', type=Path, required=True)
+    for child in (up, down):
+        child.add_argument('--expected-role-arn', required=True)
     args = parser.parse_args()
     os.umask(0o077)
     started = time.monotonic()
@@ -153,7 +164,7 @@ def main():
         from botocore.config import Config
         session = boto3.Session(region_name=REGION)
         config = Config(connect_timeout=5, read_timeout=20, retries={'total_max_attempts':1})
-        guard_identity(session.client('sts', config=config))
+        guard_identity(session.client('sts', config=config), args.expected_role_arn)
         s3 = session.client('s3', config=config)
         if args.action == 'upload':
             require(args.bucket == BUCKET, 'unapproved_bucket')

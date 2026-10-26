@@ -55,12 +55,16 @@ def test_no_overwrite_private_output(tmp_path):
 def test_root_and_wrong_account_refused(account,arn):
     class STS:
         def get_caller_identity(self): return dict(Account=account,Arn=arn)
-    with pytest.raises(ValueError): a3.guard_identity(STS())
+    with pytest.raises(ValueError): a3.guard_identity(STS(),'arn:aws:iam::'+a3.ACCOUNT+':role/ApprovedFixture')
 
 
 def test_receipt_path_injection_rejected_before_get(tmp_path):
-    receipt=dict(account=a3.ACCOUNT,region=a3.REGION,backup_id=a3.BACKUP_ID,bucket='fixture',objects={name:dict(key='../escape',version='v1',bytes=1,sha256='x') for name in a3.NAMES})
-    with pytest.raises(ValueError): a3.download(S3(),receipt,tmp_path)
+    receipt=dict(account=a3.ACCOUNT,region=a3.REGION,backup_id=a3.BACKUP_ID,bucket=a3.BUCKET,objects={name:dict(key='../escape',version='v1',bytes=1,sha256='x') for name in a3.NAMES})
+    s3=S3()
+    def forbidden_get(**kw):
+        raise AssertionError('GET must not occur before receipt key validation')
+    s3.get_object=forbidden_get
+    with pytest.raises(ValueError): a3.download(s3,receipt,tmp_path)
     assert not list(tmp_path.iterdir())
 
 
@@ -123,3 +127,36 @@ def test_unapproved_bucket_refused_without_s3_calls():
     s3=S3()
     with pytest.raises(ValueError): a3.upload(s3,'wrong-bucket',{})
     assert not s3.calls
+
+
+@pytest.mark.parametrize('actual,expected,allowed', [
+    ('arn:aws:sts::'+a3.ACCOUNT+':assumed-role/ApprovedFixture/session', 'arn:aws:iam::'+a3.ACCOUNT+':role/path/ApprovedFixture',True),
+    ('arn:aws:sts::'+a3.ACCOUNT+':assumed-role/Other/session', 'arn:aws:iam::'+a3.ACCOUNT+':role/ApprovedFixture',False),
+    ('arn:aws:iam::'+a3.ACCOUNT+':user/ApprovedFixture', 'arn:aws:iam::'+a3.ACCOUNT+':role/ApprovedFixture',False),
+    ('arn:aws:sts::'+a3.ACCOUNT+':assumed-role/ApprovedFixture/session', 'arn:aws:iam::000000000000:role/ApprovedFixture',False),
+])
+def test_exact_approved_role_binding(actual,expected,allowed):
+    class STS:
+        def get_caller_identity(self): return dict(Account=a3.ACCOUNT,Arn=actual)
+    if allowed: a3.guard_identity(STS(),expected)
+    else:
+        with pytest.raises(ValueError): a3.guard_identity(STS(),expected)
+
+
+def test_supervisor_escalates_group_even_when_leader_exits(monkeypatch):
+    import subprocess
+    import signal
+    spec=importlib.util.spec_from_file_location('a3_bound_fixture',ROOT/'deploy/remediation/a3-bounded-local.py')
+    bound=importlib.util.module_from_spec(spec);spec.loader.exec_module(bound)
+    class Process:
+        pid=99999999
+        calls=0
+        def wait(self,timeout=None):
+            self.calls+=1
+            if self.calls==1: raise subprocess.TimeoutExpired('fixture',timeout)
+            return 0
+    monkeypatch.setattr(bound.subprocess,'Popen',lambda *a,**kw:Process())
+    signals=[]
+    monkeypatch.setattr(bound.os,'killpg',lambda pid,sig:signals.append(sig))
+    assert bound.run(['fixture'],seconds=0,grace=0)==124
+    assert signals==[signal.SIGTERM,signal.SIGKILL]

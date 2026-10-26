@@ -35,10 +35,10 @@ PostgreSQL, Prefect SQLite, MLflow, models, dataset directories, environments an
 
 | Local code | SHA-256 |
 |---|---|
-| `deploy/remediation/a3-offhost-recovery.py` | `d1c29d13829efb49a351ff21b374dfaa9560027d9fd15fbcdf35e5a18b238089` |
+| `deploy/remediation/a3-offhost-recovery.py` | `bdfb245f1044938e0e9ed92d60060140fa555b2734e4cc6ae57a5c7f9ccabc0d` |
 | `deploy/remediation/restore-operational-sqlite.py` (unchanged pinned validator) | `e0144438075b5219a2b03a7dad982bab14bde81d92d6c79cf11253c91284262c` |
-| `deploy/remediation/a3-bounded-local.py` (local180s/5s process-group supervisor) | `c9d53406b970a696a056ed8275e91f8c80f50fedf11e218e71e94a132cf90774` |
-| `tests/test_a3_offhost_recovery.py` (local fixtures only) | `2e637b26325e4cafd31e4851f55cd4973635c03709c887e04dddde17ee7a0434` |
+| `deploy/remediation/a3-bounded-local.py` (local180s/5s process-group supervisor) | `9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40` |
+| `tests/test_a3_offhost_recovery.py` (local fixtures only) | `0558caba30966bf37ba07075a0b9e75c5f4205fe7cb3c5077ab79facddf5833c` |
 
 The exact executable source is in those files, not an abbreviated inline rewrite. A3 verifies the A2 file hash before loading it. It uses existing boto3, already declared by the project; no new dependency or installation performed. Local interpreter must have boto3 and support conditional PutObject `IfNoneMatch`; otherwise STOP, do not install on production. Transport uses standard OpenSSH/SFTP; private key contents never read/displayed/copied by the agent.
 
@@ -98,7 +98,7 @@ Execute sequentially, STOP on any nonzero command (do not paste as an unconditio
 From repository root, recheck the four code hashes above, then the exact upload invocation (replace bucket only after separately approving that binding):
 
 ```sh
-venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/a3-offhost-recovery.py upload --source /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z --bucket powerflow-data-ian-2026-870755688674-us-east-1-an --receipt /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/upload-receipt.json
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/a3-offhost-recovery.py upload --source /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z --bucket powerflow-data-ian-2026-870755688674-us-east-1-an --receipt /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/upload-receipt.json --expected-role-arn APPROVED_UPLOADER_ROLE_ARN
 ```
 
 Use a local process supervisor with a **180-second wall timeout per SCP or upload invocation**, terminate at timeout, wait five seconds, then kill that local process if necessary. Do not restart/retry automatically. The exact supervisor source/hash is included above and invoked in each command. It starts a separate local process group, returns124 on timeout, never retries or deletes artifacts. Final bucket/identity bindings must be reviewed before A3.2. Preserve stdout/stderr in new exclusive private0600 local capture files under the approved staging directory; do not log SDK debug output, SCP verbosity or credentials. Use a live monitored terminal if a private capture has not been approved. SDK calls have connect=5s/read=20s and total_max_attempts=1. A timeout after PUT has an **unknown remote outcome**; preserve output and request a separately approved exact-key/version reconciliation, never blindly rerun.
@@ -114,7 +114,7 @@ No new EC2 charge. Use only S3 and the private receipt; disconnecting or losing 
 After A3.2 yields actual VersionIds and receipt digest, review those exact bindings before approval. Proposed new private workspace (must not exist): `/Users/iannganga/powerflow-a3-independent-20261026T022230.137446Z/`.
 
 ```sh
-venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/a3-offhost-recovery.py restore --receipt /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/upload-receipt.json --receipt-sha256 ACTUAL_APPROVED_RECEIPT_SHA256 --workspace /Users/iannganga/powerflow-a3-independent-20261026T022230.137446Z
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/a3-offhost-recovery.py restore --receipt /Users/iannganga/powerflow-a3-transfer-20261026T022230.137446Z/upload-receipt.json --receipt-sha256 ACTUAL_APPROVED_RECEIPT_SHA256 --workspace /Users/iannganga/powerflow-a3-independent-20261026T022230.137446Z --expected-role-arn APPROVED_READER_ROLE_ARN
 ```
 
 The same reviewed local 180s supervisor/5s escalation is required. Validate receipt digest before using its storage identity. Download exactly two pinned versions, expected owner, SSE-S3 and service SHA256; cap reads, validate downloaded lengths/hashes against receipt (DB also against independently approved SHA/size). Files are exclusive0600 under0700 directories. No replacement, deletion, source fallback, URL fetching or remote code execution. Disk guard before download: >=3*12,115,968 +256MiB = **304,783,360 bytes** available; reused A2 applies an additional25%-filesystem-reserve guard before restoration. Stop rather than weaken either guard.
@@ -205,3 +205,11 @@ Private aggregate evidence on the Mac: `/tmp/powerflow-a3-bucket-config-results.
 ## Parallel local readiness preparation — 26 October 2026
 
 See the [consolidated A3 and React readiness report](phase5d2-a3-and-react-readiness.md) for the exact four-command proposed runtime IAM batch, identity/access blockers, bucket-bound transfer/restore commands and shortest safe deployment sequence including the next24 forecast-availability backlog. No new AWS/SSH calls ran. The A3 script now pins the verified bucket and checks the receipt parent before upload; current code/test hashes above supersede the earlier unexecuted proposal. Recovery regression:68passed in2.83s. Existing boto3 service-model support was checked entirely locally. Storage/identity/policy approval, encrypted workstation confirmation, transfer approval and actual receipt/version binding remain gates.
+
+## Final local package and IAM reference completion — 26 October 2026
+
+The two separately authorized policy-list calls each ran once and exited0: inline policies `PowerFlowEC2S3Access` and `PowerFlowReadProductionParameters`; no attached managed policies. Earlier get-role established no permissions boundary and was not repeated. No policy bodies, extra AWS/SSH operations, objects or credentials were inspected in this preparation. The exact next two get-role-policy commands and final execution boundaries are in the [consolidated report](phase5d2-a3-and-react-readiness.md#consolidated-completion--approved-policy-lists-and-final-local-packages).
+
+Current A3 code now **requires** an approved `--expected-role-arn` and validates the caller's STS assumed-role identity/account; no IAM user/root/other role is accepted. This replaces the earlier account/non-root-only gate. Names/ARNs of future uploader/reader roles must still be nominated and approved; placeholders are not executable authorization. The timeout supervisor now sends group KILL after the full five-second grace even if the leader exited, and the receipt-key test actually reaches key validation with a valid bucket. Current code/test hashes in section2 supersede earlier unexecuted proposals. Frozen A2 code is unchanged.
+
+Local validation: **701 Python tests passed in34.67s; 81 frontend tests passed; lint, production build and asset guard passed; pip check found no broken requirements** (a local pip-cache permission warning only). Asset guard:30JS chunks,376,359-byte entry,114,072-byte gzip entry,886,058totalJS bytes; zero source maps/test sources. No live S3 transfer/restore/IAM policy behavior is verified by mocks. No generated build was deployed.

@@ -8,6 +8,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 
 
 def run(command, seconds=180, grace=5):
@@ -19,14 +20,21 @@ def run(command, seconds=180, grace=5):
             os.killpg(process.pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
+        grace_started = time.monotonic()
         try:
             process.wait(timeout=grace)
         except subprocess.TimeoutExpired:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait()
+            pass
+        # A leader can exit while its SCP/SSH descendants remain alive.
+        # Give the entire group its grace interval, then kill any survivors.
+        remaining = grace - (time.monotonic() - grace_started)
+        if remaining > 0:
+            time.sleep(remaining)
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
         return 124
 
 

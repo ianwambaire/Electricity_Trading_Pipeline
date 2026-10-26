@@ -2,6 +2,12 @@
 
 Release: `phase-staging-https-ready-20261026`; Mac candidate `/private/tmp/powerflow-react-stage-review-dudwnuhr/candidate`; 68 files, 1,271,788 bytes. Manifest SHA256 `50be8e7a20c462eb8850d9bf61b77bb655f687f85c725cbd3d903b7ff14aad27`. Static assets are unchanged from the verified staging-origin build. Package verifier checks every file, exact inventory and public OIDC configuration. No datasets, databases, credentials, environment files, recovery artifacts, venv or model binaries are packaged.
 
+## Confirmed checkpoint and remaining Linux gate
+
+Authorized cgroup diagnostic passed: cgroup2 at `/sys/fs/cgroup`, memory advertised/enabled, `system.slice` high/max/swap interfaces readable. Missing hierarchy-root limits are expected interface placement, not absence of descendant support. Host interface compatibility is CONFIRMED; effective candidate limits/BPF are UNVERIFIED. No resource protection is relaxed.
+
+The immutable candidate remains unchanged. Existing macOS CPython3.14.7 dependency/import checks pass, but local Linux amd64 Python3.14.7 image/runtime is now verified by immutable digest, but the clean locked installation timed out at150seconds. Exact dateutil3.0.0 wheel availability is confirmed; full Linux installation/import tests and venv sizing remain BLOCKED. See `LINUX-DEPENDENCY-REVIEW.md` and `LINUX-DEPENDENCY-RESULTS.json`. System3.9.25 cannot satisfy the lock. Base interpreter accessibility under ProtectHome must be verified before new venv installation.
+
 ## Hard gates before any installation authorization
 
 - Fresh bounded host inspection: candidate unit/user/paths and port8010 unused; no symlink ancestors; no existing objects may be overwritten; record original API8000/Streamlit/Prefect/PostgreSQL identities and production Nginx/cert baseline hashes. Previously observed capacity is not current evidence.

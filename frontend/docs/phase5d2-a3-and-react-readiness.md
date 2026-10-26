@@ -112,3 +112,11 @@ Commands2–4 were **not executed** (no exit statuses). Inline policy names, att
 Next approval needed: corrected profile check `arn:aws:iam::870755688674:instance-profile/PowerFlowEC2Role` and role check `arn:aws:iam::870755688674:role/PowerFlowEC2Role`, then one execution of remaining commands2–4 (or a newly approved whole sequence if fresh binding evidence is desired). The successful command1 is not automatically retried.
 
 Minimum later policy-body review remains separately approval-gated: one `get-role-policy` per exact returned inline name; for each exact returned attached/boundary policy ARN, one `get-policy` to identify its default version, then one `get-policy-version` for that exact version. Names/ARNs/versions cannot be concretized until the remaining reference-only commands succeed. No broad IAM enumeration or policy-body call is currently authorized.
+
+## Newly approved get-role attempt — stopped on exact comparison
+
+26 October 2026: the user explicitly authorized a new three-command sequence, requiring `Role.Arn` to equal literal `arn:aws:iam::870755688674/PowerFlowEC2Role`. Executed only `aws iam get-role --role-name PowerFlowEC2Role --region us-east-1 --no-cli-pager`, once under the existing default profile. **Exit0**. Actual `Role.Arn`: **`arn:aws:iam::870755688674:role/PowerFlowEC2Role`**. No permissions boundary was present in the returned role metadata. Trust-policy contents were neither emitted nor retained; no trust conclusions are asserted.
+
+The actual role ARN did not equal the mandated literal, which omits `:role/`. Stopped immediately; `list-role-policies` and `list-attached-role-policies` were **not executed**, and their exit statuses/policy names remain unavailable. No retry, extra AWS command, policy-body read, modification, SSH, transfer, deployment or Git staging/history operation occurred. The local documentation update is the only persisted change in this attempt.
+
+A future approval can avoid the formatting ambiguity by explicitly authorizing the two remaining reference-only list commands for the **actual ARN returned by get-role**, without requiring another get-role or the malformed literal. Policy-body inspection still requires separate approval after names/ARNs are known.

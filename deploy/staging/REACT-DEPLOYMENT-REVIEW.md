@@ -75,3 +75,13 @@ Requires installed config digest and saved placeholder digest; retains app confi
 ## Resources and limits
 
 No new EC2, certificate, EIP or permanently running backend. Temporary candidate on8010 alongside existing8000/8501. Static transfer1.27MB; venv, wheelhouse and real publication size remain unmeasured: provision conservatively and measure before approval, do not call1.27MB total deployment storage. No production ingestion/training. Existing storage/network charges apply; no incremental instance charge. Renewal timer installation is still separate and required before unattended long-term use. Apex cutover/Streamlit retirement are excluded.
+
+## Authorized publication preflight — complete, no publication performed
+
+One read-only SSH inspection exited0. All12 inventory sources exist and were readable/stable individually;8 hashes differ from the old Mac inventory. Exact remote bytes/hashes/modes and timestamp aggregates are in `PUBLICATION-PREFLIGHT-RESULTS.json` and `PUBLICATION-PREFLIGHT-REVIEW.md`. The approved A1 hash/counts still match and immutable read-only schema/count queries created no sidecars. Live SQLite was metadata-only; no live connection or new backup was made. A1 remains historical operational state, not current pipeline evidence.
+
+Publication footprint with A1 is102,895,192bytes. Destination and parent are absent, no observed conflicts. MemAvailable923.20MiB and free disk11.895GiB pass the current768MiB and conservative3.325GiB total workspace/reserve guards; recheck at execution. Raw market files are newer than Silver/Gold and one-hour forecasts; preserve historical/withheld labels. The anomaly event maximum is not a coverage timestamp. Sensitivity flags are screening only, not a full secrets audit.
+
+EC2 base interpreter `/usr/bin/python3.14`, base `/usr`, stdlib `/usr/lib64/python3.14` are outside protected home paths, with traversable/readable mode bits. Version3.14.7 and ABI match local Linux tests. EC2glibc2.34 is >= every retained binary wheel's minimum tagged floor (cryptography is2.34). Static path/ABI/tag prerequisites are satisfied; actual EC2 imports and effective ProtectHome/cgroup/BPF enforcement remain unverified. Do not point candidate at the production home venv or copy a relocatable test venv.
+
+Next: separately approve a concrete consistent/hash-bound publication operation accepting A1's historical cutoff, or separately authorize a fresh SQLite backup if current operational data is required. No source copy, directory creation, runtime installation, service/group creation or activation is authorized by the inspection. Preserve observed hashes for the next proposal; recheck rather than silently accepting changed source files.

@@ -1,0 +1,585 @@
+{
+  "status": "inspection_complete_not_publication_approval",
+  "exit_status": 0,
+  "as_of_utc": "2026-10-26T12:28:44.413207+00:00",
+  "ssh_invocations": 1,
+  "automatic_retry": false,
+  "payload_sha256": "320c428803908fbff8fdab25b3d824fb5fc255c950a6e40716dfd1a8876701f1",
+  "sources": [
+    {
+      "relative_path": "data/processed/silver_electricity_market_data.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 11618469,
+        "mtime_utc": "2026-10-26T12:02:14.709497+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "a9c925c6cb020a467d3152d441d1a181d8ec927af2ebb9cab11eb9e1ad7de3c7",
+      "stable_during_hash": true,
+      "bytes_hashed": 11618469,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 68411,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-25T21:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 15.48,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/features/gold_model_features.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 20934928,
+        "mtime_utc": "2026-10-26T12:02:19.299517+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "c12a041a1d40c47e81e434479e09a99130e8b950a1f7e3ea08d1dfed3448f53f",
+      "stable_during_hash": true,
+      "bytes_hashed": 20934928,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 67965,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-08T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-23T10:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 74.48,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/raw/entsoe/prices.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 3224893,
+        "mtime_utc": "2026-10-26T12:00:29.759048+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "776c20a0ef8135622bdb41f605eda1a0568088a5f21c7604ca96678992325cc6",
+      "stable_during_hash": true,
+      "bytes_hashed": 3224893,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 96559,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-26T11:45:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 0.73,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/raw/entsoe/load.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 9695097,
+        "mtime_utc": "2026-10-26T12:00:50.699141+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "1d5558249ca70d7e05f05b0045c9aa711190949c1a92a0fbe2338025669871ce",
+      "stable_during_hash": true,
+      "bytes_hashed": 9695097,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 274101,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-26T10:15:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 2.23,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/raw/entsoe/generation.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 41207456,
+        "mtime_utc": "2026-10-26T12:01:12.889237+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "bad847a7103c93521b0d55c34a094f0546a0cb02353e3601638aa0d2305c2271",
+      "stable_during_hash": true,
+      "bytes_hashed": 41207456,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 274125,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-26T11:15:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 1.23,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/raw/weather/open_meteo_weather.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 3170780,
+        "mtime_utc": "2026-10-26T00:00:55.545713+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "996b48c8085240cd505105688e75757d29f7f9e2ebd1acda7b2772724974c039",
+      "stable_during_hash": true,
+      "bytes_hashed": 3170780,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 68520,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-25T23:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 13.48,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/reports/actual_vs_predicted.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 806734,
+        "mtime_utc": "2026-10-24T00:01:47.528594+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "aa2a197537fce4fcc853093c3b8ace5e5e570ab8018f09ab1733b834883cf488",
+      "stable_during_hash": true,
+      "bytes_hashed": 806734,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 15561,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2025-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-23T11:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 73.48,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/reports/detected_anomalies.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 113133,
+        "mtime_utc": "2026-10-26T12:02:31.539572+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "ea5b46f8c0aef021f7e7602a5fcc9770bceb7ec93266ef54f94e46608f2db609",
+      "stable_during_hash": true,
+      "bytes_hashed": 113133,
+      "matches_local_inventory": false,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 685,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2021-11-24T16:00:00+00:00",
+        "latest_aware_utc": "2026-09-22T17:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 811.48,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/reports/final_holdout_metrics.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 540,
+        "mtime_utc": "2026-09-20T07:01:53.884104+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "60c1830414df97f68c6a2de67c242305427014d5049bc2945bbd8f29e545d0ba",
+      "stable_during_hash": true,
+      "bytes_hashed": 540,
+      "matches_local_inventory": true,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 1,
+        "timestamp_column": null,
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": null,
+        "latest_aware_utc": null,
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": null,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "data/reports/feature_importance.csv",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 1671,
+        "mtime_utc": "2026-10-26T12:02:34.716923+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "935e00ee045f485e607fd0429816747757ad4885d046d8e6bc062361c70fe466",
+      "stable_during_hash": true,
+      "bytes_hashed": 1671,
+      "matches_local_inventory": true,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 31,
+        "timestamp_column": null,
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": null,
+        "latest_aware_utc": null,
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": null,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "artifacts/models/final_model_release_manifest.json",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 2749,
+        "mtime_utc": "2026-10-16T09:21:37.384396+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6",
+      "stable_during_hash": true,
+      "bytes_hashed": 2749,
+      "matches_local_inventory": true,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "parsed_metadata_only",
+        "sensitive_key_count": 0,
+        "internal_path_value_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    },
+    {
+      "relative_path": "artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 2774,
+        "mtime_utc": "2026-09-21T17:14:07.799179+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650",
+      "stable_during_hash": true,
+      "bytes_hashed": 2774,
+      "matches_local_inventory": true,
+      "readable_as_inspector": true,
+      "summary": {
+        "status": "parsed_metadata_only",
+        "sensitive_key_count": 0,
+        "internal_path_value_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      }
+    }
+  ],
+  "source_root": "/home/ec2-user/Electricity_Trading_Pipeline",
+  "destination_root": "/srv/powerflow/published",
+  "snapshot_metadata": {
+    "exists": true,
+    "uid": 1000,
+    "gid": 1000,
+    "mode": "0o600",
+    "bytes": 12115968,
+    "mtime_utc": "2026-10-26T02:22:31.500734+00:00",
+    "regular": true,
+    "directory": false,
+    "symlink": false
+  },
+  "snapshot_hash": {
+    "sha256": "21fcb0e920ffaf13f214e39720e1176e012086d6ffa7b8a7ed736b6e4ab79690",
+    "stable_during_hash": true,
+    "bytes_hashed": 12115968
+  },
+  "snapshot_read": {
+    "status": "consistent_known_standalone_snapshot_read",
+    "uri_mode": "ro&immutable=1",
+    "counts": {
+      "pipeline_runs": 891,
+      "data_quality_results": 16525,
+      "operational_incidents": 1485,
+      "pipeline_stage_timings": 11561
+    },
+    "counts_match_A1": true,
+    "same_file_after_query": true,
+    "sidecars_after": {
+      "-wal": {
+        "exists": false
+      },
+      "-shm": {
+        "exists": false
+      },
+      "-journal": {
+        "exists": false
+      }
+    },
+    "sensitivity": "Operational records potentially sensitive; only aggregate counts/zero-row schema queried"
+  },
+  "live_db_metadata_only": {
+    "database": {
+      "exists": true,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 13651968,
+      "mtime_utc": "2026-10-26T12:02:37.972415+00:00",
+      "regular": true,
+      "directory": false,
+      "symlink": false
+    },
+    "sidecars": {
+      "-wal": {
+        "exists": false
+      },
+      "-shm": {
+        "exists": false
+      },
+      "-journal": {
+        "exists": false
+      }
+    },
+    "connection": "SKIPPED_TO_AVOID_POSSIBLE_SHM_WRITES"
+  },
+  "destination": {
+    "paths": {
+      "/srv": {
+        "exists": true,
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o755",
+        "bytes": 6,
+        "mtime_utc": "2023-01-30T02:31:01+00:00",
+        "regular": false,
+        "directory": true,
+        "symlink": false
+      },
+      "/srv/powerflow": {
+        "exists": false
+      },
+      "/srv/powerflow/published": {
+        "exists": false
+      }
+    },
+    "status": "ABSENT_NO_EXISTING_CONTENTS"
+  },
+  "capacity": {
+    "available_bytes": 12772130816,
+    "memory_bytes": {
+      "MemAvailable": 968044544,
+      "SwapTotal": 4294963200,
+      "SwapFree": 3550367744
+    },
+    "observed_publication_bytes": 102895192,
+    "measured_venv_bytes": 207724544,
+    "measured_wheelhouse_bytes": 38371328,
+    "required_bytes_including_2GiB_reserve_and_1GiB_extra_workspace": 3570216536,
+    "disk_guard_pass": true,
+    "memory_768MiB_guard_pass": true,
+    "footprint_complete": true
+  },
+  "interpreter": {
+    "python": "3.14.7",
+    "abi": "cpython-314-x86_64-linux-gnu",
+    "libc": [
+      "glibc",
+      "2.34"
+    ],
+    "real_executable": "/usr/bin/python3.14",
+    "base_prefix": "/usr",
+    "stdlib": "/usr/lib64/python3.14",
+    "effective_systemd_enforcement": "UNVERIFIED",
+    "path_checks": {
+      "real_executable": {
+        "hidden_by_ProtectHome": false,
+        "world_mode_traversable": true,
+        "leaf_world_readable": true,
+        "leaf_world_executable": true
+      },
+      "base_prefix": {
+        "hidden_by_ProtectHome": false,
+        "world_mode_traversable": true,
+        "leaf_world_readable": true,
+        "leaf_world_executable": true
+      },
+      "stdlib": {
+        "hidden_by_ProtectHome": false,
+        "world_mode_traversable": true,
+        "leaf_world_readable": true,
+        "leaf_world_executable": true
+      }
+    }
+  },
+  "wheel_glibc_tag_review": [
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "minimum_tagged_glibc": [
+        2,
+        17
+      ],
+      "meets_observed_ec2_glibc_2_34": true
+    },
+    {
+      "name": "cryptography",
+      "version": "46.0.7",
+      "minimum_tagged_glibc": [
+        2,
+        34
+      ],
+      "meets_observed_ec2_glibc_2_34": true
+    },
+    {
+      "name": "numpy",
+      "version": "2.4.6",
+      "minimum_tagged_glibc": [
+        2,
+        27
+      ],
+      "meets_observed_ec2_glibc_2_34": true
+    },
+    {
+      "name": "pandas",
+      "version": "2.3.3",
+      "minimum_tagged_glibc": [
+        2,
+        24
+      ],
+      "meets_observed_ec2_glibc_2_34": true
+    },
+    {
+      "name": "pydantic-core",
+      "version": "2.46.4",
+      "minimum_tagged_glibc": [
+        2,
+        17
+      ],
+      "meets_observed_ec2_glibc_2_34": true
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "Stable individual reads do not establish a coherent cross-file publication snapshot",
+    "No credentials, environment files, logs, binary models or excluded reports read",
+    "Freshness uses timestamp aggregates only; metadata flags do not constitute a complete secrets audit",
+    "Live SQLite not opened: a read-only WAL connection may touch SHM state",
+    "No effective ProtectHome/unit/BPF enforcement test; mode-bit analysis only"
+  ],
+  "private_capture_directory": "/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-publication-preflight-bnuzb84b",
+  "publication_authorized": false
+}

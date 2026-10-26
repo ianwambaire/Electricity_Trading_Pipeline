@@ -1,0 +1,41 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "A3CreateTwoObjects",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-server-side-encryption": "AES256",
+          "s3:if-none-match": "*"
+        }
+      }
+    },
+    {
+      "Sid": "A3VerifyExactVersions",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectVersion",
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ]
+    },
+    {
+      "Sid": "A3ReadStorageGuardrails",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketOwnershipControls"
+      ],
+      "Resource": "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an"
+    }
+  ]
+}

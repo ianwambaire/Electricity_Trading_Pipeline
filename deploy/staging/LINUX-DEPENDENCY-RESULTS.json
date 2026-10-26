@@ -1,0 +1,374 @@
+{
+  "release_id": "phase-staging-https-ready-20261026",
+  "release_manifest_sha256": "50be8e7a20c462eb8850d9bf61b77bb655f687f85c725cbd3d903b7ff14aad27",
+  "api_lock_sha256": "b1d8bbbec84a08b651b7bdc0b96e5bb94bf6c527297e037357702de00bcc84e3",
+  "dependencies": [
+    {
+      "name": "annotated-doc",
+      "version": "0.0.5",
+      "installed_version": "0.0.5",
+      "requires_python": ">=3.9",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "installed_version": "0.8.0",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "anyio",
+      "version": "4.15.1",
+      "installed_version": "4.15.1",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.10.19",
+      "installed_version": "2026.10.19",
+      "requires_python": ">=3.7",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "installed_version": "2.1.1",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": true,
+      "local_wheel_tags": [
+        "cp314-cp314-macosx_11_0_arm64"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "installed_version": "8.5.0",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "cryptography",
+      "version": "46.0.7",
+      "installed_version": "46.0.7",
+      "requires_python": ">=3.8, !=3.9.0, !=3.9.1",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": true,
+      "local_wheel_tags": [
+        "cp311-abi3-macosx_10_9_universal2"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "fastapi",
+      "version": "0.136.3",
+      "installed_version": "0.136.3",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "h11",
+      "version": "0.16.0",
+      "installed_version": "0.16.0",
+      "requires_python": ">=3.8",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "httpcore",
+      "version": "1.0.9",
+      "installed_version": "1.0.9",
+      "requires_python": ">=3.8",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "httpx",
+      "version": "0.28.1",
+      "installed_version": "0.28.1",
+      "requires_python": ">=3.8",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "installed_version": "3.20",
+      "requires_python": ">=3.9",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "joserfc",
+      "version": "1.7.7",
+      "installed_version": "1.7.7",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "numpy",
+      "version": "2.4.6",
+      "installed_version": "2.4.6",
+      "requires_python": ">=3.11",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": true,
+      "local_wheel_tags": [
+        "cp314-cp314-macosx_14_0_arm64"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "pandas",
+      "version": "2.3.3",
+      "installed_version": "2.3.3",
+      "requires_python": ">=3.9",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": true,
+      "local_wheel_tags": [
+        "cp314-cp314-macosx_11_0_arm64"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "pycparser",
+      "version": "3.11",
+      "installed_version": "3.11",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "pydantic",
+      "version": "2.13.4",
+      "installed_version": "2.13.4",
+      "requires_python": ">=3.9",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "pydantic_core",
+      "version": "2.46.4",
+      "installed_version": "2.46.4",
+      "requires_python": ">=3.9",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": true,
+      "local_wheel_tags": [
+        "cp314-cp314-macosx_11_0_arm64"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "python-dateutil",
+      "version": "3.0.0",
+      "installed_version": "3.0.0",
+      "requires_python": "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "pytz",
+      "version": "2026.5",
+      "installed_version": "2026.5",
+      "requires_python": null,
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "six",
+      "version": "1.17.0",
+      "installed_version": "1.17.0",
+      "requires_python": ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "starlette",
+      "version": "0.52.1",
+      "installed_version": "0.52.1",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "installed_version": "0.4.4",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "installed_version": "4.16.0",
+      "requires_python": ">=3.9",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "tzdata",
+      "version": "2026.5",
+      "installed_version": "2026.5",
+      "requires_python": ">=2",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": true,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    },
+    {
+      "name": "uvicorn",
+      "version": "0.48.0",
+      "installed_version": "0.48.0",
+      "requires_python": ">=3.10",
+      "allows_python_3_14_7": true,
+      "allows_python_3_9_25": false,
+      "compiled_dependency": false,
+      "local_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_wheel_availability": "UNVERIFIED"
+    }
+  ],
+  "verified_environment": {
+    "python": "3.14.7",
+    "platform": "macosx-10.15-universal2",
+    "host_architecture": "Darwin arm64",
+    "linux": false
+  },
+  "verification": {
+    "all_pins_match": true,
+    "pip_check": "passed",
+    "immutable_candidate_imports_compiled_primitives_uvicorn_load": "passed",
+    "offline_candidate_lifecycle": "passed",
+    "linux_installation": "NOT_RUN",
+    "linux_wheel_resolution": "NOT_RUN",
+    "production_environment_modified": false
+  },
+  "existing_api_test_venv_allocated_kib": 186620,
+  "size_scope": "Existing macOS API test environment includes test tools; not a measured Linux API-only venv",
+  "local_linux_blocker": "Docker CLI present; configured local Unix socket absent, daemon check exit1",
+  "installed_linux_size": "UNMEASURED",
+  "conservative_planning_only": {
+    "linux_venv_budget_mib": 300,
+    "whole_install_workspace_budget_mib": 1024,
+    "additional_free_reserve_gib": 2
+  },
+  "host_cgroup_interfaces": "CONFIRMED by authorized diagnostic; effective candidate and BPF enforcement UNVERIFIED"
+}

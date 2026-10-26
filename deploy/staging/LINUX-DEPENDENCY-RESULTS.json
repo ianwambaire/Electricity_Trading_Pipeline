@@ -14,7 +14,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "annotated_doc-0.0.5-py3-none-any.whl",
+      "linux_wheel_sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.0.5",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "annotated-types",
@@ -27,7 +34,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "annotated_types-0.8.0-py3-none-any.whl",
+      "linux_wheel_sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.8.0",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "anyio",
@@ -40,7 +54,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "anyio-4.15.1-py3-none-any.whl",
+      "linux_wheel_sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "4.15.1",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "certifi",
@@ -53,7 +74,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "certifi-2026.10.19-py3-none-any.whl",
+      "linux_wheel_sha256": "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "2026.10.19",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "cffi",
@@ -66,7 +94,15 @@
       "local_wheel_tags": [
         "cp314-cp314-macosx_11_0_arm64"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "linux_wheel_sha256": "b0431303acaea1089ad4b3e9ce4e6518193def1118d4073ca848635ee4ea2e96",
+      "linux_wheel_tags": [
+        "cp314-cp314-manylinux_2_17_x86_64",
+        "cp314-cp314-manylinux2014_x86_64"
+      ],
+      "linux_installed_version": "2.1.1",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "click",
@@ -79,7 +115,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "click-8.5.0-py3-none-any.whl",
+      "linux_wheel_sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "8.5.0",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "cryptography",
@@ -92,7 +135,14 @@
       "local_wheel_tags": [
         "cp311-abi3-macosx_10_9_universal2"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "cryptography-46.0.7-cp311-abi3-manylinux_2_34_x86_64.whl",
+      "linux_wheel_sha256": "42a1e5f98abb6391717978baf9f90dc28a743b7d9be7f0751a6f56a75d14065b",
+      "linux_wheel_tags": [
+        "cp311-abi3-manylinux_2_34_x86_64"
+      ],
+      "linux_installed_version": "46.0.7",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "fastapi",
@@ -105,7 +155,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "fastapi-0.136.3-py3-none-any.whl",
+      "linux_wheel_sha256": "3d2a69bdf04b7e9f3afa292c3bc7a98816bbfafa10bc9b45f3f3700d2f761620",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.136.3",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "h11",
@@ -118,7 +175,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "h11-0.16.0-py3-none-any.whl",
+      "linux_wheel_sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.16.0",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "httpcore",
@@ -131,7 +195,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "httpcore-1.0.9-py3-none-any.whl",
+      "linux_wheel_sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "1.0.9",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "httpx",
@@ -144,7 +215,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "httpx-0.28.1-py3-none-any.whl",
+      "linux_wheel_sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.28.1",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "idna",
@@ -157,7 +235,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "idna-3.20-py3-none-any.whl",
+      "linux_wheel_sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "3.20",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "joserfc",
@@ -170,7 +255,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "joserfc-1.7.7-py3-none-any.whl",
+      "linux_wheel_sha256": "06979cfbab78bc802f14c0358f32969826cc26720e13cb38926ffdc86bc0cb2c",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "1.7.7",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "numpy",
@@ -183,7 +275,15 @@
       "local_wheel_tags": [
         "cp314-cp314-macosx_14_0_arm64"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "numpy-2.4.6-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "linux_wheel_sha256": "a2c306dea656c12c68f51f4cea133cbe78ca7435eb28c735eac1d3ebe73be6e8",
+      "linux_wheel_tags": [
+        "cp314-cp314-manylinux_2_27_x86_64",
+        "cp314-cp314-manylinux_2_28_x86_64"
+      ],
+      "linux_installed_version": "2.4.6",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "pandas",
@@ -196,7 +296,15 @@
       "local_wheel_tags": [
         "cp314-cp314-macosx_11_0_arm64"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "pandas-2.3.3-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "linux_wheel_sha256": "ee67acbbf05014ea6c763beb097e03cd629961c8a632075eeb34247120abcb4b",
+      "linux_wheel_tags": [
+        "cp314-cp314-manylinux_2_24_x86_64",
+        "cp314-cp314-manylinux_2_28_x86_64"
+      ],
+      "linux_installed_version": "2.3.3",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "pycparser",
@@ -209,7 +317,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "pycparser-3.11-py3-none-any.whl",
+      "linux_wheel_sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "3.11",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "pydantic",
@@ -222,7 +337,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "pydantic-2.13.4-py3-none-any.whl",
+      "linux_wheel_sha256": "45a282cde31d808236fd7ea9d919b128653c8b38b393d1c4ab335c62924d9aba",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "2.13.4",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "pydantic_core",
@@ -235,7 +357,15 @@
       "local_wheel_tags": [
         "cp314-cp314-macosx_11_0_arm64"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "pydantic_core-2.46.4-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "linux_wheel_sha256": "7a5f930472650a82629163023e630d160863fce524c616f4e5186e5de9d9a49b",
+      "linux_wheel_tags": [
+        "cp314-cp314-manylinux_2_17_x86_64",
+        "cp314-cp314-manylinux2014_x86_64"
+      ],
+      "linux_installed_version": "2.46.4",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "python-dateutil",
@@ -249,7 +379,15 @@
         "py2-none-any",
         "py3-none-any"
       ],
-      "linux_wheel_availability": "VERIFIED_PYPI_DOWNLOAD_PURE_WHEEL"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "python_dateutil-3.0.0-py2.py3-none-any.whl",
+      "linux_wheel_sha256": "3c79630202e4152c6add678446984236efe4f57e84d8e892aab0637bab82e9fd",
+      "linux_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_installed_version": "3.0.0",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "pytz",
@@ -263,7 +401,15 @@
         "py2-none-any",
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "pytz-2026.5-py2.py3-none-any.whl",
+      "linux_wheel_sha256": "e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03",
+      "linux_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_installed_version": "2026.5",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "six",
@@ -277,7 +423,15 @@
         "py2-none-any",
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "six-1.17.0-py2.py3-none-any.whl",
+      "linux_wheel_sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+      "linux_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_installed_version": "1.17.0",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "starlette",
@@ -290,7 +444,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "starlette-0.52.1-py3-none-any.whl",
+      "linux_wheel_sha256": "0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.52.1",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "typing-inspection",
@@ -303,7 +464,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "typing_inspection-0.4.4-py3-none-any.whl",
+      "linux_wheel_sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.4.4",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "typing_extensions",
@@ -316,7 +484,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "linux_wheel_sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "4.16.0",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "tzdata",
@@ -330,7 +505,15 @@
         "py2-none-any",
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "tzdata-2026.5-py2.py3-none-any.whl",
+      "linux_wheel_sha256": "b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac",
+      "linux_wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ],
+      "linux_installed_version": "2026.5",
+      "linux_exact_version_assertion": "PASSED"
     },
     {
       "name": "uvicorn",
@@ -343,7 +526,14 @@
       "local_wheel_tags": [
         "py3-none-any"
       ],
-      "linux_wheel_availability": "UNVERIFIED_FULL_RESOLUTION_TIMED_OUT"
+      "linux_wheel_availability": "VERIFIED_DOWNLOADED_AND_INSTALLED_OFFLINE",
+      "linux_wheel_filename": "uvicorn-0.48.0-py3-none-any.whl",
+      "linux_wheel_sha256": "48097851328b87ec36117d3d575234519eb58c2b22d79666e9bbc6c49a761dad",
+      "linux_wheel_tags": [
+        "py3-none-any"
+      ],
+      "linux_installed_version": "0.48.0",
+      "linux_exact_version_assertion": "PASSED"
     }
   ],
   "verified_environment": {
@@ -357,14 +547,19 @@
     "pip_check": "passed",
     "immutable_candidate_imports_compiled_primitives_uvicorn_load": "passed",
     "offline_candidate_lifecycle": "passed",
-    "linux_installation": "ATTEMPTED_TIMEOUT_150_SECONDS",
-    "linux_wheel_resolution": "dateutil exact wheel verified; full locked set incomplete",
-    "production_environment_modified": false
+    "linux_installation": "PASSED exact offline locked installation; all26 installed versions asserted",
+    "linux_wheel_resolution": "PASSED all26 pinned binary wheels from PyPI; exact inventory/hashes recorded",
+    "production_environment_modified": false,
+    "linux_pip_check": "PASSED",
+    "linux_imports_and_regressions": "PASSED8 Linux unittest regressions; no live Cognito"
   },
   "existing_api_test_venv_allocated_kib": 186620,
   "size_scope": "Existing macOS API test environment includes test tools; not a measured Linux API-only venv",
-  "local_linux_blocker": "Image/runtime gate cleared; full locked pip installation timed out at150seconds. No confirmed dependency incompatibility; remaining package/wheel availability unverified.",
-  "installed_linux_size": "UNMEASURED_COMPLETE_ENV;13200KiB incomplete venv is not deployment estimate",
+  "local_linux_blocker": null,
+  "installed_linux_size": {
+    "allocated_kib": 202856,
+    "scope": "completed exact-pinned venv; compiled imports and regression acceptance passed"
+  },
   "conservative_planning_only": {
     "linux_venv_budget_mib": 300,
     "whole_install_workspace_budget_mib": 1024,
@@ -372,56 +567,78 @@
   },
   "host_cgroup_interfaces": "CONFIRMED by authorized diagnostic; effective candidate and BPF enforcement UNVERIFIED",
   "linux_verification": {
-    "status": "BLOCKED_LOCKED_INSTALL_TIMEOUT",
-    "image_reference": "python@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56",
-    "immutable_image_digest": "sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56",
-    "platform_flag": "linux/amd64",
-    "actual_machine": "x86_64",
-    "actual_python_patch_version": "3.14.7",
-    "linux_abi": "cpython-314-x86_64-linux-gnu",
+    "status": "PASSED_LOCAL_LINUX_AMD64_OFFLINE",
+    "image": "python@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56",
+    "payload_sha256": "699a7810fa67261e77cc2fe485b918ee155375bbe5f9598d372e8f5cada66b1a",
+    "python": "3.14.7",
+    "machine": "x86_64",
+    "abi": "cpython-314-x86_64-linux-gnu",
     "libc": [
       "glibc",
       "2.36"
     ],
     "patch_matches_ec2_3_14_7": true,
-    "container_exit_status": 1,
-    "venv_creation_exit_status": 0,
-    "locked_install_exit_status": 124,
-    "locked_install_timeout_seconds": 150,
-    "full_lock_installation_completed": false,
-    "dateutil_exact_wheel": {
-      "pin": "python-dateutil==3.0.0",
-      "source": "https://pypi.org/simple",
-      "exit_status": 0,
-      "success_marker_verified": true,
-      "filename": "python_dateutil-3.0.0-py2.py3-none-any.whl",
-      "sha256": "NOT_RECORDED",
-      "compatibility": "pure Python wheel successfully downloaded under Linux CPython3.14.7"
+    "overall_exit_status": 0,
+    "overall_elapsed_seconds": 13.939,
+    "offline_phase_seconds": 12.142,
+    "five_minute_bound_satisfied": true,
+    "operations": {
+      "clean_venv_creation": 0,
+      "offline_exact_install": 0,
+      "pip_check": 0,
+      "linux_regressions_compiled_and_lifecycle": 0
     },
-    "pip_check": "NOT_RUN_INSTALL_INCOMPLETE",
-    "compiled_imports": "NOT_RUN_INSTALL_INCOMPLETE",
-    "backend_lifecycle": "NOT_RUN_INSTALL_INCOMPLETE",
-    "linux_regression_tests": "NOT_RUN_INSTALL_INCOMPLETE",
-    "incomplete_venv_allocated_kib": 13200,
-    "complete_linux_venv_size": null,
-    "elapsed_seconds": 156.307,
-    "private_capture_directory": "/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-linux-deps-0u0_hzk3",
-    "container_removed": true,
-    "dependencies_changed": false,
-    "automatic_install_retry": false,
-    "ec2_access": false,
+    "regression_results": {
+      "tests_run": 8,
+      "failures": 0,
+      "errors": 0,
+      "successful": true,
+      "scope": "offline synthetic data and JWT/JWKS; no real Cognito"
+    },
+    "compiled_imports_and_primitives": "passed: numpy,pandas,_cffi_backend,pydantic_core,cryptography",
+    "lifecycle_readiness_authorization": "passed; synthetic standalone SQLite and ephemeral JWT/JWKS only; no real Cognito",
+    "all26_exact_versions_asserted": true,
+    "wheel_manifest_sha256": "1ae7da081a467988380614e346c01f256601369fd17196d635c6e71c7035693b",
+    "wheel_count": 26,
+    "wheelhouse_volume": "powerflow-verification-wheels-1owxiids",
+    "wheelhouse_readonly": true,
+    "wheels_reacquired": false,
+    "network": "none",
+    "mount_precheck": {
+      "/tmp": [
+        "rw",
+        "nosuid",
+        "nodev",
+        "noexec",
+        "relatime"
+      ],
+      "/venv": [
+        "rw",
+        "nosuid",
+        "nodev",
+        "relatime"
+      ]
+    },
+    "completed_venv_allocated_kib": 202856,
+    "wheelhouse_allocated_kib": 37472,
+    "wheelhouse_file_bytes": 38310385,
+    "sampled_peak_workspace_allocated_bytes": 246091776,
+    "peak_scope": "sampled0.5s: scratch+venv tmpfs usage plus wheel files; excludes image layers/host logs; not instantaneous peak",
+    "container_interpreter_paths": {
+      "executable": "/venv/api-verify/bin/python",
+      "real_executable": "/usr/local/bin/python3.14",
+      "base_prefix": "/usr/local",
+      "stdlib": "/usr/local/lib/python3.14"
+    },
+    "container_paths_outside_protected_homes": true,
+    "unit_static_checks": "passed; EC2 base interpreter and effective systemd enforcement UNVERIFIED",
+    "ec2_effective_enforcement": "UNVERIFIED",
+    "private_capture_directory": "/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-linux-offline-approved-cznk97h4",
+    "last_completed_operation": "linux_regressions_compiled_and_lifecycle",
+    "automatic_retry": false,
     "production_modified": false,
-    "isolation": {
-      "read_only_root": true,
-      "capabilities_dropped": "ALL",
-      "no_new_privileges": true,
-      "host_networking": false,
-      "aws_credentials_or_ssh_keys_mounted": false,
-      "production_data_mounted": false,
-      "inputs": "read-only candidate api/ and runtime probe only",
-      "temporary_storage": "disposable container tmpfs",
-      "container_memory_limit_mib": 1536
-    }
+    "ec2_access": false,
+    "candidate_service_created": false
   },
   "dateutil_correction": "The immutable lock and results both specify python-dateutil==3.0.0. Earlier chat references to 2.9.0.post0 were incorrect.",
   "linux_verification_history": [
@@ -451,7 +668,121 @@
       "image_acquisition_retried": false,
       "ec2_access": false,
       "production_modified": false
+    },
+    {
+      "status": "BLOCKED_LOCKED_INSTALL_TIMEOUT",
+      "image_reference": "python@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56",
+      "immutable_image_digest": "sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56",
+      "platform_flag": "linux/amd64",
+      "actual_machine": "x86_64",
+      "actual_python_patch_version": "3.14.7",
+      "linux_abi": "cpython-314-x86_64-linux-gnu",
+      "libc": [
+        "glibc",
+        "2.36"
+      ],
+      "patch_matches_ec2_3_14_7": true,
+      "container_exit_status": 1,
+      "venv_creation_exit_status": 0,
+      "locked_install_exit_status": 124,
+      "locked_install_timeout_seconds": 150,
+      "full_lock_installation_completed": false,
+      "dateutil_exact_wheel": {
+        "pin": "python-dateutil==3.0.0",
+        "source": "https://pypi.org/simple",
+        "exit_status": 0,
+        "success_marker_verified": true,
+        "filename": "python_dateutil-3.0.0-py2.py3-none-any.whl",
+        "sha256": "NOT_RECORDED",
+        "compatibility": "pure Python wheel successfully downloaded under Linux CPython3.14.7"
+      },
+      "pip_check": "NOT_RUN_INSTALL_INCOMPLETE",
+      "compiled_imports": "NOT_RUN_INSTALL_INCOMPLETE",
+      "backend_lifecycle": "NOT_RUN_INSTALL_INCOMPLETE",
+      "linux_regression_tests": "NOT_RUN_INSTALL_INCOMPLETE",
+      "incomplete_venv_allocated_kib": 13200,
+      "complete_linux_venv_size": null,
+      "elapsed_seconds": 156.307,
+      "private_capture_directory": "/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-linux-deps-0u0_hzk3",
+      "container_removed": true,
+      "dependencies_changed": false,
+      "automatic_install_retry": false,
+      "ec2_access": false,
+      "production_modified": false,
+      "isolation": {
+        "read_only_root": true,
+        "capabilities_dropped": "ALL",
+        "no_new_privileges": true,
+        "host_networking": false,
+        "aws_credentials_or_ssh_keys_mounted": false,
+        "production_data_mounted": false,
+        "inputs": "read-only candidate api/ and runtime probe only",
+        "temporary_storage": "disposable container tmpfs",
+        "container_memory_limit_mib": 1536
+      }
+    },
+    {
+      "status": "OFFLINE_INSTALL_PASSED_REGRESSION_COLLECTION_BLOCKED_BY_NOEXEC_VENV",
+      "image": "python@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56",
+      "python": "3.14.7",
+      "machine": "x86_64",
+      "abi": "cpython-314-x86_64-linux-gnu",
+      "libc": [
+        "glibc",
+        "2.36"
+      ],
+      "patch_matches_ec2_3_14_7": true,
+      "overall_exit_status": 1,
+      "overall_elapsed_seconds": 97.849,
+      "wheel_acquisition_exit_status": 0,
+      "wheel_acquisition_seconds": 86.917,
+      "offline_phase_exit_status": 1,
+      "offline_phase_seconds": 9.831,
+      "operations": {
+        "clean_venv_creation": 0,
+        "offline_exact_install": 0,
+        "pip_check": 0,
+        "linux_regressions_compiled_and_lifecycle": 1
+      },
+      "wheel_manifest_sha256": "1ae7da081a467988380614e346c01f256601369fd17196d635c6e71c7035693b",
+      "wheel_count": 26,
+      "wheelhouse_volume": "powerflow-verification-wheels-1owxiids",
+      "wheelhouse_file_bytes": 38310385,
+      "wheelhouse_allocated_kib": 37472,
+      "completed_venv_allocated_kib": 202852,
+      "sampled_peak_workspace_allocated_bytes": 246087680,
+      "sampling_period_seconds": 0.5,
+      "peak_scope": "sampled0.5s: tmpfs usage plus wheel files; excludes image layers/host logs; not instantaneous peak",
+      "last_completed_operation": "pip_check",
+      "regression_tests_run": 0,
+      "failure": "ImportError: /tmp/api-verify/lib/python3.14/site-packages/pydantic_core/_pydantic_core.cpython-314-x86_64-linux-gnu.so: failed to map segment from shared object",
+      "diagnosis": "Original harness installed venv on /tmp; identical mount configuration verified rw,nosuid,nodev,noexec,relatime. Shared-object mapping blocked. Not a demonstrated dependency-pin/ABI defect.",
+      "private_capture_directory": "/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-linux-15min-1owxiids",
+      "incremental_logs": [
+        "acquire.log",
+        "offline.log"
+      ],
+      "executed_payload_hashes": {
+        "deploy/staging/linux-dependency-phase.py": "7e7408c8eb4181023ce8944ed01ada36db6bcfbf07dd9da709c1a843ec5e56fd",
+        "deploy/staging/linux-regression-unittest.py": "6c32ebfb0aa97bc5a8dd4517c5dd96fddc29ebb0d667d6394b71fb804d2a3580",
+        "deploy/staging/powerflow-candidate-api.service": "685ad17fbfdd39b04a0e114c469e0898aa042c3a80530a373adc0126311c7a2a"
+      },
+      "automatic_retry": false,
+      "wheelhouse_retained": true,
+      "all_verification_containers_disposable": true,
+      "ec2_access": false,
+      "production_modified": false,
+      "static_protecthome_review": {
+        "unit_ProtectHome": "true",
+        "unit_code_and_interpreter_entry": "/opt/powerflow/react-current/.venv-api/bin/uvicorn",
+        "candidate_code": "/opt/powerflow/react-current/src",
+        "container_base_interpreter": "/usr/local/bin/python3.14",
+        "container_stdlib": "/usr/local/lib/python3.14",
+        "container_base_paths_nonroot_readability": "previous read-only image diagnostic passed",
+        "ec2_base_interpreter_realpath_and_effective_enforcement": "UNVERIFIED"
+      },
+      "prepared_fix": "Separate executable /venv tmpfs; retain non-executable /tmp; not executed"
     }
   ],
-  "local_regression_tests_latest": "28 passed (macOS); not Linux runtime regressions"
+  "local_regression_tests_latest": "27 offline host harness/release tests passed; Linux test collection failed before8 regression tests ran"
 }

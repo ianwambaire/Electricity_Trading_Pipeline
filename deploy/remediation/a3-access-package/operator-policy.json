@@ -13,6 +13,15 @@
           "aws:MultiFactorAuthPresent": "true"
         }
       }
+    },
+    {
+      "Sid": "LocalBrowserSignInOnly",
+      "Effect": "Allow",
+      "Action": [
+        "signin:AuthorizeOAuth2Access",
+        "signin:CreateOAuth2Token"
+      ],
+      "Resource": "arn:aws:signin:us-east-1:870755688674:oauth2/public-client/localhost"
     }
   ]
 }

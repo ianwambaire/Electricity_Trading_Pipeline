@@ -105,8 +105,16 @@ def prepare(root, dist, settings, release_id, output=None):
         for path in paths: files['api/src/'+name+'/'+path.name]=read_file(path)
     for name in ('api.lock','shared.txt'):
         files['api/requirements/'+name]=read_file(root/'requirements'/name)
-    for name in ('powerflow-react-api.service','nginx-http.conf','security-headers.conf','powerflowenergy.dev.conf','api.env.example','cognito-production-client.json'):
-        files['proposals/'+name]=read_file(root/'deploy/preflight'/name)
+    if settings['origin'] == 'https://staging.powerflowenergy.dev':
+        # Never package an apex virtual host/client proposal for hostname staging.
+        for name in ('staging.powerflowenergy.dev.conf','powerflow-candidate-api.service',
+                     'activate-staging.sh','rollback-staging.sh','switch-candidate.sh','api.env.example'):
+            files['proposals/'+name]=read_file(root/'deploy/staging'/name)
+        for name in ('nginx-http.conf','security-headers.conf'):
+            files['proposals/'+name]=read_file(root/'deploy/preflight'/name)
+    else:
+        for name in ('powerflow-react-api.service','nginx-http.conf','security-headers.conf','powerflowenergy.dev.conf','api.env.example','cognito-production-client.json'):
+            files['proposals/'+name]=read_file(root/'deploy/preflight'/name)
     manifest={
         'format':1,'release_id':release_id,'deployment_authorized':False,
         'settings':settings,'callback_url':settings['origin']+'/auth/callback',

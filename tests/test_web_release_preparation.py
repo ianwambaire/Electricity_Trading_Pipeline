@@ -23,6 +23,9 @@ def inputs(tmp_path):
     proposals=root/'deploy/preflight';proposals.mkdir(parents=True)
     for name in ('powerflow-react-api.service','nginx-http.conf','security-headers.conf','powerflowenergy.dev.conf','api.env.example','cognito-production-client.json'):
         (proposals/name).write_text('review-only')
+    staging=root/'deploy/staging';staging.mkdir(parents=True)
+    for name in ('staging.powerflowenergy.dev.conf','powerflow-candidate-api.service','activate-staging.sh','rollback-staging.sh','switch-candidate.sh','api.env.example'):
+        (staging/name).write_text('staging-review-only')
     settings=dict(origin='https://staging.powerflowenergy.dev',cognito_issuer='https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TestPool',cognito_client_id='testclient1234567890',cognito_domain='https://test.auth.us-east-1.amazoncognito.com',api_port=8010,previous_release='old-1')
     (dist/'assets/index-abcd.js').write_text(json.dumps([settings['cognito_client_id'],settings['cognito_issuer'],settings['origin']+'/auth/callback',settings['origin']+'/']))
     import hashlib
@@ -41,6 +44,9 @@ def test_dry_run_writes_nothing_and_records_rollback(inputs,tmp_path):
     assert manifest['rollback']['previous_release']=='old-1'
     assert manifest['rollback']['database_restore'] is False
     assert 'static/assets/index-abcd.js' in manifest['files']
+    assert 'proposals/staging.powerflowenergy.dev.conf' in manifest['files']
+    assert 'proposals/powerflowenergy.dev.conf' not in manifest['files']
+    assert 'proposals/cognito-production-client.json' not in manifest['files']
 
 
 def test_write_private_package_hashes_and_refuse_overwrite(inputs,tmp_path):

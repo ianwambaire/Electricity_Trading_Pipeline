@@ -1,11 +1,12 @@
 {
   "deploy/remediation/a3-access-package/bucket-policy.json": "03f08cab195ede826a362721079728e1d4aec44417d4fe83887d86fd2adce0dd",
   "deploy/remediation/a3-access-package/mfa-operator-trust.json": "10c6aa6549ac7c7f92ef3dbadd064aeadc095bbe120113fb9d43c48b66fed505",
-  "deploy/remediation/a3-access-package/operator-policy.json": "a8c651958414321fba34012a116ededca4f75a8d40a6abcac412fbd732d58a23",
+  "deploy/remediation/a3-access-package/operator-policy.json": "2a0f010ae7a54729f36a3b5516f0909a47d32ceb40e97fa3714240070742b5f7",
   "deploy/remediation/a3-access-package/reader-policy.json": "36a746bb7459872502dd80158bffc8b32fdf9c52718aa155dd10693f7e3f8ac6",
   "deploy/remediation/a3-access-package/uploader-policy.json": "c9fc18b21766b7040aece7caf3b91d4ca994fed873fc963f4e94b9ce928b39aa",
-  "deploy/remediation/a3-access-package/REVIEW.md": "6e94c196cf9ee557c68004e9cd4146c9b28632c7f5f8ad3926d5ddc5cec51a0c",
-  "deploy/remediation/run-a3-session.py": "c345d901eeec4c0aed4fc73d4ce9755925e738f067d49c041e3249a741102789",
+  "deploy/remediation/a3-access-package/REVIEW.md": "2a32ab3fd25c056e6c3aee233ed83aafb4318cc8df27cebecabb20edb3f2c1ad",
+  "deploy/remediation/run-a3-session.py": "0543d865414b851ed52c0970aff6443153402d26682b5952013872bf6ac52566",
   "deploy/remediation/a3-offhost-recovery.py": "4de44780530ecb6b5af422e54355ff4030a812ed9d65496a7d0d6ed385fe6a3f",
-  "deploy/remediation/a3-bounded-local.py": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
+  "deploy/remediation/a3-bounded-local.py": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40",
+  "deploy/remediation/a3-access-package/AUTH-ONLY.md": "0c6103ecf87a2a720ce436e1c62e71959b4f94a5cc1e6cbfd2d856b63cad3c7b"
 }

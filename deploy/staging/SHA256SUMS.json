@@ -1,0 +1,10 @@
+{
+  "deploy/staging/staging.powerflowenergy.dev.conf": "c5b53a6fe2ee3589d0e4378d99a4a50b4ffdb109ef982667d12bd58df75f2886",
+  "deploy/staging/powerflow-candidate-api.service": "685ad17fbfdd39b04a0e114c469e0898aa042c3a80530a373adc0126311c7a2a",
+  "deploy/staging/api.env.example": "ee1ea96ebd2aa9b1c15891fd4cb9adf1c6ee7d06d6177b99bb1f375419b36704",
+  "deploy/staging/activate-staging.sh": "810d43607e4598619f2a64108b93f50332c51cb59da05357fa01082c4515df3d",
+  "deploy/staging/rollback-staging.sh": "609d315bfec4439be7f82d34e83fa128f8a36c5faa4cbdb4f1a57877e6385382",
+  "deploy/staging/switch-candidate.sh": "80901bfb08ba14b996e40095ce7a18b51fe29f10c6546e3bdf79532bcb2b9ebe",
+  "deploy/staging/EXECUTION.md": "67039e2d089dbdbc21af1b4c899563bf2fe784a06f9f39c9dcfa33f0779c485d",
+  "scripts/smoke_staging.py": "d98545ccc668a2213d9d77359545010153a154ac128555d2852e65d3e22a7cd8"
+}

@@ -6,7 +6,7 @@
 
 | New identity | Proposed exact ARN | Purpose |
 |---|---|---|
-| IAM user PowerFlowA3Operator | `arn:aws:iam::870755688674:user/PowerFlowA3Operator` | Human AWS browser login + MFA; only AssumeRole, no direct S3 |
+| IAM user PowerFlowA3Operator | `arn:aws:iam::870755688674:user/PowerFlowA3Operator` | Human AWS browser login + MFA; same-device CLI Sign-In and AssumeRole only; no direct S3 |
 | IAM role PowerFlowA3Uploader | `arn:aws:iam::870755688674:role/PowerFlowA3Uploader` | Two-key conditional encrypted PUT + version verification and bucket guards |
 | IAM role PowerFlowA3Reader | `arn:aws:iam::870755688674:role/PowerFlowA3Reader` | Independent recovery identity; initially denied reads, later exact two VersionIds only |
 
@@ -80,4 +80,19 @@ After actual receipt/VersionIds exist, generate an exact-version reader policy u
 
 ## Rollback and failure
 
-This is not atomic. A failure can leave the new user/roles/policies; preserve them and report exactly which steps completed. No existing runtime grant/service was modified. Do not delete the bucket policy automatically: that would reopen broad EC2 access to any recovery objects already uploaded. Removing the operator's AssumeRole grant prevents new sessions; already issued sessions can remain valid until expiry (900seconds requested by this runner, up to3600seconds for other role sessions). Any revocation, login/MFA removal, role/user deletion or bucket-policy rollback requires separate approval after inventory of only these newly created resources and any recovery objects. Never delete backup versions as rollback. If no objects exist and rollback is approved, remove only the new policies/roles/operator; no unrelated IAM or S3 resource is touched.
+This is not atomic. A failure can leave the new user/roles/policies; preserve them and report exactly which steps completed. No existing runtime grant/service was modified. Do not delete the bucket policy automatically: that would reopen broad EC2 access to any recovery objects already uploaded. Removing the identity-policy Allow alone does NOT prevent new sessions: this same-account trust directly grants the user access. Remove the operator from BOTH role trust policies or add an explicit deny to stop new sessions; already issued sessions can remain valid until expiry (900seconds requested by this runner, up to3600seconds for other role sessions). Any revocation, login/MFA removal, role/user deletion or bucket-policy rollback requires separate approval after inventory of only these newly created resources and any recovery objects. Never delete backup versions as rollback. If no objects exist and rollback is approved, remove only the new policies/roles/operator; no unrelated IAM or S3 resource is touched.
+
+## Authentication-only gate (before bucket-policy activation or transfers)
+
+Revised operator policy includes only `signin:AuthorizeOAuth2Access` and `signin:CreateOAuth2Token` on `arn:aws:signin:us-east-1:870755688674:oauth2/public-client/localhost`. No remote-login grant. References: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html and https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SignInLocalDevelopmentAccess.html (reviewed 2026-10-26). AWS CLI >=2.32; SDK must support login credentials. No long-lived keys.
+
+Approve bootstrap steps 1–4 and IAM-only creation/readback above as one bounded batch; EXCLUDE bucket-policy read/write and all S3 calls. Authenticate the new operator in its own profile using `aws login --profile powerflow-a3-operator --region us-east-1`, then run the authentication-only helper below once per role. Owner enters IAM credentials/TOTP only in AWS or the local terminal. Newly proposed identities do not yet exist. Admin bootstrap is separate from routine operator identity.
+
+```sh
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/run-a3-session.py upload --source-profile powerflow-a3-operator --mfa-device-arn arn:aws:iam::870755688674:mfa/PowerFlowA3Operator --authentication-only
+venv/bin/python -B deploy/remediation/a3-bounded-local.py -- venv/bin/python -B deploy/remediation/run-a3-session.py restore --source-profile powerflow-a3-operator --mfa-device-arn arn:aws:iam::870755688674:mfa/PowerFlowA3Operator --authentication-only
+```
+
+The MFA Bool/age trust conditions remain mandatory. CLI login's temporary credential context and explicit AssumeRole TOTP are NOT assumed interchangeable: a new code does not prove the source MFA age refreshed. Both role assumptions must succeed server-side with the unchanged conditions; otherwise STOP without removing conditions, adding access keys or expanding permissions. Fresh browser MFA may be necessary; no automatic retry is authorized. Authentication-only prints only success/role, never credentials; no S3 operation occurs. Deny/expired-token paths are locally mocked, not live evidence.
+
+Already-issued sessions require separate approved revocation: put an explicit deny-all role permissions policy on BOTH new roles and retain it through their maximum 3600-second lifetime before cleanup. Removing trust blocks new sessions but does not revoke existing ones. Do not delete S3 protection as an authentication rollback.

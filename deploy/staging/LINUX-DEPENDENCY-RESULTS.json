@@ -784,5 +784,85 @@
       "prepared_fix": "Separate executable /venv tmpfs; retain non-executable /tmp; not executed"
     }
   ],
-  "local_regression_tests_latest": "27 offline host harness/release tests passed; Linux test collection failed before8 regression tests ran"
+  "local_regression_tests_latest": "27 offline host harness/release tests passed; Linux test collection failed before8 regression tests ran",
+  "ec2_readonly_interpreter_review": {
+    "python": "3.14.7",
+    "abi": "cpython-314-x86_64-linux-gnu",
+    "libc": [
+      "glibc",
+      "2.34"
+    ],
+    "real_executable": "/usr/bin/python3.14",
+    "base_prefix": "/usr",
+    "stdlib": "/usr/lib64/python3.14",
+    "path_checks": {
+      "real_executable": {
+        "hidden_by_ProtectHome": false,
+        "world_mode_traversable": true,
+        "leaf_world_readable": true,
+        "leaf_world_executable": true
+      },
+      "base_prefix": {
+        "hidden_by_ProtectHome": false,
+        "world_mode_traversable": true,
+        "leaf_world_readable": true,
+        "leaf_world_executable": true
+      },
+      "stdlib": {
+        "hidden_by_ProtectHome": false,
+        "world_mode_traversable": true,
+        "leaf_world_readable": true,
+        "leaf_world_executable": true
+      }
+    },
+    "wheel_glibc_tag_review": [
+      {
+        "name": "cffi",
+        "version": "2.1.1",
+        "minimum_tagged_glibc": [
+          2,
+          17
+        ],
+        "meets_observed_ec2_glibc_2_34": true
+      },
+      {
+        "name": "cryptography",
+        "version": "46.0.7",
+        "minimum_tagged_glibc": [
+          2,
+          34
+        ],
+        "meets_observed_ec2_glibc_2_34": true
+      },
+      {
+        "name": "numpy",
+        "version": "2.4.6",
+        "minimum_tagged_glibc": [
+          2,
+          27
+        ],
+        "meets_observed_ec2_glibc_2_34": true
+      },
+      {
+        "name": "pandas",
+        "version": "2.3.3",
+        "minimum_tagged_glibc": [
+          2,
+          24
+        ],
+        "meets_observed_ec2_glibc_2_34": true
+      },
+      {
+        "name": "pydantic-core",
+        "version": "2.46.4",
+        "minimum_tagged_glibc": [
+          2,
+          17
+        ],
+        "meets_observed_ec2_glibc_2_34": true
+      }
+    ],
+    "effective_candidate_enforcement": "UNVERIFIED",
+    "evidence": "PUBLICATION-PREFLIGHT-RESULTS.json; one authorized read-only SSH"
+  }
 }

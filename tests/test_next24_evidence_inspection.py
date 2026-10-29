@@ -47,3 +47,28 @@ def test_actual_partial_load_pattern_remains_withheld_until_real_quarters_arrive
     issue,_=assemble_operational_issue_features(prices_path=prices,load_path=load,generation_path=generation,now=now,weather_session=weather)
     assert issue['forecast_issue_time'].iloc[0]==last
     assert len(issue)==1
+
+
+def test_clock_boundary_and_offset_never_accept_stale_unchanged_inputs(tmp_path):
+    import pandas as pd
+    import pytest
+    from test_next24h_production import operational_inputs
+    from models.next24h_production import assemble_operational_issue_features,ForecastUnavailableError
+    paths,weather,last=operational_inputs(tmp_path)
+    prices,load,generation=paths
+    original=pd.read_csv(load);times=pd.to_datetime(original['timestamp'],utc=True)
+    original.loc[times<last+pd.Timedelta(minutes=30)].to_csv(load,index=False)
+    def assemble(offset):
+        return assemble_operational_issue_features(prices_path=prices,load_path=load,generation_path=generation,now=last+offset,weather_session=weather)
+    # At exact3h age the previous complete issue is eligible. Two minutes
+    # later it is stale: flooring the wall clock must not bypass this gate.
+    row,_=assemble(pd.Timedelta(hours=2))
+    assert row['forecast_issue_time'].iloc[0]==last-pd.Timedelta(hours=1)
+    for offset in [pd.Timedelta(hours=2,minutes=2),pd.Timedelta(hours=2,minutes=45)]:
+        with pytest.raises(ForecastUnavailableError,match='3-hour freshness threshold'):assemble(offset)
+    # A schedule offset helps only if genuine provider observations have arrived.
+    original.to_csv(load,index=False)
+    row,_=assemble(pd.Timedelta(hours=2,minutes=45))
+    assert row['forecast_issue_time'].iloc[0]==last
+    with pytest.raises(ForecastUnavailableError,match='3-hour freshness threshold'):
+        assemble(pd.Timedelta(hours=3,seconds=1))

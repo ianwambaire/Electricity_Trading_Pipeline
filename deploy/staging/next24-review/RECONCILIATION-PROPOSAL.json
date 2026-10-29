@@ -1,0 +1,46 @@
+{
+  "status": "PROPOSAL_ONLY_NOT_EXECUTED",
+  "base_url": "http://127.0.0.1:4200/api",
+  "required_flow_id": "01a0c4e9-92ac-7772-8e1d-2ab939191545",
+  "required_task_id": "01a0c58d-ece5-75b0-95fd-5230d239413f",
+  "preconditions": [
+    "Exact RUNNING states and September21 timestamps unchanged",
+    "Recorded infrastructure process absent; no matching engine/ingestion process",
+    "Current worker ONLINE with recent heartbeat",
+    "No new old-run task or log activity",
+    "Snapshot before states privately; never dump credentials"
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/task_runs/01a0c58d-ece5-75b0-95fd-5230d239413f/set_state",
+      "json": {
+        "state": {
+          "type": "CRASHED",
+          "name": "Crashed",
+          "message": "Operator-approved reconciliation: orphaned September21 execution; original process absent and no subsequent activity."
+        },
+        "force": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/flow_runs/01a0c4e9-92ac-7772-8e1d-2ab939191545/set_state",
+      "json": {
+        "state": {
+          "type": "CRASHED",
+          "name": "Crashed",
+          "message": "Operator-approved reconciliation: orphaned September21 execution; original process absent and no subsequent activity."
+        },
+        "force": false
+      }
+    }
+  ],
+  "acceptance": "Require ACCEPT and readback CRASHED for each exact record before proceeding. No retry or force override. Preserve partial reconciliation if later action rejects.",
+  "not_authorized_now": true,
+  "limitations": [
+    "Metadata reconciliation only; no cancellation signal, no process termination, no data deletion, no re-run",
+    "Do not restore a false RUNNING state as rollback",
+    "Unexpected live activity or ownership uncertainty stops reconciliation"
+  ]
+}

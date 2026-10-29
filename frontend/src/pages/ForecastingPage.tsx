@@ -1,3 +1,5 @@
+import { useClock } from '../hooks/useClock'
+import { publicationState } from '../api/publicationState'
 import { useServerAccount } from '../auth/serverAccountContext'
 import { rmseImprovement } from '../api/parity'
 import { ForecastInputContext, RealizedForecastEvaluation, ObservedPriceComparison, ForecastProvenanceEvidence } from '../components/data/ForecastEvidence'
@@ -19,14 +21,16 @@ export function ForecastingPage() {
   const observed = useApi(api.marketSummary)
   const operations = useApi(api.operations)
   const models = useApi(api.models)
-  const next24 = useApi(api.next24)
+  const fetchedNext24 = useApi(api.next24)
+  const now = useClock(fetchedNext24.data?.publication ? Date.parse(fetchedNext24.data.publication.expires_at) : undefined)
+  const next24 = publicationState(fetchedNext24, now)
   const pipeline = useApi(api.pipeline)
   const oneHour = useApi(api.oneHour, 0)
   return <><PageHeading title="Forecast Intelligence" description="Inspect persisted model predictions, target times, and availability evidence." />
     <p className="data-note">No model is run in this browser. Forecast reports are persisted evidence, not a browser model run. Exact issue-hour context and realized evaluation are separate read-only reports; missing evidence is never substituted. Frozen release evaluation is also available in Model Insights.</p>
-    {operations.data?.forecast_reason && <div className="notice notice-warning"><strong>Recorded forecast availability</strong><p>{operations.data.forecast_reason}</p><p>{operations.data.forecast_reason_provenance}</p></div>}
+    {!next24.data?.publication && operations.data?.forecast_reason && <div className="notice notice-warning"><strong>Recorded forecast availability</strong><p>{operations.data.forecast_reason}</p><p>{operations.data.forecast_reason_provenance}</p></div>}
     {observed.data?.coverage.latest_observation && <div className="mt-6"><ForecastInputContext observed issue={observed.data.coverage.latest_observation}/></div>}
-    <ForecastSummary report={next24.data} pipeline={pipeline} />
+    <ForecastSummary report={next24.data} pipeline={pipeline} errorCode={next24.error?.code} />
     {pipeline.error && <button className="secondary-button mb-4" onClick={pipeline.retry}>Retry availability check</button>}
     <ApiPanel title="24-hour forecast report" description="Report issue time and target hours determine whether values are recent, stale, or historical." state={next24}>{data => <Suspense fallback={<LoadingState label="Loading chart…" />}><ForecastChart rows={data.forecasts} issueTime={data.forecasts[0].issue_time} observed={observed.data?.latest_observation?.price_eur_mwh != null ? {timestamp:observed.data.latest_observation.timestamp,price:observed.data.latest_observation.price_eur_mwh} : null} /></Suspense>}</ApiPanel>
     <div className="mt-6"><ObservedPriceComparison forecastAverage={next24.data?next24.data.forecasts.reduce((sum,r)=>sum+r.predicted_price_eur_mwh,0)/next24.data.row_count:null}/></div>

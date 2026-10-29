@@ -1,0 +1,21 @@
+{
+  "as_of": "2026-10-29T10:14:41.658015+00:00",
+  "requested_1045_run": {
+    "id": "01a186bf-9adc-7f05-98e5-8ca434ea2823",
+    "expected_start_time": "2026-10-29T10:45:00Z",
+    "start_time": null,
+    "end_time": null,
+    "state_type": "SCHEDULED"
+  },
+  "preparation_allowed": false,
+  "artifact": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/next24h_forecast.csv",
+  "sha256": "4174ec76396674267c596e9a9baed498ac9122afe0b8004c49a36a79c2e7735c",
+  "bytes": 2470,
+  "issue": "2026-10-29T07:00:00+00:00",
+  "freshness_cutoff": "2026-10-29T10:00:00+00:00",
+  "contract_valid": true,
+  "remaining_future_targets": 21,
+  "model_release": "next24h-hgb-2026-09-21-v1",
+  "stable": true,
+  "blocker": "scheduled_1045_run_not_completed"
+}

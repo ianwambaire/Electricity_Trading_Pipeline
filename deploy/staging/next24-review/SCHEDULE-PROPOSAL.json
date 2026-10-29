@@ -1,0 +1,11 @@
+{
+  "status": "PROPOSAL_ONLY_NOT_APPLIED",
+  "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+  "schedule_id": "9319f665-9836-4120-9801-031e23ad2b4a",
+  "current": {"cron": "0 * * * *", "timezone": "UTC", "concurrency_limit": null},
+  "proposed": {"cron": "45 * * * *", "timezone": "UTC", "concurrency_limit": 1},
+  "preserve": ["deployment identity", "schedule identity", "one run per hour", "incremental mode", "existing storage backend", "work pool and queue", "worker service", "model and feature contract", "3-hour issue-time freshness", "all completeness checks"],
+  "preconditions": ["Reconcile only the verified orphan flow/task through approved Prefect state APIs", "No real active ingestion or pipeline process", "No pending/running live flow while changing schedule", "Verify queued occurrences: no duplicate old/new schedule runs", "Abort if any unrelated deployment settings drift"],
+  "limitations": ["45-minute offset is supported by one positive upstream availability check at07:45, not a publication-time SLA", "Forecast may correctly remain withheld if provider delays or gaps persist", "Do not synthesize or extend forecasts to hide elapsed target hours"],
+  "rollback": "Restore exactly the original00-minute UTC schedule and original null deployment limit only under explicit approval; preserve all other settings. Orphan reconciliation must not be rolled back to a false RUNNING state."
+}

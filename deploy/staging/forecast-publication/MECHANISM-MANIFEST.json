@@ -1,0 +1,90 @@
+{
+  "status": "LOCAL_ONLY_NOT_DEPLOYED",
+  "files": {
+    "src/api/app.py": {
+      "status": "modified",
+      "sha256": "3107abcc28b45385726277d56d12e683eb22afe0ae13ff282fd9d9776d6f9619"
+    },
+    "src/shared/forecast_publication.py": {
+      "status": "created",
+      "sha256": "41fa76b884d48a4555af80208f3a4dee51c278588e129ad1099f19c534379a60"
+    },
+    "deploy/staging/forecast-publication/prepare.py": {
+      "status": "created",
+      "sha256": "49b9c36926c0b59b07772a26175fbc41c9b343170943f88b83d7339399953a08"
+    },
+    "deploy/staging/forecast-publication/publish.py": {
+      "status": "created",
+      "sha256": "cacc6116944269bed260af5034c8e1bd4066ea126850a2a94c45c465f94a053a"
+    },
+    "deploy/staging/forecast-publication/README.md": {
+      "status": "created",
+      "sha256": "67c4577dcd3123102637ad1dd55be32036f2c7b276eea568d5f8a0f324f35288"
+    },
+    "deploy/staging/forecast-publication/release-settings.json": {
+      "status": "created",
+      "sha256": "5e2ba4461eaf0243983f52d5449e2a626b30d2fabc26536e0f08c8b8eb009dc9"
+    },
+    "frontend/src/api/contracts.ts": {
+      "status": "modified",
+      "sha256": "148245e00804bc38a0fd497218966ef7f9e91a9287f93319b7255ebedf827af1"
+    },
+    "frontend/src/api/client.ts": {
+      "status": "modified",
+      "sha256": "cf08fda19d40a7710176e57dc2e72691b0ef33e8fc91be071d4c0fcb9e5dd24e"
+    },
+    "frontend/src/api/forecastState.ts": {
+      "status": "modified",
+      "sha256": "5fc1a175ddfeef12ed84e24121506fe0c91666ce0ad58f9545ca774d798603f5"
+    },
+    "frontend/src/api/publicationState.ts": {
+      "status": "created",
+      "sha256": "57d447328b8a375291f4d127005ba8352f97dce4f06fc0f503bc9ec7f0078700"
+    },
+    "frontend/src/hooks/useClock.ts": {
+      "status": "modified",
+      "sha256": "c4fb88b621bea89ee6e8baf5b886c7b09292e06495886d532491da911c3aba7e"
+    },
+    "frontend/src/components/data/ForecastSummary.tsx": {
+      "status": "modified",
+      "sha256": "a46f126c01b64a6bf1ba173af770271d29a4e0b6e2485fddedac1e95a0fb8fbb"
+    },
+    "frontend/src/components/data/ApiPanel.tsx": {
+      "status": "modified",
+      "sha256": "a43be38547b8da6e53b177d4e26a922c60612e5274d3b9ef0fb0b73dec65801c"
+    },
+    "frontend/src/pages/ForecastingPage.tsx": {
+      "status": "modified",
+      "sha256": "d36c8d0f695fd1a0d96a9bb5f670adb1be235c50d621dd25f3c40b19f44643ee"
+    },
+    "tests/test_forecast_publication.py": {
+      "status": "created",
+      "sha256": "32b00e1b4208c40a304145c89778df5f2dd46bef69a8a53429b68d4ec83f934f"
+    },
+    "frontend/tests/forecastPublication.test.ts": {
+      "status": "created",
+      "sha256": "ecbc030a2a7ecdc648a587e814d0cdc67248bbec627e33972fecfe50aa315456"
+    },
+    "frontend/tests/forecastPublicationUi.test.tsx": {
+      "status": "created",
+      "sha256": "806faf627042ece2b5b857b7223e864730fea7fe62c8904a8dd96c6c4ce271c5"
+    },
+    "deploy/staging/forecast-publication/RELEASE-RESULTS.json": {
+      "status": "created",
+      "sha256": "c4230ea68c0830b72efa137a36b585fc494bf15f2b72d9b509ee17d32662045c"
+    },
+    "deploy/staging/forecast-publication/TOOLS-RESULTS.json": {
+      "status": "created",
+      "sha256": "979717f00e2ca3a8682a8675d694715d3bc73375c37e86a038407218f954ea99"
+    }
+  },
+  "python_tests_passed": 114,
+  "frontend_tests_passed": 92,
+  "lint": "passed",
+  "production_build": "passed",
+  "staging_build": "passed",
+  "release_files": 70,
+  "operator_packet_sha256": "919dba09e146d0871bae2678b2ccb05f4fca9ce0662427c2e9569f73c51a506b",
+  "release_manifest_sha256": "ff8cf370548ec94bf283ad9b13872631bc08a27533a7dfba9a3ab36ae51d0e00",
+  "production_data_included": false
+}

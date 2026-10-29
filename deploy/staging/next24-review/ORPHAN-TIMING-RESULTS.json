@@ -1,0 +1,569 @@
+{
+  "as_of": "2026-10-29T08:07:55.991313+00:00",
+  "old_run": {
+    "id": "01a0c4e9-92ac-7772-8e1d-2ab939191545",
+    "name": "marvellous-mastiff",
+    "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+    "start_time": "2026-09-21T19:59:59.539764Z",
+    "end_time": null,
+    "updated": "2026-09-21T19:59:59.541364Z",
+    "work_queue_name": "default",
+    "work_pool_name": "electricity-pool",
+    "run_count": 1,
+    "state_type": "RUNNING",
+    "state_timestamp": "2026-09-21T19:59:59.539764Z",
+    "infrastructure_pid_present": true,
+    "infrastructure_pid_numeric": true,
+    "infrastructure_process_exists": false,
+    "state_history": [
+      {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-09-21T17:00:36.908888Z"
+      },
+      {
+        "type": "PENDING",
+        "name": "Pending",
+        "timestamp": "2026-09-21T19:59:51.624715Z"
+      },
+      {
+        "type": "PENDING",
+        "name": "Submitting",
+        "timestamp": "2026-09-21T19:59:51.759434Z"
+      },
+      {
+        "type": "RUNNING",
+        "name": "Running",
+        "timestamp": "2026-09-21T19:59:59.539764Z"
+      }
+    ]
+  },
+  "old_tasks": [
+    {
+      "id": "01a0c58d-ece5-75b0-95fd-5230d239413f",
+      "name": "Fetch ENTSO-E electricity data-227",
+      "start_time": "2026-09-21T20:00:07.912134Z",
+      "end_time": null,
+      "updated": "2026-09-21T20:00:07.923021Z",
+      "state_type": "RUNNING"
+    }
+  ],
+  "last_old_log_activity": [
+    {
+      "timestamp": "2026-09-21T20:00:38.266371Z",
+      "level": 20
+    },
+    {
+      "timestamp": "2026-09-21T20:00:36.743014Z",
+      "level": 20
+    },
+    {
+      "timestamp": "2026-09-21T20:00:08.629333Z",
+      "level": 20
+    }
+  ],
+  "deployment": {
+    "id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+    "name": "powerflow-entsoe-pipeline",
+    "paused": false,
+    "status": "READY",
+    "last_polled": "2026-10-29T08:07:51.050177Z",
+    "concurrency_limit": null,
+    "concurrency_options": null,
+    "work_pool_name": "electricity-pool",
+    "work_queue_name": "default",
+    "schedules": [
+      {
+        "id": "9319f665-9836-4120-9801-031e23ad2b4a",
+        "active": true,
+        "schedule": {
+          "cron": "0 * * * *",
+          "timezone": "UTC",
+          "day_or": true
+        },
+        "max_scheduled_runs": null
+      }
+    ]
+  },
+  "workers": [
+    {
+      "id": "ddb771f2-9770-43c5-9615-359fcb242048",
+      "name": "powerflow-ec2",
+      "status": "ONLINE",
+      "last_heartbeat_time": "2026-10-29T08:07:52.514015Z",
+      "heartbeat_interval_seconds": 30,
+      "created": "2026-09-19T12:48:39.899233Z",
+      "updated": "2026-09-19T12:48:39.899244Z"
+    }
+  ],
+  "worker_service": {
+    "MainPID": "1319862",
+    "NRestarts": "0",
+    "ExecMainStartTimestamp": "Fri 2026-10-16 09:22:24 UTC",
+    "ActiveState": "active"
+  },
+  "host_boot_utc": "2026-09-19T18:32:07+00:00",
+  "ingestion_process_pids": [],
+  "prefect_engine_or_old_run_process_pids": [],
+  "pipeline_timing": [
+    {
+      "run_time": "2026-10-29T08:02:12.751635+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T06:00:00+00:00",
+        "load": "2026-10-29T05:00:00+00:00",
+        "price": "2026-10-29T07:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.21
+    },
+    {
+      "run_time": "2026-10-29T07:02:26.335242+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T05:00:00+00:00",
+        "load": "2026-10-29T04:00:00+00:00",
+        "price": "2026-10-29T06:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.44
+    },
+    {
+      "run_time": "2026-10-29T06:02:11.278000+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T04:00:00+00:00",
+        "load": "2026-10-29T03:00:00+00:00",
+        "price": "2026-10-29T05:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.19
+    },
+    {
+      "run_time": "2026-10-29T05:01:59.840244+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T03:00:00+00:00",
+        "load": "2026-10-29T02:00:00+00:00",
+        "price": "2026-10-29T04:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.0
+    },
+    {
+      "run_time": "2026-10-29T04:02:01.921199+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T02:00:00+00:00",
+        "load": "2026-10-29T01:00:00+00:00",
+        "price": "2026-10-29T03:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.03
+    },
+    {
+      "run_time": "2026-10-29T03:01:54.717784+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T01:00:00+00:00",
+        "load": "2026-10-29T00:00:00+00:00",
+        "price": "2026-10-29T02:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 181.91
+    },
+    {
+      "run_time": "2026-10-29T02:01:48.004943+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-29T00:00:00+00:00",
+        "load": "2026-10-28T23:00:00+00:00",
+        "price": "2026-10-29T01:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 181.8
+    },
+    {
+      "run_time": "2026-10-29T01:01:55.405796+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T23:00:00+00:00",
+        "load": "2026-10-28T22:00:00+00:00",
+        "price": "2026-10-29T00:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 181.92
+    },
+    {
+      "run_time": "2026-10-29T00:01:58.992871+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T22:00:00+00:00",
+        "load": "2026-10-28T21:00:00+00:00",
+        "price": "2026-10-28T23:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 181.98
+    },
+    {
+      "run_time": "2026-10-28T23:02:12.445848+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T21:00:00+00:00",
+        "load": "2026-10-28T20:00:00+00:00",
+        "price": "2026-10-28T22:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.21
+    },
+    {
+      "run_time": "2026-10-28T22:02:07.152804+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T20:00:00+00:00",
+        "load": "2026-10-28T19:00:00+00:00",
+        "price": "2026-10-28T21:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.12
+    },
+    {
+      "run_time": "2026-10-28T21:02:16.074965+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T19:00:00+00:00",
+        "load": "2026-10-28T18:00:00+00:00",
+        "price": "2026-10-28T20:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.27
+    },
+    {
+      "run_time": "2026-10-28T20:02:18.436443+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T18:00:00+00:00",
+        "load": "2026-10-28T17:00:00+00:00",
+        "price": "2026-10-28T19:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.31
+    },
+    {
+      "run_time": "2026-10-28T19:02:36.700508+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T17:00:00+00:00",
+        "load": "2026-10-28T16:00:00+00:00",
+        "price": "2026-10-28T18:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.61
+    },
+    {
+      "run_time": "2026-10-28T18:02:33.477970+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T16:00:00+00:00",
+        "load": "2026-10-28T15:00:00+00:00",
+        "price": "2026-10-28T17:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.56
+    },
+    {
+      "run_time": "2026-10-28T17:02:20.167196+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T15:00:00+00:00",
+        "load": "2026-10-28T14:00:00+00:00",
+        "price": "2026-10-28T16:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.34
+    },
+    {
+      "run_time": "2026-10-28T16:02:27.872765+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T14:00:00+00:00",
+        "load": "2026-10-28T13:00:00+00:00",
+        "price": "2026-10-28T15:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.46
+    },
+    {
+      "run_time": "2026-10-28T15:02:21.641462+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T13:00:00+00:00",
+        "load": "2026-10-28T12:00:00+00:00",
+        "price": "2026-10-28T14:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.36
+    },
+    {
+      "run_time": "2026-10-28T14:02:35.134257+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T12:00:00+00:00",
+        "load": "2026-10-28T11:00:00+00:00",
+        "price": "2026-10-28T13:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.59
+    },
+    {
+      "run_time": "2026-10-28T13:02:46.749938+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T11:00:00+00:00",
+        "load": "2026-10-28T10:00:00+00:00",
+        "price": "2026-10-28T12:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.78
+    },
+    {
+      "run_time": "2026-10-28T12:02:57.723762+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T10:00:00+00:00",
+        "load": "2026-10-28T09:00:00+00:00",
+        "price": "2026-10-28T11:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.96
+    },
+    {
+      "run_time": "2026-10-28T11:02:47.648849+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T08:00:00+00:00",
+        "load": "2026-10-28T08:00:00+00:00",
+        "price": "2026-10-28T10:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.79
+    },
+    {
+      "run_time": "2026-10-28T10:02:20.882300+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T08:00:00+00:00",
+        "load": "2026-10-28T07:00:00+00:00",
+        "price": "2026-10-28T09:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.35
+    },
+    {
+      "run_time": "2026-10-28T09:02:08.916685+00:00",
+      "status": "SUCCESS",
+      "next24_status": "WITHHELD",
+      "complete_hours": {
+        "generation": "2026-10-28T07:00:00+00:00",
+        "load": "2026-10-28T06:00:00+00:00",
+        "price": "2026-10-28T08:00:00+00:00"
+      },
+      "complete_load_age_minutes_at_run_end": 182.15
+    }
+  ],
+  "current_data": {
+    "as_of": "2026-10-29T08:07:55.991313+00:00",
+    "sources": {
+      "prices": {
+        "exists": true,
+        "bytes": 3235350,
+        "missing_columns": [],
+        "rows": 96829,
+        "latest": "2026-10-29T07:45:00+00:00",
+        "latest_complete_hour": "2026-10-29T07:00:00+00:00",
+        "last_finite": {
+          "price_eur_mwh": "2026-10-29T07:45:00+00:00"
+        },
+        "recent_incomplete": {},
+        "stable": true
+      },
+      "load": {
+        "exists": true,
+        "bytes": 9705405,
+        "missing_columns": [],
+        "rows": 274373,
+        "latest": "2026-10-29T06:15:00+00:00",
+        "latest_complete_hour": "2026-10-29T05:00:00+00:00",
+        "last_finite": {
+          "load_mw": "2026-10-29T06:15:00+00:00"
+        },
+        "recent_incomplete": {
+          "2026-10-29T06:00:00+00:00": {
+            "row_count": 2,
+            "expected_count": 4,
+            "missing_fields": {},
+            "missing_quarters": [
+              "2026-10-29T06:30:00+00:00",
+              "2026-10-29T06:45:00+00:00"
+            ]
+          }
+        },
+        "stable": true
+      },
+      "generation": {
+        "exists": true,
+        "bytes": 41257364,
+        "missing_columns": [],
+        "rows": 274397,
+        "latest": "2026-10-29T07:15:00+00:00",
+        "latest_complete_hour": "2026-10-29T06:00:00+00:00",
+        "last_finite": {
+          "Biomass": "2026-10-29T06:45:00+00:00",
+          "Fossil Brown coal/Lignite": "2026-10-29T07:15:00+00:00",
+          "Fossil Gas": "2026-10-29T06:45:00+00:00",
+          "Fossil Hard coal": "2026-10-29T07:15:00+00:00",
+          "Hydro Run-of-river and poundage": "2026-10-29T06:45:00+00:00",
+          "Solar": "2026-10-29T06:45:00+00:00",
+          "Wind Offshore": "2026-10-29T07:15:00+00:00",
+          "Wind Onshore": "2026-10-29T06:45:00+00:00"
+        },
+        "recent_incomplete": {
+          "2026-10-29T07:00:00+00:00": {
+            "row_count": 2,
+            "expected_count": 4,
+            "missing_fields": {
+              "Biomass": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Fossil Gas": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Hydro Run-of-river and poundage": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Solar": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Wind Onshore": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ]
+            },
+            "missing_quarters": [
+              "2026-10-29T07:30:00+00:00",
+              "2026-10-29T07:45:00+00:00"
+            ]
+          }
+        },
+        "stable": true
+      }
+    },
+    "original_missing_quarters_present": {
+      "2026-10-29T05:30:00+00:00": true,
+      "2026-10-29T05:45:00+00:00": true
+    },
+    "fresh_complete_market_issues": [],
+    "database": {
+      "latest_pipeline": {
+        "time": "2026-10-29T08:02:12.751635+00:00",
+        "status": "SUCCESS",
+        "metadata": {
+          "next24h_forecast_reason": "Forecast withheld because required recent market history is incomplete.",
+          "next24h_forecast_status": "WITHHELD",
+          "next24h_latest_complete_market_hours": {
+            "generation": "2026-10-29T06:00:00+00:00",
+            "load": "2026-10-29T05:00:00+00:00",
+            "price": "2026-10-29T07:00:00+00:00"
+          }
+        }
+      },
+      "incidents": [
+        {
+          "time": "2026-10-29T08:02:00.994924+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T06:00:00+00:00",
+              "load": "2026-10-29T05:00:00+00:00",
+              "price": "2026-10-29T07:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T05:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T08:01:58.390784+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T08:00:50.733861+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        },
+        {
+          "time": "2026-10-29T07:02:15.064072+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T05:00:00+00:00",
+              "load": "2026-10-29T04:00:00+00:00",
+              "price": "2026-10-29T06:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T04:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T07:02:12.509257+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T07:00:46.670584+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        },
+        {
+          "time": "2026-10-29T06:01:59.797653+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T04:00:00+00:00",
+              "load": "2026-10-29T03:00:00+00:00",
+              "price": "2026-10-29T05:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T03:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T06:01:57.251072+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T06:00:55.701316+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        }
+      ],
+      "stable": true
+    },
+    "forecast_report": {
+      "rows": 24,
+      "issue": "2026-10-23T11:00:00+00:00",
+      "target_start": "2026-10-23T12:00:00+00:00",
+      "target_end": "2026-10-24T11:00:00+00:00",
+      "future_targets": 0,
+      "valid24": true
+    }
+  }
+}

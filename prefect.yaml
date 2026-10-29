@@ -39,7 +39,7 @@ deployments:
     job_variables:
       working_dir: /home/ec2-user/Electricity_Trading_Pipeline
   schedules:
-  - cron: "0 * * * *"
+  - cron: "45 * * * *"
     timezone: UTC
     day_or: true
     active: true

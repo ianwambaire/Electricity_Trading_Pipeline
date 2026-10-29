@@ -25,12 +25,17 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
       try { const body = await response.json(); const candidate = body?.detail?.code; if (typeof candidate === 'string' && Object.hasOwn(accountErrorMessages,candidate)) code = candidate } catch { /* Never display a raw response body. */ }
       throw new ApiError(code ? accountErrorMessages[code] : 'This account action could not be completed. Please try again.', response.status, code)
     }
+    if (path === '/forecast/next24' && response.status === 503) {
+      let withheld = false
+      try { const body = await response.json(); withheld = body?.detail?.code === 'FORECAST_WITHHELD' } catch { /* Never expose raw bodies. */ }
+      if (withheld) throw new ApiError('Forecast withheld because the publication is expired, invalid, or unavailable.', 503, 'FORECAST_WITHHELD')
+    }
     if (response.status === 403) throw new ApiError('Your account does not have permission for this information.', 403)
     // Do not surface raw server/proxy bodies: operational details may be sensitive.
     if (!response.ok) throw new ApiError(response.status === 404 ? 'This report is not available from the API.' : response.status === 503 ? 'The backend report is unavailable or invalid.' : `API request failed (HTTP ${response.status}).`, response.status)
-    const value = await response.json().catch(() => { throw new ApiError('The API returned an unexpected or invalid response.') })
+    const value = await response.json().catch(() => { throw new ApiError('The API returned an unexpected or invalid response.', null, path === '/forecast/next24' ? 'FORECAST_WITHHELD' : null) })
     assertCurrent()
-    try { return parse(value) } catch { throw new ApiError('The API returned an unexpected or invalid response.') }
+    try { return parse(value) } catch { throw new ApiError('The API returned an unexpected or invalid response.', null, path === '/forecast/next24' ? 'FORECAST_WITHHELD' : null) }
   } catch (error) {
     if (signal?.aborted) throw error
     if (error instanceof ApiError) throw error

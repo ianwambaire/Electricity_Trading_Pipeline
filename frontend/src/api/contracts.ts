@@ -2,7 +2,8 @@ export interface Health { status: string; application: string; timestamp_utc: st
 export interface PipelineStatus { latest_run_status: string; latest_run_timestamp: string; forecast_status: string | null }
 export interface Next24Row { issue_time: string; target_time: string; horizon_hours: number; predicted_price_eur_mwh: number; model_release: string }
 export interface OneHourRow { target_time: string; actual_price_eur_mwh: number; predicted_price_eur_mwh: number }
-export interface ForecastReport<T> { row_count: number; forecasts: T[] }
+export interface ForecastPublication { status: 'VALID'; issue_time: string; expires_at: string; completed_at: string }
+export interface ForecastReport<T> { row_count: number; forecasts: T[]; publication?: ForecastPublication }
 export interface VintageHealth { generated_at_utc: string; overall_status: string; sources: { source: string; status: string; latest_acquired_at_utc: string | null; expected_target_count: number|null; observed_target_count: number|null; missing_target_count: number|null; duplicate_identity_count: number|null; revision_count: number|null; consecutive_collection_failures: number|null; s3_sync_status: string|null }[] }
 export interface Readiness { generated_at_utc: string; dataset_status: string; distinct_issue_cycles: number; distinct_calendar_days: number; complete_issue_cycles: number; horizon_coverage_count: number; output_rows: number; duplicate_key_count: number|null; leakage_check_passed: boolean|null }
 
@@ -31,7 +32,14 @@ export function parseNext24(value: unknown): ForecastReport<Next24Row> {
     return { issue_time: issue, target_time: target, horizon_hours: horizon, predicted_price_eur_mwh: number(r.predicted_price_eur_mwh), model_release: release }
   })
   if (count(v.row_count) !== 24 || rows.length !== 24 || new Set(rows.map(r => r.issue_time)).size !== 1 || new Set(rows.map(r => r.model_release)).size !== 1) throw new Error('Invalid forecast report')
-  return { row_count: 24, forecasts: rows }
+  let publication: ForecastPublication | undefined
+  if (v.publication != null) {
+    const p = record(v.publication)
+    const issue = time(p.issue_time), expires = time(p.expires_at), completed = time(p.completed_at)
+    if (p.status !== 'VALID' || Date.parse(issue) !== Date.parse(rows[0].issue_time) || Date.parse(expires) !== Date.parse(issue) + 3 * 3600000 || Date.parse(completed) < Date.parse(issue)) throw new Error('Invalid publication')
+    publication = {status: 'VALID', issue_time: issue, expires_at: expires, completed_at: completed}
+  }
+  return { row_count: 24, forecasts: rows, ...(publication ? {publication} : {}) }
 }
 export function parseOneHour(value: unknown): ForecastReport<OneHourRow> {
   const v = record(value)

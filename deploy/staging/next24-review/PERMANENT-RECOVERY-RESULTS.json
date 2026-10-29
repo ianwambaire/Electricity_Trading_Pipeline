@@ -1,0 +1,96 @@
+{
+  "stage": "complete",
+  "task_reconciled": true,
+  "flow_reconciled": true,
+  "schedule_updated": true,
+  "concurrency_updated": false,
+  "automatic_retry": false,
+  "manual_run_triggered": false,
+  "deployment_before": {
+    "id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+    "name": "powerflow-entsoe-pipeline",
+    "status": "READY",
+    "paused": false,
+    "schedules": [
+      {
+        "id": "9319f665-9836-4120-9801-031e23ad2b4a",
+        "created": "2026-09-19T12:50:40.282409Z",
+        "updated": "2026-09-19T12:50:40.282423Z",
+        "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+        "schedule": {
+          "cron": "0 * * * *",
+          "timezone": "UTC",
+          "day_or": true
+        },
+        "active": true,
+        "max_scheduled_runs": null,
+        "parameters": {},
+        "slug": null
+      }
+    ],
+    "legacy_concurrency_limit": null,
+    "global_concurrency_limit": {
+      "id": "55df0967-7a78-41ce-a151-12f8fe3a6243",
+      "limit": 1,
+      "active_slots": 0,
+      "active": true
+    },
+    "concurrency_options": null
+  },
+  "non_overlap_gate": {
+    "currently_clear": true,
+    "genuine_active_states_still_block": true
+  },
+  "queued_before": [
+    {
+      "id": "01a1863f-3b13-7ca9-9a26-0d298ce6f486",
+      "expected_start_time": "2026-10-29T09:00:00Z",
+      "auto_scheduled": true
+    },
+    {
+      "id": "01a18676-3ffd-733c-af3d-a54774d17af5",
+      "expected_start_time": "2026-10-29T10:00:00Z",
+      "auto_scheduled": true
+    },
+    {
+      "id": "01a186ac-5963-7972-8a08-0eb7f422c32e",
+      "expected_start_time": "2026-10-29T11:00:00Z",
+      "auto_scheduled": true
+    }
+  ],
+  "deployment_after": {
+    "id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+    "name": "powerflow-entsoe-pipeline",
+    "status": "READY",
+    "paused": false,
+    "schedules": [
+      {
+        "id": "9319f665-9836-4120-9801-031e23ad2b4a",
+        "created": "2026-09-19T12:50:40.282409Z",
+        "updated": "2026-10-29T08:20:31.621287Z",
+        "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+        "schedule": {
+          "cron": "45 * * * *",
+          "timezone": "UTC",
+          "day_or": true
+        },
+        "active": true,
+        "max_scheduled_runs": null,
+        "parameters": {},
+        "slug": null
+      }
+    ],
+    "legacy_concurrency_limit": null,
+    "global_concurrency_limit": {
+      "id": "55df0967-7a78-41ce-a151-12f8fe3a6243",
+      "limit": 1,
+      "active_slots": 0,
+      "active": true
+    },
+    "concurrency_options": null
+  },
+  "queued_after": [],
+  "queue_materialization_verified": false,
+  "production_preserved": true,
+  "next_configured_run": "2026-10-29T08:45:00+00:00"
+}

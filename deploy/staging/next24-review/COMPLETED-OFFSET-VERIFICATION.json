@@ -1,0 +1,466 @@
+{
+  "as_of": "2026-10-29T09:58:58.960458+00:00",
+  "requested_run": {
+    "id": "01a186bf-9adc-782a-9802-dfb83088875d",
+    "name": "astute-uakari",
+    "start_time": "2026-10-29T08:45:00.167129Z",
+    "end_time": "2026-10-29T08:46:51.421278Z",
+    "updated": "2026-10-29T08:46:51.424126Z",
+    "expected_start_time": "2026-10-29T08:45:00Z",
+    "run_count": 1,
+    "estimated_run_time": 111.254149,
+    "total_run_time": 111.254149,
+    "state_type": "COMPLETED",
+    "state_name": "Completed",
+    "state_timestamp": "2026-10-29T08:46:51.421278Z"
+  },
+  "task_results": [
+    {
+      "id": "01a186d5-91ea-7daf-a5c2-34bc316f7cb6",
+      "name": "Fetch ENTSO-E electricity data-ae1",
+      "start_time": "2026-10-29T08:45:05.899863Z",
+      "end_time": "2026-10-29T08:45:46.042116Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-3866-7f0c-ae8c-75426aa0dd89",
+      "name": "Fetch Open-Meteo weather data-418",
+      "start_time": "2026-10-29T08:45:48.519469Z",
+      "end_time": "2026-10-29T08:45:48.673265Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-3938-736d-b7d5-b0bee30a40eb",
+      "name": "Collect forecast vintages-60e",
+      "start_time": "2026-10-29T08:45:48.729792Z",
+      "end_time": "2026-10-29T08:46:07.720237Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-8842-70cf-a245-7521c2c499f5",
+      "name": "Monitor forecast vintage health-513",
+      "start_time": "2026-10-29T08:46:08.964500Z",
+      "end_time": "2026-10-29T08:46:11.525949Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-a041-747b-838e-d8a31ebe109d",
+      "name": "Build silver dataset-56c",
+      "start_time": "2026-10-29T08:46:15.106102Z",
+      "end_time": "2026-10-29T08:46:20.282669Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-b485-748c-a27e-67b2538c8619",
+      "name": "Validate silver dataset-cd5",
+      "start_time": "2026-10-29T08:46:20.295071Z",
+      "end_time": "2026-10-29T08:46:20.900578Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-ba05-7d13-a39d-568797903cc6",
+      "name": "Build gold dataset-bbf",
+      "start_time": "2026-10-29T08:46:21.702084Z",
+      "end_time": "2026-10-29T08:46:25.627122Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-c965-7861-bdf4-88d93a026b1e",
+      "name": "Validate gold dataset-513",
+      "start_time": "2026-10-29T08:46:25.638546Z",
+      "end_time": "2026-10-29T08:46:26.346439Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-cc8a-76e8-a081-05b5ce9ba635",
+      "name": "Verify frozen final model release-691",
+      "start_time": "2026-10-29T08:46:26.443614Z",
+      "end_time": "2026-10-29T08:46:26.450223Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-ccf1-7ac2-9f17-5c5f46aca878",
+      "name": "Generate actual-vs-predicted report-3ee",
+      "start_time": "2026-10-29T08:46:26.546365Z",
+      "end_time": "2026-10-29T08:46:26.975407Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-cee4-78eb-ad90-28f4d0353b70",
+      "name": "Verify next24h production release-7f6",
+      "start_time": "2026-10-29T08:46:27.045298Z",
+      "end_time": "2026-10-29T08:46:27.635512Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-d1b0-7e14-ab16-7b8aae16db62",
+      "name": "Generate next24h production forecast-bbb",
+      "start_time": "2026-10-29T08:46:27.761851Z",
+      "end_time": "2026-10-29T08:46:37.309819Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-fa28-7fa3-a9fb-448e74a63829",
+      "name": "Monitor next24h realized forecast errors-007",
+      "start_time": "2026-10-29T08:46:38.121731Z",
+      "end_time": "2026-10-29T08:46:38.909419Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d6-fd88-77fb-81ed-d9b8aec9b374",
+      "name": "Detect market anomalies-046",
+      "start_time": "2026-10-29T08:46:38.985009Z",
+      "end_time": "2026-10-29T08:46:45.177455Z",
+      "state_type": "COMPLETED"
+    },
+    {
+      "id": "01a186d7-163b-711b-bee7-a27cb5573571",
+      "name": "Generate feature importance report-393",
+      "start_time": "2026-10-29T08:46:45.308317Z",
+      "end_time": "2026-10-29T08:46:48.014471Z",
+      "state_type": "COMPLETED"
+    }
+  ],
+  "recent_runs": [
+    {
+      "id": "01a186bf-9adc-782a-9802-dfb83088875d",
+      "name": "astute-uakari",
+      "start_time": "2026-10-29T08:45:00.167129Z",
+      "end_time": "2026-10-29T08:46:51.421278Z",
+      "updated": "2026-10-29T08:46:51.424126Z",
+      "expected_start_time": "2026-10-29T08:45:00Z",
+      "run_count": 1,
+      "estimated_run_time": 111.254149,
+      "total_run_time": 111.254149,
+      "state_type": "COMPLETED",
+      "state_name": "Completed",
+      "state_timestamp": "2026-10-29T08:46:51.421278Z"
+    },
+    {
+      "id": "01a186bf-9adc-7cce-978b-254c4d83b2de",
+      "name": "hissing-vulture",
+      "start_time": "2026-10-29T09:45:09.303210Z",
+      "end_time": "2026-10-29T09:46:58.724547Z",
+      "updated": "2026-10-29T09:46:58.726040Z",
+      "expected_start_time": "2026-10-29T09:45:00Z",
+      "run_count": 1,
+      "estimated_run_time": 109.421337,
+      "total_run_time": 109.421337,
+      "state_type": "COMPLETED",
+      "state_name": "Completed",
+      "state_timestamp": "2026-10-29T09:46:58.724547Z"
+    },
+    {
+      "id": "01a186bf-9adc-7f05-98e5-8ca434ea2823",
+      "name": "masterful-wolf",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-29T08:21:06.400858Z",
+      "expected_start_time": "2026-10-29T10:45:00Z",
+      "run_count": 0,
+      "estimated_run_time": 0.0,
+      "total_run_time": 0.0,
+      "state_type": "SCHEDULED",
+      "state_name": "Scheduled",
+      "state_timestamp": "2026-10-29T08:21:06.396619Z"
+    }
+  ],
+  "active_runs": [],
+  "ingestion_process_pids": [],
+  "current_evidence": {
+    "as_of": "2026-10-29T09:58:58.960458+00:00",
+    "sources": {
+      "prices": {
+        "exists": true,
+        "bytes": 3235506,
+        "missing_columns": [],
+        "rows": 96833,
+        "latest": "2026-10-29T08:45:00+00:00",
+        "latest_complete_hour": "2026-10-29T08:00:00+00:00",
+        "last_finite": {
+          "price_eur_mwh": "2026-10-29T08:45:00+00:00"
+        },
+        "recent_incomplete": {},
+        "stable": true
+      },
+      "load": {
+        "exists": true,
+        "bytes": 9705670,
+        "missing_columns": [],
+        "rows": 274380,
+        "latest": "2026-10-29T08:00:00+00:00",
+        "latest_complete_hour": "2026-10-29T07:00:00+00:00",
+        "last_finite": {
+          "load_mw": "2026-10-29T08:00:00+00:00"
+        },
+        "recent_incomplete": {
+          "2026-10-29T08:00:00+00:00": {
+            "row_count": 1,
+            "expected_count": 4,
+            "missing_fields": {},
+            "missing_quarters": [
+              "2026-10-29T08:15:00+00:00",
+              "2026-10-29T08:30:00+00:00",
+              "2026-10-29T08:45:00+00:00"
+            ]
+          }
+        },
+        "stable": true
+      },
+      "generation": {
+        "exists": true,
+        "bytes": 41258496,
+        "missing_columns": [],
+        "rows": 274403,
+        "latest": "2026-10-29T08:45:00+00:00",
+        "latest_complete_hour": "2026-10-29T07:00:00+00:00",
+        "last_finite": {
+          "Biomass": "2026-10-29T08:30:00+00:00",
+          "Fossil Brown coal/Lignite": "2026-10-29T08:45:00+00:00",
+          "Fossil Gas": "2026-10-29T08:30:00+00:00",
+          "Fossil Hard coal": "2026-10-29T08:45:00+00:00",
+          "Hydro Run-of-river and poundage": "2026-10-29T08:30:00+00:00",
+          "Solar": "2026-10-29T08:30:00+00:00",
+          "Wind Offshore": "2026-10-29T08:45:00+00:00",
+          "Wind Onshore": "2026-10-29T08:30:00+00:00"
+        },
+        "recent_incomplete": {
+          "2026-10-29T08:00:00+00:00": {
+            "row_count": 4,
+            "expected_count": 4,
+            "missing_fields": {
+              "Biomass": [
+                "2026-10-29T08:45:00+00:00"
+              ],
+              "Fossil Gas": [
+                "2026-10-29T08:45:00+00:00"
+              ],
+              "Hydro Run-of-river and poundage": [
+                "2026-10-29T08:45:00+00:00"
+              ],
+              "Solar": [
+                "2026-10-29T08:45:00+00:00"
+              ],
+              "Wind Onshore": [
+                "2026-10-29T08:45:00+00:00"
+              ]
+            },
+            "missing_quarters": []
+          }
+        },
+        "stable": true
+      }
+    },
+    "fresh_complete_market_issues": [
+      "2026-10-29T07:00:00+00:00"
+    ],
+    "database": {
+      "latest_pipeline": {
+        "time": "2026-10-29T09:46:58.466146+00:00",
+        "status": "SUCCESS",
+        "metadata": {
+          "next24h_forecast_status": "GENERATED"
+        }
+      },
+      "incidents": [
+        {
+          "time": "2026-10-29T09:45:42.333654+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "generation by type"
+          }
+        },
+        {
+          "time": "2026-10-29T09:45:42.272024+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        },
+        {
+          "time": "2026-10-29T08:46:37.327189+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {}
+        },
+        {
+          "time": "2026-10-29T08:02:00.994924+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T06:00:00+00:00",
+              "load": "2026-10-29T05:00:00+00:00",
+              "price": "2026-10-29T07:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T05:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T08:01:58.390784+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T08:00:50.733861+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        },
+        {
+          "time": "2026-10-29T07:02:15.064072+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T05:00:00+00:00",
+              "load": "2026-10-29T04:00:00+00:00",
+              "price": "2026-10-29T06:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T04:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T07:02:12.509257+00:00"
+          }
+        }
+      ],
+      "stable": true
+    },
+    "forecast_report": {
+      "rows": 24,
+      "issue": "2026-10-29T07:00:00+00:00",
+      "target_start": "2026-10-29T08:00:00+00:00",
+      "target_end": "2026-10-30T07:00:00+00:00",
+      "future_targets": 22,
+      "valid24": true
+    }
+  },
+  "forecast_validation": {
+    "schema_valid": true,
+    "issue": "2026-10-29T07:00:00+00:00",
+    "freshness_cutoff": "2026-10-29T10:00:00+00:00",
+    "fresh_by_3h_policy": true,
+    "target_count": 24,
+    "remaining_future_targets": 22,
+    "targets": [
+      "2026-10-29 08:00:00+00:00",
+      "2026-10-29 09:00:00+00:00",
+      "2026-10-29 10:00:00+00:00",
+      "2026-10-29 11:00:00+00:00",
+      "2026-10-29 12:00:00+00:00",
+      "2026-10-29 13:00:00+00:00",
+      "2026-10-29 14:00:00+00:00",
+      "2026-10-29 15:00:00+00:00",
+      "2026-10-29 16:00:00+00:00",
+      "2026-10-29 17:00:00+00:00",
+      "2026-10-29 18:00:00+00:00",
+      "2026-10-29 19:00:00+00:00",
+      "2026-10-29 20:00:00+00:00",
+      "2026-10-29 21:00:00+00:00",
+      "2026-10-29 22:00:00+00:00",
+      "2026-10-29 23:00:00+00:00",
+      "2026-10-30 00:00:00+00:00",
+      "2026-10-30 01:00:00+00:00",
+      "2026-10-30 02:00:00+00:00",
+      "2026-10-30 03:00:00+00:00",
+      "2026-10-30 04:00:00+00:00",
+      "2026-10-30 05:00:00+00:00",
+      "2026-10-30 06:00:00+00:00",
+      "2026-10-30 07:00:00+00:00"
+    ],
+    "predictions": [
+      337.4619702341259,
+      299.37541245860285,
+      287.77833394876046,
+      242.35930744536648,
+      247.58248794385338,
+      230.83893173195224,
+      254.79904720532735,
+      273.35735225815813,
+      307.34584336457857,
+      342.31879401778275,
+      362.074146406157,
+      363.56945532857014,
+      278.38316932287603,
+      246.0545172573178,
+      218.0947443298789,
+      212.54322942276906,
+      192.2128247782819,
+      214.60574764304897,
+      223.44835833994395,
+      269.799536639344,
+      274.95540362886044,
+      293.8367606675743,
+      303.3692401399483,
+      311.95916576484063
+    ],
+    "all_predictions_finite": true,
+    "model_releases": [
+      "next24h-hgb-2026-09-21-v1"
+    ],
+    "sha256": "4174ec76396674267c596e9a9baed498ac9122afe0b8004c49a36a79c2e7735c",
+    "stable": true
+  },
+  "provenance": {
+    "forecast_issue_time": "2026-10-29T07:00:00+00:00",
+    "market_latest_complete_hour": "2026-10-29T07:00:00+00:00",
+    "weather_hour": "2026-10-29T07:00:00+00:00",
+    "weather_acquired_at_utc": "2026-10-29T09:46:36.802768+00:00",
+    "weather_source": "open_meteo_forecast_api_operational_model"
+  },
+  "provenance_matches_issue": true,
+  "history": {
+    "matching_rows": 24,
+    "issued_at": [
+      "2026-10-29 09:46:44.935317+00:00"
+    ],
+    "matches_latest": true
+  },
+  "pipeline_records": [
+    {
+      "run_time": "2026-10-29T09:46:58.466146+00:00",
+      "status": "SUCCESS",
+      "next24": {
+        "next24h_forecast_generated": true,
+        "next24h_forecast_issue_time": "2026-10-29 07:00:00+00:00",
+        "next24h_forecast_status": "GENERATED",
+        "next24h_model_release": "next24h-hgb-2026-09-21-v1",
+        "next24h_weather_acquired_at_utc": "2026-10-29T09:46:36.802768+00:00"
+      }
+    },
+    {
+      "run_time": "2026-10-29T08:46:51.136535+00:00",
+      "status": "SUCCESS",
+      "next24": {
+        "next24h_forecast_generated": true,
+        "next24h_forecast_issue_time": "2026-10-29 06:00:00+00:00",
+        "next24h_forecast_status": "GENERATED",
+        "next24h_model_release": "next24h-hgb-2026-09-21-v1",
+        "next24h_weather_acquired_at_utc": "2026-10-29T08:46:28.527733+00:00"
+      }
+    },
+    {
+      "run_time": "2026-10-29T08:02:12.751635+00:00",
+      "status": "SUCCESS",
+      "next24": {
+        "next24h_forecast_generated": false,
+        "next24h_forecast_reason": "Forecast withheld because required recent market history is incomplete.",
+        "next24h_forecast_status": "WITHHELD",
+        "next24h_model_release": "next24h-hgb-2026-09-21-v1"
+      }
+    },
+    {
+      "run_time": "2026-10-29T07:02:26.335242+00:00",
+      "status": "SUCCESS",
+      "next24": {
+        "next24h_forecast_generated": false,
+        "next24h_forecast_reason": "Forecast withheld because required recent market history is incomplete.",
+        "next24h_forecast_status": "WITHHELD",
+        "next24h_model_release": "next24h-hgb-2026-09-21-v1"
+      }
+    }
+  ],
+  "staging_forecast_exists": false
+}

@@ -1,0 +1,9 @@
+{
+  "ingestion_executed": false,
+  "stage": "preflight",
+  "error_type": "RuntimeError",
+  "error": "active_prefect_run",
+  "automatic_retry": false,
+  "remote_exit_status": 1,
+  "scope": "One guarded attempt; stopped before ingestion because Prefect non-overlap gate failed."
+}

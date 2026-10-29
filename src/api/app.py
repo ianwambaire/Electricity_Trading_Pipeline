@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
@@ -53,11 +53,13 @@ class APISettings:
     market_silver: Path | None = None
     public_metadata_root: Path | None = None
     anomaly_report: Path | None = None
+    next24_publication_root: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "APISettings":
         root = Path(root)
         return cls(
+            next24_publication_root=Path(os.environ["POWERFLOW_FORECAST_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_FORECAST_PUBLICATION_ROOT") else None,
             market_silver=root / "data/processed/silver_electricity_market_data.csv",
             public_metadata_root=root,
             anomaly_report=root / "data/reports/detected_anomalies.csv",
@@ -98,9 +100,17 @@ class Next24ForecastRow(StrictResponseModel):
     model_release: str
 
 
+class ForecastPublication(StrictResponseModel):
+    status: Literal["VALID"]
+    issue_time: datetime
+    expires_at: datetime
+    completed_at: datetime
+
+
 class Next24ForecastResponse(StrictResponseModel):
     row_count: int
     forecasts: list[Next24ForecastRow]
+    publication: ForecastPublication | None = None
 
 
 class OneHourForecastRow(StrictResponseModel):
@@ -422,9 +432,20 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     def pipeline_status() -> PipelineStatusResponse:
         return _latest_pipeline_status(configured.operational_database)
 
-    @application.get("/forecast/next24", response_model=Next24ForecastResponse)
-    def next24_forecast() -> Next24ForecastResponse:
-        return _next24_report(configured.next24_forecast)
+    @application.get("/forecast/next24", response_model=Next24ForecastResponse, response_model_exclude_none=True)
+    def next24_forecast(response: Response) -> Next24ForecastResponse:
+        response.headers["Cache-Control"] = "no-store"
+        if configured.next24_publication_root is None:
+            return _next24_report(configured.next24_forecast)
+        from shared.forecast_publication import read_active, Withheld, time as publication_time, MAX_AGE
+        try:
+            bundle = read_active(configured.next24_publication_root)
+        except Withheld as error:
+            raise HTTPException(503, detail={"code": "FORECAST_WITHHELD"}, headers={"Cache-Control": "no-store"}) from error
+        issue = publication_time(bundle["forecasts"][0]["issue_time"])
+        return Next24ForecastResponse(row_count=24, forecasts=bundle["forecasts"], publication=ForecastPublication(
+            status="VALID", issue_time=issue, expires_at=issue+MAX_AGE,
+            completed_at=bundle["execution"]["completed_at"]))
 
     @application.get("/forecast/one-hour", response_model=OneHourForecastResponse)
     def one_hour_forecast() -> OneHourForecastResponse:

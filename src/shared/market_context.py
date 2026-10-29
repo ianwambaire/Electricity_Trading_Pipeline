@@ -1,7 +1,7 @@
 """Observed market context; no UI, file cache or inference side effects."""
 import math
 import pandas as pd
-from processing.build_silver_dataset import aggregate_hourly_prices
+from shared.price_aggregation import aggregate_hourly_prices
 
 def _utc_timestamp(value) -> pd.Timestamp | None:
     if value is None or pd.isna(value):

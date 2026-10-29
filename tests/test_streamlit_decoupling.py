@@ -66,7 +66,7 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] in {'streamlit','sklearn','joblib','mlflow','prefect','boto3'}:
+        if fullname.split('.')[0] in {'streamlit','sklearn','joblib','mlflow','prefect','boto3','processing'}:
             raise AssertionError('Unexpected runtime dependency: '+fullname)
 sys.meta_path.insert(0, Block())
 from api.app import APISettings, create_app
@@ -103,7 +103,7 @@ with TestClient(create_app(settings)) as c:
     assert c.get('/forecast/next24').status_code==404
     assert c.get('/admin/operations').status_code==401
 assert source_freshness_state(start,source_kind='silver')=='Historical dataset'
-assert not any(k.split('.')[0] in {'streamlit','sklearn','joblib','prefect','mlflow','boto3'} for k in sys.modules)
+assert not any(k.split('.')[0] in {'streamlit','sklearn','joblib','prefect','mlflow','boto3','processing'} for k in sys.modules)
 '''
     env = {k:v for k,v in os.environ.items() if not k.startswith('POWERFLOW_')}
     env['PYTHONPATH'] = str(root/'src')

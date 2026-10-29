@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "purpose": "staging API market-context two-file hotfix; NOT deployed",
+  "artifacts": {
+    "hotfix.py": "b08d667b9a37a4dfc1fcdb8f835454824130ca18a19f1c6b81ddc2a04c83de51",
+    "execute.py": "738aedabaebb95327617892748afd66da707e51563f8eae9bd8f95ed8f6c05df"
+  },
+  "changed_api_files": {
+    "src/shared/market_context.py": "15e9746be365efabd4c3329d73553b7879c03c382e5b570349f757f19b968656",
+    "src/shared/price_aggregation.py": "cdb29ea521506babf568d9e8cdc656565b120d52b8b502cc48003550af172fbb"
+  }
+}

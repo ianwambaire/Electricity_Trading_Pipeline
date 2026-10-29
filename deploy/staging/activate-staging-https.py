@@ -162,7 +162,7 @@ def review_config(allow_target=False, config_root=Path('/etc/nginx')):
                     position[0] += 1
                     return nodes
                 words = []
-                while position[0] < len(tokens) and tokens[position[0]] not in '{};':
+                while position[0] < len(tokens) and tokens[position[0]] not in ('{', '}', ';'):
                     words.append(tokens[position[0]]); position[0] += 1
                 require(words and position[0] < len(tokens), 'unsupported_configuration_syntax')
                 end = tokens[position[0]]; position[0] += 1

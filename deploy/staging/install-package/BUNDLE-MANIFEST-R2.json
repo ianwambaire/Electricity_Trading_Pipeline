@@ -1,0 +1,754 @@
+{
+  "format": 1,
+  "release_id": "phase-staging-https-ready-20261026",
+  "deployment_authorized": false,
+  "control_hashes": {
+    "install.py": "6eac8ca4c357de1ef147426cfd12a8a64addb6b753db26ac4f1dd942745a1e02",
+    "publisher.py": "9fe702f963c85817783697a595ff7ce4cc0264e04f31e92b9eef93af1fbcab01",
+    "cgroup_bpf.py": "79282e3493e0cf447a13193ffa487ff3c3d7c7202ed9de136c7f5a2202084fb7",
+    "bootstrap.py": "f5150eccae5247c57efd4a16a42c769e5ac7a0e552ab408e4ab6d4a6854f1445"
+  },
+  "artifacts": [
+    {
+      "name": "release.tar.gz",
+      "bytes": 497556,
+      "sha256": "8a32da48575760f42b04043f249edeff7459c36212cf1d4eb09fbfb3e1479f3e"
+    },
+    {
+      "name": "wheels.tar.gz",
+      "bytes": 37533461,
+      "sha256": "d71db0518421463fa78edd1bcd8d6db8cc3bf6008ed62972be5affdfe9161e97"
+    },
+    {
+      "name": "linux-regression-unittest.py",
+      "bytes": 6126,
+      "sha256": "6c32ebfb0aa97bc5a8dd4517c5dd96fddc29ebb0d667d6394b71fb804d2a3580"
+    },
+    {
+      "name": "activate-staging-https.py",
+      "bytes": 19670,
+      "sha256": "9c9173cf3f8da0e004dd30e16ca320f19ab860fa0770fa6a87414869b3efa6d4"
+    },
+    {
+      "name": "staging-support.conf",
+      "bytes": 320,
+      "sha256": "bbfcc177625e6938aff1945e6435681cb39a83dc4b65624959af339e64b1b790"
+    }
+  ],
+  "release_archive_inventory": {
+    "api/requirements/api.lock": {
+      "bytes": 601,
+      "sha256": "b1d8bbbec84a08b651b7bdc0b96e5bb94bf6c527297e037357702de00bcc84e3"
+    },
+    "api/requirements/shared.txt": {
+      "bytes": 152,
+      "sha256": "d221f4eec4e7e97c44d523ee8f55939aceb229c12bbf4a27d9823676d618360c"
+    },
+    "api/src/api/__init__.py": {
+      "bytes": 70,
+      "sha256": "d7842be76c9c978de666675161f35a3bd24c24e732682cb7d76e9401c5d36a85"
+    },
+    "api/src/api/account_routes.py": {
+      "bytes": 8247,
+      "sha256": "4f74ca84be298f4848059cd8e15900cbd2c22bd7341594fc9bfefbdb4786a88c"
+    },
+    "api/src/api/account_service.py": {
+      "bytes": 9320,
+      "sha256": "7aae6f7cb2397570bf0daa778f33af5bc19a95fc0b1f23053a8167a1e3da5343"
+    },
+    "api/src/api/admin_operations.py": {
+      "bytes": 7837,
+      "sha256": "37c7f5dc1794d680580ff69165a3e64035c9282b202cdda141b67bbe106ee2f4"
+    },
+    "api/src/api/anomalies.py": {
+      "bytes": 4766,
+      "sha256": "9f2957cbc733d61f80b36444033174e69cfe078cafa5d3b721b0f53eb809c7e3"
+    },
+    "api/src/api/app.py": {
+      "bytes": 22688,
+      "sha256": "ec2fabd38f91174ba2589a3831f824ee36151d5d622f313e796ded9226639a42"
+    },
+    "api/src/api/database.py": {
+      "bytes": 631,
+      "sha256": "962e07dd654cfb06017866a2c98bc553077239f98de9a0698f1eb83db4c6e906"
+    },
+    "api/src/api/feature_parity.py": {
+      "bytes": 13572,
+      "sha256": "3a0f3c7c027229e4313f0a25e0fe46fde63834b24f712f49fc232892ab107699"
+    },
+    "api/src/api/market_data.py": {
+      "bytes": 15115,
+      "sha256": "4c9b135d5f97b6e8381688c41fcd4e41047ea36423713c70a655ffa0b503752a"
+    },
+    "api/src/api/mfa_routes.py": {
+      "bytes": 5109,
+      "sha256": "858b229be48baa668e5f816136db07c94c52310e01cdeac2803ccca4a8785470"
+    },
+    "api/src/api/mfa_service.py": {
+      "bytes": 3253,
+      "sha256": "8ea67f55d36e4cd6e97fff1c5907ae83f3c48bbb74c948bd82fc424686942715"
+    },
+    "api/src/api/model_summaries.py": {
+      "bytes": 10064,
+      "sha256": "9e57ce3de689f76e1036a901663c7cc7b7a49fe0f6188f113f203627e7bf2fd4"
+    },
+    "api/src/api/operations_summary.py": {
+      "bytes": 10908,
+      "sha256": "5989120938501241c84d128c0e86897b3949668fde9d29421b4b79d4cc7a20f9"
+    },
+    "api/src/api/readiness.py": {
+      "bytes": 1785,
+      "sha256": "dd3bb8dda2bb3561212915aabdbc55e0a96430331e43e1f0ba0e277842167ff7"
+    },
+    "api/src/api/restricted_reports.py": {
+      "bytes": 11112,
+      "sha256": "69ae92e3b888cde893946b49ec8acb6e5c117ce7987e27d7ac5cb1e33293c1b0"
+    },
+    "api/src/api/runtime.py": {
+      "bytes": 5945,
+      "sha256": "8ef6206a373705bcccd06acf25de8cbc31e4e35a05bdb59a3366b630a617b030"
+    },
+    "api/src/api/security.py": {
+      "bytes": 10507,
+      "sha256": "7e4d05cb476555fd18884212ecfd88357669f8cd9515edf6bcd17152a6175b61"
+    },
+    "api/src/shared/__init__.py": {
+      "bytes": 70,
+      "sha256": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110"
+    },
+    "api/src/shared/forecast_evaluation.py": {
+      "bytes": 3344,
+      "sha256": "f185ccf0c7b503eb529eb25fb95026937e4a8ddd9206bf6890b1d64ca010e28b"
+    },
+    "api/src/shared/market_context.py": {
+      "bytes": 5609,
+      "sha256": "ca5a043cc1ef2a427f4e7b5449b59873e6f5ec85b7be7c963e8b8a6dad6825e7"
+    },
+    "api/src/shared/operational_health.py": {
+      "bytes": 8582,
+      "sha256": "4db26232cab02591c4d8bdd4adbe80694dffb44da7b57346cc17c50930c89108"
+    },
+    "proposals/activate-staging.sh": {
+      "bytes": 2623,
+      "sha256": "2ef00dbf43a26db8e99374c9121fb4be656f2219224bd51b249fb596519b3e1d"
+    },
+    "proposals/api.env.example": {
+      "bytes": 878,
+      "sha256": "ee1ea96ebd2aa9b1c15891fd4cb9adf1c6ee7d06d6177b99bb1f375419b36704"
+    },
+    "proposals/nginx-http.conf": {
+      "bytes": 339,
+      "sha256": "1dc75df96d3c355b42494c107e5b8f32218159f85e6e13ff40bf5a3de2bfe3cf"
+    },
+    "proposals/powerflow-candidate-api.service": {
+      "bytes": 1550,
+      "sha256": "685ad17fbfdd39b04a0e114c469e0898aa042c3a80530a373adc0126311c7a2a"
+    },
+    "proposals/rollback-staging.sh": {
+      "bytes": 1166,
+      "sha256": "cc4c2a58206f98c8e1c3827cf78c4eb3a078439c74d6df4f2e031e3a2af57d2e"
+    },
+    "proposals/security-headers.conf": {
+      "bytes": 1022,
+      "sha256": "6bd7fb2cf62ae7dcddbd0d874f7a05648ae14ca287cc330f8ecb1322bd72a879"
+    },
+    "proposals/staging.powerflowenergy.dev.conf": {
+      "bytes": 3468,
+      "sha256": "ba9cc88e8a9b8f9401a713ccc2289f1c4375aa734745a6bfdbb431ce240e96ba"
+    },
+    "proposals/switch-candidate.sh": {
+      "bytes": 1362,
+      "sha256": "80901bfb08ba14b996e40095ce7a18b51fe29f10c6546e3bdf79532bcb2b9ebe"
+    },
+    "static/assets/AnalyticsPage-BA-31sOz.js": {
+      "bytes": 10587,
+      "sha256": "afc22cba18b0e19494b20aa1bc59112c767327d5817552f3c1111435c2c63815"
+    },
+    "static/assets/AnomaliesPage-f4fxo-ye.js": {
+      "bytes": 5564,
+      "sha256": "a6e735d0d28598391656466d07285c7dfd1daa95f9e95c016006db10271e4a40"
+    },
+    "static/assets/ApiPanel-4W0OymnB.js": {
+      "bytes": 2656,
+      "sha256": "aa3c3a4aa3a39cc814694aa71f32ec08cdfb5aaee61c374e70bbef02a3d4721e"
+    },
+    "static/assets/BarChart-yrNLa8zV.js": {
+      "bytes": 20069,
+      "sha256": "a6bb64b1fe0cec4e3a78017cb9cd4bd473944ac4464f115d68d03cdc32aa7ff6"
+    },
+    "static/assets/CartesianChart-DC6XSMH1.js": {
+      "bytes": 338530,
+      "sha256": "c0113290fa433d52ca03f7c7e1693e2e92d1159813a8f6b0a8844da55ed69871"
+    },
+    "static/assets/CoefficientChart-C28jf0_R.js": {
+      "bytes": 1194,
+      "sha256": "4b3d76dd4bb1269825a821bb9b14cac1e52de7ebcbc3504b10cce599eef6fa33"
+    },
+    "static/assets/DateRangeFilter-CoKVLPya.js": {
+      "bytes": 1067,
+      "sha256": "6a1b666dd714217ae6fd8471cea0a75f24ad81c5611f7d711225a4f544353943"
+    },
+    "static/assets/ExplorationCharts-SlrbqlQG.js": {
+      "bytes": 2047,
+      "sha256": "9132e4ea9cecd45915ef6acb5467eafc5da1602aa593dd2f3c0ff94d6b2264d3"
+    },
+    "static/assets/ForecastChart-CrMd7ryD.js": {
+      "bytes": 4085,
+      "sha256": "2e8c7666a62b365b6f6c659cd0631c3b72c209b4ecf47dcd897f4c6da56eca90"
+    },
+    "static/assets/ForecastSummary-NLcrRvap.js": {
+      "bytes": 3395,
+      "sha256": "963066d5c2a8efcb3727ef0a4d281b9a3ee03496817b1ec943627aa5c03d2d91"
+    },
+    "static/assets/ForecastingPage-EEe2X3Ov.js": {
+      "bytes": 11203,
+      "sha256": "9ccaece0ec3a647443e747bbf6920538f3484b00b2636baa51b8f1cbb7cbc642"
+    },
+    "static/assets/HistoricalChart-Bn2pQbRC.js": {
+      "bytes": 14610,
+      "sha256": "e4cc15a6399a5b434b4a06911b5acf63d117dd031c78bb93e515d45f5dbd2b8f"
+    },
+    "static/assets/KpiGrid-eOgMfoBa.js": {
+      "bytes": 481,
+      "sha256": "6b003db98a2f4ebd601807428b5181c7fe9cc0ddc9afe1678ac277fb56eee17f"
+    },
+    "static/assets/Legend-CHPs3-X5.js": {
+      "bytes": 14277,
+      "sha256": "a9fcd2a6efe3ef687459c936e56b09b674252bc4454a7f7213d06d5cc602e5e1"
+    },
+    "static/assets/Line-DFl83V32.js": {
+      "bytes": 16574,
+      "sha256": "869494257a94b9992e3a7788b801e00a5f60f19aa43abde4ce84d6ab55813825"
+    },
+    "static/assets/LineChart-DWrPE4XG.js": {
+      "bytes": 332,
+      "sha256": "03700005b675057c1f4f754287649da3e25e6c0f694e859667c1fe3493afe92d"
+    },
+    "static/assets/MarketChart-DNO8JZPW.js": {
+      "bytes": 1823,
+      "sha256": "97331b77fc9ef9648f20b3d4c9100e11acb2bcba5b1ef15b9a8a98641e118153"
+    },
+    "static/assets/MarketOverview-CZRgcic1.js": {
+      "bytes": 4595,
+      "sha256": "a360c1852acbf3b2b3b40fd19d9b375028316580f62021296c34904d9483e628"
+    },
+    "static/assets/ModelsPage-DSU8PA2u.js": {
+      "bytes": 6822,
+      "sha256": "0f24c9a254f9843a24a833afda157ae467af8778553e7d2f313751dfcb8d372d"
+    },
+    "static/assets/NotFoundPage-Ch51SsRd.js": {
+      "bytes": 744,
+      "sha256": "495d18353704e9412159a6c8854446c91b7d513f2568dd90239bd77a533ec9de"
+    },
+    "static/assets/OperationalSummary-BjntXDIq.js": {
+      "bytes": 1606,
+      "sha256": "3e6210d09f574f621c3f3cc9c918ed2bd7912dc4b4b5232b8a5f10edae2e7dbc"
+    },
+    "static/assets/PageHeading-MxfeYaE5.js": {
+      "bytes": 303,
+      "sha256": "04a0c0a89492d4fc404608902c7374361287cb00993e42de01c62b231fc04974"
+    },
+    "static/assets/Panel-DEIxcgKV.js": {
+      "bytes": 316,
+      "sha256": "d044f2db5f4b09b68f2e428d75b2ae9ecada85c25114157ecf19e32115c1fef0"
+    },
+    "static/assets/PipelinePage-gldBqyMJ.js": {
+      "bytes": 13828,
+      "sha256": "f31a2eb088ae23642515dd3ac5224abbd2d912ecc2005dbc2de759d8a54fb47c"
+    },
+    "static/assets/ProfilePage-WahkAQiF.js": {
+      "bytes": 18449,
+      "sha256": "6535dd385181409986775abcf58b5510612f12c5066d23af00e7708608014901"
+    },
+    "static/assets/ReferenceLine-VrEvhCYr.js": {
+      "bytes": 4293,
+      "sha256": "ccca642cf92c3afcd9b43725e7c3e431c611cb018d4e5659ea95d6f75c53e307"
+    },
+    "static/assets/index-DCLLDsHi.js": {
+      "bytes": 376387,
+      "sha256": "b9285b179ce20b273c2f91035344e8b57199bf9a05a2f31dae774c709e1d78b2"
+    },
+    "static/assets/index-DST_P3xP.css": {
+      "bytes": 33162,
+      "sha256": "c72f1b5e81a3305f4af934c7b42916032f969b6eb2320a647cbf033351328fea"
+    },
+    "static/assets/jsx-runtime-Wy9s6hX0.js": {
+      "bytes": 8911,
+      "sha256": "bcb9f6586cd973c2fb2faa4a2d38d4b06660e2fe2806aaa0de1c39306ff0f69a"
+    },
+    "static/assets/tooltipContext-DDXscRaI.js": {
+      "bytes": 508,
+      "sha256": "2a796ab04ddd804e6eb39125efd61390d8bfd96d5311708bbe11245e4ba11eef"
+    },
+    "static/assets/useApi-Dy9YsRHP.js": {
+      "bytes": 830,
+      "sha256": "23ce181e7f427ec9c8ec2090c0851a662682ea70b0654900104b6e131cdc8b7a"
+    },
+    "static/build-config.json": {
+      "bytes": 216,
+      "sha256": "af11eff0593cace4ca27bd836ea3eeddaf6a012ba9f58ceea191e96055891476"
+    },
+    "static/favicon.svg": {
+      "bytes": 176,
+      "sha256": "1e61c65d94661362653f84017ea81b24123cb5c52812846ff3737c55a78e3a9b"
+    },
+    "static/fonts/SourceSans3-LICENSE.md": {
+      "bytes": 4486,
+      "sha256": "56af9b9c6715597e458284a474dc118a50a4150e9d547c70f7b4a33c3e6a9328"
+    },
+    "static/fonts/SourceSans3VF-Upright.woff2": {
+      "bytes": 170188,
+      "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8"
+    },
+    "static/icons.svg": {
+      "bytes": 5031,
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a"
+    },
+    "static/index.html": {
+      "bytes": 748,
+      "sha256": "0f279d5d2e94de494ff56050c46034822aba1bb03a46bec915c7ac3bdecafad9"
+    },
+    "release-manifest.json": {
+      "bytes": 11638,
+      "sha256": "50be8e7a20c462eb8850d9bf61b77bb655f687f85c725cbd3d903b7ff14aad27"
+    }
+  },
+  "wheel_archive_inventory": {
+    "annotated_doc-0.0.5-py3-none-any.whl": {
+      "bytes": 5302,
+      "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101"
+    },
+    "annotated_types-0.8.0-py3-none-any.whl": {
+      "bytes": 13427,
+      "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0"
+    },
+    "anyio-4.15.1-py3-none-any.whl": {
+      "bytes": 132079,
+      "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101"
+    },
+    "certifi-2026.10.19-py3-none-any.whl": {
+      "bytes": 136464,
+      "sha256": "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b"
+    },
+    "cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+      "bytes": 221525,
+      "sha256": "b0431303acaea1089ad4b3e9ce4e6518193def1118d4073ca848635ee4ea2e96"
+    },
+    "click-8.5.0-py3-none-any.whl": {
+      "bytes": 125251,
+      "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
+    },
+    "cryptography-46.0.7-cp311-abi3-manylinux_2_34_x86_64.whl": {
+      "bytes": 4459756,
+      "sha256": "42a1e5f98abb6391717978baf9f90dc28a743b7d9be7f0751a6f56a75d14065b"
+    },
+    "fastapi-0.136.3-py3-none-any.whl": {
+      "bytes": 117481,
+      "sha256": "3d2a69bdf04b7e9f3afa292c3bc7a98816bbfafa10bc9b45f3f3700d2f761620"
+    },
+    "h11-0.16.0-py3-none-any.whl": {
+      "bytes": 37515,
+      "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
+    },
+    "httpcore-1.0.9-py3-none-any.whl": {
+      "bytes": 78784,
+      "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55"
+    },
+    "httpx-0.28.1-py3-none-any.whl": {
+      "bytes": 73517,
+      "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"
+    },
+    "idna-3.20-py3-none-any.whl": {
+      "bytes": 69583,
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
+    },
+    "joserfc-1.7.7-py3-none-any.whl": {
+      "bytes": 71758,
+      "sha256": "06979cfbab78bc802f14c0358f32969826cc26720e13cb38926ffdc86bc0cb2c"
+    },
+    "manifest.json": {
+      "bytes": 7838,
+      "sha256": "1ae7da081a467988380614e346c01f256601369fd17196d635c6e71c7035693b"
+    },
+    "numpy-2.4.6-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+      "bytes": 16638245,
+      "sha256": "a2c306dea656c12c68f51f4cea133cbe78ca7435eb28c735eac1d3ebe73be6e8"
+    },
+    "pandas-2.3.3-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+      "bytes": 12332638,
+      "sha256": "ee67acbbf05014ea6c763beb097e03cd629961c8a632075eeb34247120abcb4b"
+    },
+    "pycparser-3.11-py3-none-any.whl": {
+      "bytes": 51178,
+      "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
+    },
+    "pydantic-2.13.4-py3-none-any.whl": {
+      "bytes": 472262,
+      "sha256": "45a282cde31d808236fd7ea9d919b128653c8b38b393d1c4ab335c62924d9aba"
+    },
+    "pydantic_core-2.46.4-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
+      "bytes": 2099732,
+      "sha256": "7a5f930472650a82629163023e630d160863fce524c616f4e5186e5de9d9a49b"
+    },
+    "python_dateutil-3.0.0-py2.py3-none-any.whl": {
+      "bytes": 94659,
+      "sha256": "3c79630202e4152c6add678446984236efe4f57e84d8e892aab0637bab82e9fd"
+    },
+    "pytz-2026.5-py2.py3-none-any.whl": {
+      "bytes": 506342,
+      "sha256": "e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03"
+    },
+    "six-1.17.0-py2.py3-none-any.whl": {
+      "bytes": 11050,
+      "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"
+    },
+    "starlette-0.52.1-py3-none-any.whl": {
+      "bytes": 74272,
+      "sha256": "0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74"
+    },
+    "typing_extensions-4.16.0-py3-none-any.whl": {
+      "bytes": 45571,
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+    },
+    "typing_inspection-0.4.4-py3-none-any.whl": {
+      "bytes": 14750,
+      "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147"
+    },
+    "tzdata-2026.5-py2.py3-none-any.whl": {
+      "bytes": 347996,
+      "sha256": "b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac"
+    },
+    "uvicorn-0.48.0-py3-none-any.whl": {
+      "bytes": 71410,
+      "sha256": "48097851328b87ec36117d3d575234519eb58c2b22d79666e9bbc6c49a761dad"
+    }
+  },
+  "publication_plan": [
+    {
+      "relative_path": "data/processed/silver_electricity_market_data.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/processed/silver_electricity_market_data.csv",
+      "sha256": "127cb37b85ab35bd5519a12aae3ffac44d4d7ef5f9e7469f917dde972acd6330",
+      "bytes": 11618483,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 68411,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-25T21:00:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 16.58,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/features/gold_model_features.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/features/gold_model_features.csv",
+      "sha256": "c12a041a1d40c47e81e434479e09a99130e8b950a1f7e3ea08d1dfed3448f53f",
+      "bytes": 20934928,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 67965,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2019-01-08T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-23T10:00:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 75.58,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/raw/entsoe/prices.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/prices.csv",
+      "sha256": "64964fe588b2cd3a0802ab9d81ce5409c8139fa5535afb85d6d5fa420c4e8df4",
+      "bytes": 3225047,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 96563,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-26T12:45:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 0.83,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/raw/entsoe/load.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/load.csv",
+      "sha256": "781ce49798296d0ad58aa73a9179666bfc44a95d0a3dfbbd3b48ad59fb423859",
+      "bytes": 9695251,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 274105,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-26T11:15:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 2.33,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/raw/entsoe/generation.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/generation.csv",
+      "sha256": "da34e965703f661b45e46abf92fcfa3fef100c54695736ce3dd8f54038b915aa",
+      "bytes": 41208037,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 274129,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-26T12:15:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 1.33,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/raw/weather/open_meteo_weather.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/weather/open_meteo_weather.csv",
+      "sha256": "996b48c8085240cd505105688e75757d29f7f9e2ebd1acda7b2772724974c039",
+      "bytes": 3170780,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 68520,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-25T23:00:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 14.58,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/reports/actual_vs_predicted.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/actual_vs_predicted.csv",
+      "sha256": "aa2a197537fce4fcc853093c3b8ace5e5e570ab8018f09ab1733b834883cf488",
+      "bytes": 806734,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 15561,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2025-01-01T00:00:00+00:00",
+          "latest_aware_utc": "2026-10-23T11:00:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 74.58,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/reports/detected_anomalies.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/detected_anomalies.csv",
+      "sha256": "a765bcf21bd56078281cbfcec1087997b6f9429405fef597f38a50f0d5cb051b",
+      "bytes": 112875,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 684,
+          "timestamp_column": "timestamp",
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": "2021-11-24T16:00:00+00:00",
+          "latest_aware_utc": "2026-09-22T17:00:00+00:00",
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": 812.58,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/reports/final_holdout_metrics.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/final_holdout_metrics.csv",
+      "sha256": "60c1830414df97f68c6a2de67c242305427014d5049bc2945bbd8f29e545d0ba",
+      "bytes": 540,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 1,
+          "timestamp_column": null,
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": null,
+          "latest_aware_utc": null,
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": null,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "data/reports/feature_importance.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/feature_importance.csv",
+      "sha256": "935e00ee045f485e607fd0429816747757ad4885d046d8e6bc062361c70fe466",
+      "bytes": 1671,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "aggregate_only",
+          "row_count": 31,
+          "timestamp_column": null,
+          "invalid_timestamp_rows": 0,
+          "earliest_aware_utc": null,
+          "latest_aware_utc": null,
+          "latest_naive_timestamp": null,
+          "latest_aware_age_hours": null,
+          "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+          "sensitive_header_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "artifacts/models/final_model_release_manifest.json",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/artifacts/models/final_model_release_manifest.json",
+      "sha256": "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6",
+      "bytes": 2749,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "parsed_metadata_only",
+          "sensitive_key_count": 0,
+          "internal_path_value_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650",
+      "bytes": 2774,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 420,
+      "freshness": {
+        "observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+        "summary": {
+          "status": "parsed_metadata_only",
+          "sensitive_key_count": 0,
+          "internal_path_value_count": 0,
+          "stable_during_summary": true,
+          "sensitivity_review_required": false
+        }
+      }
+    },
+    {
+      "relative_path": "database/electricity_trading.db",
+      "source": "/home/ec2-user/powerflow-recovery-phase5d2-operational/20261026T022230.137446Z/electricity_trading.db",
+      "sha256": "21fcb0e920ffaf13f214e39720e1176e012086d6ffa7b8a7ed736b6e4ab79690",
+      "bytes": 12115968,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": 384,
+      "freshness": {
+        "classification": "HISTORICAL",
+        "snapshot_cutoff_utc": "2026-10-26T02:22:00Z",
+        "accepted_by_owner": true,
+        "not_current_operational_state": true
+      }
+    }
+  ],
+  "publication_provenance": {
+    "source_preflight_sha256": "9c7e9aa35dd7f70c4abc8382b3de53279c26e6fb0bd2586399a08fe908551642",
+    "inventory_observed_as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+    "owner_accepts_historical_A1": true
+  },
+  "preserved_hashes": {
+    "/etc/nginx/conf.d/powerflow.conf": "407a3ba22e0d2ef74ed638e942f1e7a91336342eed0074008bb8484d62928d7d",
+    "/etc/nginx/conf.d/powerflow-staging-acme.conf": "4d3f247575b0f5c1d447d6efac43711ab5f7c438185d32d2fa708e8bc1a41e4c"
+  },
+  "candidate_unit_sha256": "685ad17fbfdd39b04a0e114c469e0898aa042c3a80530a373adc0126311c7a2a",
+  "candidate_env_sha256": "ee1ea96ebd2aa9b1c15891fd4cb9adf1c6ee7d06d6177b99bb1f375419b36704",
+  "candidate_nginx_sha256": "ba9cc88e8a9b8f9401a713ccc2289f1c4375aa734745a6bfdbb431ce240e96ba",
+  "disk_budget_bytes": 531640036
+}

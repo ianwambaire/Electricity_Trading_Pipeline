@@ -1,5 +1,7 @@
 # React staging execution review — LOCAL proposal, not executed
 
+> **2026-10-26 complete local package:** [install-package/REVIEW.md](install-package/REVIEW.md) supersedes the partial installation/activation commands below. It binds the original immutable release, verified Linux wheels and exact production publication hashes; supplies identity creation, atomic publisher, isolated installer, effective-resource checks, staging activation and rollback. Nothing has executed remotely. Additional write paths require explicit approval; Cognito remains separate. See install-package/BUILD-RESULTS.json for the103-test result and exact hashes. Do not combine the obsolete shell sequence below with the new installer.
+
 Release: `phase-staging-https-ready-20261026`; Mac candidate `/private/tmp/powerflow-react-stage-review-dudwnuhr/candidate`; 68 files, 1,271,788 bytes. Manifest SHA256 `50be8e7a20c462eb8850d9bf61b77bb655f687f85c725cbd3d903b7ff14aad27`. Static assets are unchanged from the verified staging-origin build. Package verifier checks every file, exact inventory and public OIDC configuration. No datasets, databases, credentials, environment files, recovery artifacts, venv or model binaries are packaged.
 
 ## Confirmed checkpoint and remaining Linux gate
@@ -85,3 +87,11 @@ Publication footprint with A1 is102,895,192bytes. Destination and parent are abs
 EC2 base interpreter `/usr/bin/python3.14`, base `/usr`, stdlib `/usr/lib64/python3.14` are outside protected home paths, with traversable/readable mode bits. Version3.14.7 and ABI match local Linux tests. EC2glibc2.34 is >= every retained binary wheel's minimum tagged floor (cryptography is2.34). Static path/ABI/tag prerequisites are satisfied; actual EC2 imports and effective ProtectHome/cgroup/BPF enforcement remain unverified. Do not point candidate at the production home venv or copy a relocatable test venv.
 
 Next: separately approve a concrete consistent/hash-bound publication operation accepting A1's historical cutoff, or separately authorize a fresh SQLite backup if current operational data is required. No source copy, directory creation, runtime installation, service/group creation or activation is authorized by the inspection. Preserve observed hashes for the next proposal; recheck rather than silently accepting changed source files.
+
+## Publication execution request — stopped before remote execution
+
+Owner explicitly accepts the existing A1 operational snapshot from2026-10-26 02:22UTC as HISTORICAL staging data. No fresh operational snapshot is requested. The12 observed source hashes and A1 hash remain the only permitted source set.
+
+Local review found no reviewed production hash-bound atomic publisher implementation. `publication-preflight-readonly.py` cannot publish; `scripts/prepare_preflight_data.py` is local-only, includes additional files and is not a substitute. The last verified candidate identity `powerflow-api` was absent; this request does not authorize its creation. The publication parent was also absent at last inspection, so any parent/scratch path writes must be explicitly covered by the eventual implementation.
+
+Per the owner's instruction to stop if a new script/identity/additional privileges are required, no publication SSH session was opened, no new publisher was written, and no remote directories, copies or permissions were changed. Next review must cover a concrete hash-bound publisher and the minimum non-login candidate identity/group setup (or verification of an independently created approved identity), including exact filesystem boundaries and final candidate-access/atomicity checks. No automatic source-hash refresh or broadening is allowed.

@@ -56,3 +56,11 @@ Prepare and separately approve a hash-bound publication execution package: exact
 Candidate runtime installation, account/group creation, systemd/unit enforcement, Cognito staging URLs, Nginx activation and real-account acceptance remain separate approved gates. Next read-only host inspection is not automatically authorized.
 
 Private captures: `/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-publication-preflight-bnuzb84b`. Local payload safety tests:4 passed; no Git operations.
+
+## Publication execution request — stopped before remote execution
+
+Owner explicitly accepts the existing A1 operational snapshot from2026-10-26 02:22UTC as HISTORICAL staging data. No fresh operational snapshot is requested. The12 observed source hashes and A1 hash remain the only permitted source set.
+
+Local review found no reviewed production hash-bound atomic publisher implementation. `publication-preflight-readonly.py` cannot publish; `scripts/prepare_preflight_data.py` is local-only, includes additional files and is not a substitute. The last verified candidate identity `powerflow-api` was absent; this request does not authorize its creation. The publication parent was also absent at last inspection, so any parent/scratch path writes must be explicitly covered by the eventual implementation.
+
+Per the owner's instruction to stop if a new script/identity/additional privileges are required, no publication SSH session was opened, no new publisher was written, and no remote directories, copies or permissions were changed. Next review must cover a concrete hash-bound publisher and the minimum non-login candidate identity/group setup (or verification of an independently created approved identity), including exact filesystem boundaries and final candidate-access/atomicity checks. No automatic source-hash refresh or broadening is allowed.

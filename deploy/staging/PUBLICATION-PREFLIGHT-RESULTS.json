@@ -581,5 +581,19 @@
     "No effective ProtectHome/unit/BPF enforcement test; mode-bit analysis only"
   ],
   "private_capture_directory": "/var/folders/1j/fq1jzz6d5vv_y1xqd8z5lvb40000gn/T/powerflow-publication-preflight-bnuzb84b",
-  "publication_authorized": false
+  "publication_authorized": false,
+  "publication_execution_request": {
+    "historical_A1_cutoff_explicitly_accepted": "2026-10-26T02:22:00Z",
+    "execution_attempted": false,
+    "ssh_invocations_for_publication_request": 0,
+    "outcome": "STOPPED_AT_USER_APPROVAL_BOUNDARY",
+    "reasons": [
+      "No previously reviewed production hash-bound atomic publisher implementation exists; preflight is read-only and prepare_preflight_data.py is local-only with a broader source set",
+      "Last verified powerflow-api candidate identity was absent; current existence not rechecked and creation is outside this authorization",
+      "Last inspected /srv/powerflow parent was absent; any required parent creation or temporary-path scope must be explicit in the reviewed implementation"
+    ],
+    "new_publisher_created": false,
+    "identities_created": false,
+    "remote_changes": false
+  }
 }

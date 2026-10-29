@@ -1,0 +1,92 @@
+{
+  "checks": {
+    "current_link": true,
+    "new_release_absent": true,
+    "helper_absent": true,
+    "service": true,
+    "python": true
+  },
+  "files": {
+    "requirements/api.lock": {
+      "match": true
+    },
+    "src/api/__init__.py": {
+      "match": true
+    },
+    "src/api/account_routes.py": {
+      "match": true
+    },
+    "src/api/account_service.py": {
+      "match": true
+    },
+    "src/api/admin_operations.py": {
+      "match": true
+    },
+    "src/api/anomalies.py": {
+      "match": true
+    },
+    "src/api/app.py": {
+      "match": true
+    },
+    "src/api/database.py": {
+      "match": true
+    },
+    "src/api/feature_parity.py": {
+      "match": true
+    },
+    "src/api/market_data.py": {
+      "match": true
+    },
+    "src/api/mfa_routes.py": {
+      "match": true
+    },
+    "src/api/mfa_service.py": {
+      "match": true
+    },
+    "src/api/model_summaries.py": {
+      "match": true
+    },
+    "src/api/operations_summary.py": {
+      "match": true
+    },
+    "src/api/readiness.py": {
+      "match": true
+    },
+    "src/api/restricted_reports.py": {
+      "match": true
+    },
+    "src/api/runtime.py": {
+      "match": true
+    },
+    "src/api/security.py": {
+      "match": true
+    },
+    "src/shared/__init__.py": {
+      "match": true
+    },
+    "src/shared/forecast_evaluation.py": {
+      "match": true
+    },
+    "src/shared/market_context.py": {
+      "match": true
+    },
+    "src/shared/operational_health.py": {
+      "match": true
+    }
+  },
+  "service": {
+    "ActiveState": "active",
+    "MainPID": "1824094",
+    "User": "powerflow-api",
+    "MemoryMax": "536870912",
+    "MemorySwapMax": "0",
+    "WorkingDirectory": "/opt/powerflow/react-current"
+  },
+  "runtime": {
+    "python": "3.14.7",
+    "fastapi": "0.136.3",
+    "pandas": "2.3.3",
+    "uvicorn": "0.48.0"
+  },
+  "passed": true
+}

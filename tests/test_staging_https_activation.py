@@ -258,3 +258,29 @@ def test_options_cannot_bypass_directive_limit(options):
     real.write_text('ssl_prefer_server_ciphers on;' * 4097)
     with pytest.raises(RuntimeError, match='expanded_directive_limit'):
         m.review_config(config_root=root)
+
+
+@pytest.mark.parametrize('quoted_empty',["\"\"","''"])
+def test_empty_quoted_proxy_header_is_an_argument_not_a_terminator(config,quoted_empty):
+    root,target,_=config
+    target.write_text('server { listen 443 ssl; server_name '+m.HOST+'; location /api/ { proxy_set_header Connection '+quoted_empty+'; proxy_pass http://127.0.0.1:8010/; } }')
+    hashes,summary=m.review_config(True,config_root=root)
+    assert str(target) in hashes
+    assert any(m.HOST in row['known_names'] for row in summary)
+
+
+def test_original_reviewed_react_vhost_including_empty_header_parses(config):
+    root,target,_=config
+    body=(ROOT/'deploy/staging/staging.powerflowenergy.dev.conf').read_text()
+    headers=root/'security-headers.conf';headers.write_bytes((ROOT/'deploy/preflight/security-headers.conf').read_bytes())
+    body=body.replace('/etc/nginx/powerflow/security-headers.conf',str(headers))
+    target.write_text(body)
+    hashes,summary=m.review_config(True,config_root=root)
+    assert str(target) in hashes and str(headers) in hashes
+    assert len(summary)==3
+
+
+def test_empty_argument_does_not_hide_missing_semicolon(config):
+    root,target,_=config
+    target.write_text('server { listen 443 ssl; server_name '+m.HOST+'; location /api/ { proxy_set_header Connection "" } }')
+    with pytest.raises(RuntimeError,match='invalid_directive_end'):m.review_config(True,config_root=root)

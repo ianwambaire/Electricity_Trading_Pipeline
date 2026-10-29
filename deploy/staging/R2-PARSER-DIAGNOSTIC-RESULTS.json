@@ -1,0 +1,1530 @@
+{
+  "read_only": true,
+  "errors": [],
+  "markers": {
+    "installed.ok": true,
+    "activation.started": true,
+    "activated.ok": false,
+    "previous-https.conf": true,
+    "rollback.started": false
+  },
+  "captures": [
+    {
+      "name": "base-interpreter-1793022167757882479.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "base-interpreter-1793022167757882479.stdout",
+      "bytes": 126
+    },
+    {
+      "name": "candidate-listener-1793023677660344271.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-listener-1793023677660344271.stdout",
+      "bytes": 83
+    },
+    {
+      "name": "candidate-restarts-1793023678941505196.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023678941505196.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023683965836930.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023683965836930.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023688989747985.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023688989747985.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023694013251749.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023694013251749.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023699037126195.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023699037126195.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023704060578365.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023704060578365.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023709083904314.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023709083904314.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023714107571521.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023714107571521.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023719132024632.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023719132024632.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023724155497400.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023724155497400.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023729179110281.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023729179110281.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-restarts-1793023734202980677.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-restarts-1793023734202980677.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "candidate-state-1793022167727863379.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-state-1793022167727863379.stdout",
+      "bytes": 10
+    },
+    {
+      "name": "candidate-state-1793023465579868518.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-state-1793023465579868518.stdout",
+      "bytes": 10
+    },
+    {
+      "name": "certificate-chain-1793023676055132168.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "certificate-chain-1793023676055132168.stdout",
+      "bytes": 81
+    },
+    {
+      "name": "certificate-expiry-1793023676035106481.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "certificate-expiry-1793023676035106481.stdout",
+      "bytes": 28
+    },
+    {
+      "name": "certificate-hostname-1793023676020790300.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "certificate-hostname-1793023676020790300.stdout",
+      "bytes": 60
+    },
+    {
+      "name": "certificate-public-metadata-1793023676069132219.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "certificate-public-metadata-1793023676069132219.stdout",
+      "bytes": 139
+    },
+    {
+      "name": "create-group-1793022168294883855.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "create-group-1793022168294883855.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "create-isolated-venv-1793022173987844631.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "create-isolated-venv-1793022173987844631.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "create-user-1793022168351962555.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "create-user-1793022168351962555.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "daemon-reload-1793023676574312351.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "daemon-reload-1793023676574312351.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "effective-unit-properties-1793023677639028035.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "effective-unit-properties-1793023677639028035.stdout",
+      "bytes": 384
+    },
+    {
+      "name": "guard-restarts-1793023677621090902.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023677621090902.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023678660024536.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023678660024536.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023679683266175.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023679683266175.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023680706925357.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023680706925357.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023681767788085.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023681767788085.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023682824760509.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023682824760509.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023683852567443.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023683852567443.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023684876092155.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023684876092155.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023685899658890.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023685899658890.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023686922579583.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023686922579583.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023687945873446.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023687945873446.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023688969108811.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023688969108811.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023689992402050.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023689992402050.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023691015840106.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023691015840106.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023692041329105.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023692041329105.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023693064432387.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023693064432387.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023694090298998.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023694090298998.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023695114138769.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023695114138769.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023696137803009.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023696137803009.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023697160980763.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023697160980763.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023698184633046.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023698184633046.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023699207616695.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023699207616695.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023700230872402.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023700230872402.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023701254390724.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023701254390724.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023702279199500.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023702279199500.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023703302643920.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023703302643920.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023704325791897.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023704325791897.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023705350561260.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023705350561260.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023706374800993.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023706374800993.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023707398383392.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023707398383392.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023708423034127.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023708423034127.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023709446607250.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023709446607250.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023710469789550.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023710469789550.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023711551359014.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023711551359014.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023712574945673.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023712574945673.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023713597991048.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023713597991048.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023714621585035.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023714621585035.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023715644665467.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023715644665467.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023716669103869.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023716669103869.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023717692155047.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023717692155047.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023718715672664.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023718715672664.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023719738981135.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023719738981135.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023720761984403.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023720761984403.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023721785320921.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023721785320921.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023722808795428.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023722808795428.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023723832184896.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023723832184896.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023724855224769.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023724855224769.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023725878458374.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023725878458374.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023726901435248.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023726901435248.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023727925060650.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023727925060650.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023728948196224.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023728948196224.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023729971735331.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023729971735331.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023730998035683.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023730998035683.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023732026924188.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023732026924188.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023733050729584.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023733050729584.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023734073771527.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023734073771527.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023735101795866.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023735101795866.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023736130385663.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023736130385663.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023737153784886.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023737153784886.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023738176912697.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023738176912697.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "guard-restarts-1793023739199939566.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "guard-restarts-1793023739199939566.stdout",
+      "bytes": 2
+    },
+    {
+      "name": "nginx-baseline-1793023676162625278.stderr",
+      "bytes": 132
+    },
+    {
+      "name": "nginx-baseline-1793023676162625278.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "nginx-installed-1793023739257214891.stderr",
+      "bytes": 132
+    },
+    {
+      "name": "nginx-installed-1793023739257214891.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "offline-api-install-1793022187094716197.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "offline-api-install-1793022187094716197.stdout",
+      "bytes": 6797
+    },
+    {
+      "name": "pip-check-1793022187462371383.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "pip-check-1793022187462371383.stdout",
+      "bytes": 30
+    },
+    {
+      "name": "production-identities-1793022168066649397.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793022168066649397.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023464989709774.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023464989709774.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023469049370555.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023469049370555.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023675975832022.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023675975832022.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023675990785790.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023675990785790.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023677605606327.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023677605606327.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023678646209133.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023678646209133.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023678955998225.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023678955998225.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023679674962707.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023679674962707.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023680698673588.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023680698673588.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023681750284304.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023681750284304.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023682805476786.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023682805476786.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023683843859055.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023683843859055.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023683980953255.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023683980953255.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023684867679150.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023684867679150.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023685891165146.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023685891165146.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023686914367332.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023686914367332.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023687937451608.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023687937451608.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023688960706173.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023688960706173.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023689004272167.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023689004272167.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023689984048887.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023689984048887.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023691007422627.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023691007422627.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023692032687086.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023692032687086.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023693056108375.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023693056108375.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023694028091642.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023694028091642.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023694081093834.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023694081093834.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023695105766038.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023695105766038.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023696129365295.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023696129365295.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023697152643000.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023697152643000.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023698176217266.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023698176217266.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023699051438037.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023699051438037.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023699199424935.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023699199424935.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023700222488464.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023700222488464.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023701245870603.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023701245870603.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023702270862582.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023702270862582.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023703294264238.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023703294264238.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023704075077489.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023704075077489.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023704317611898.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023704317611898.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023705340688670.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023705340688670.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023706366397458.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023706366397458.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023707389909795.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023707389909795.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023708413905248.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023708413905248.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023709098332848.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023709098332848.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023709438234116.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023709438234116.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023710461500192.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023710461500192.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023711537840168.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023711537840168.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023712566703942.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023712566703942.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023713589762852.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023713589762852.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023714122889249.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023714122889249.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023714613220757.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023714613220757.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023715636377615.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023715636377615.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023716660922936.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023716660922936.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023717683965678.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023717683965678.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023718707208872.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023718707208872.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023719146451586.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023719146451586.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023719730468362.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023719730468362.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023720753829111.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023720753829111.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023721777080626.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023721777080626.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023722800352939.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023722800352939.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023723823778863.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023723823778863.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023724170100936.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023724170100936.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023724846957241.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023724846957241.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023725869970843.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023725869970843.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023726893168999.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023726893168999.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023727916733216.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023727916733216.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023728940014085.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023728940014085.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023729193795821.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023729193795821.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023729963336463.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023729963336463.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023730986735831.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023730986735831.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023732018367572.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023732018367572.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023733042293690.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023733042293690.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023734065570604.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023734065570604.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023734217704591.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023734217704591.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023735092306692.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023735092306692.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023736119072501.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023736119072501.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023737145543909.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023737145543909.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023738168630971.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023738168630971.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "production-identities-1793023739191603490.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793023739191603490.stdout",
+      "bytes": 408
+    },
+    {
+      "name": "resume-offline-regressions-1793023468711376231.stderr",
+      "bytes": 8425
+    },
+    {
+      "name": "resume-offline-regressions-1793023468711376231.stdout",
+      "bytes": 146
+    },
+    {
+      "name": "resume-pip-check-1793023466144717956.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "resume-pip-check-1793023466144717956.stdout",
+      "bytes": 30
+    },
+    {
+      "name": "resume-published-access-1793023468741577958.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "resume-published-access-1793023468741577958.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "resume-systemd-syntax-1793023468998258929.stderr",
+      "bytes": 201
+    },
+    {
+      "name": "resume-systemd-syntax-1793023468998258929.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "start-candidate-1793023676605217552.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "start-candidate-1793023676605217552.stdout",
+      "bytes": 0
+    }
+  ],
+  "nginx_capture_summary": [
+    {
+      "name": "nginx-baseline-1793023676162625278.stdout",
+      "syntax_success_message": false,
+      "test_success_message": false,
+      "warning_present": false
+    },
+    {
+      "name": "nginx-baseline-1793023676162625278.stderr",
+      "syntax_success_message": true,
+      "test_success_message": true,
+      "warning_present": false
+    },
+    {
+      "name": "nginx-installed-1793023739257214891.stdout",
+      "syntax_success_message": false,
+      "test_success_message": false,
+      "warning_present": false
+    },
+    {
+      "name": "nginx-installed-1793023739257214891.stderr",
+      "syntax_success_message": true,
+      "test_success_message": true,
+      "warning_present": false
+    }
+  ],
+  "retained_runtime_security": [
+    {
+      "MainPID": "1824094",
+      "NRestarts": "0",
+      "ControlGroup": "/system.slice/powerflow-candidate-api.service",
+      "MemoryHigh": "402653184",
+      "MemoryMax": "536870912",
+      "MemorySwapMax": "0",
+      "IPAddressDeny": "169.254.169.254/32 fd00:ec2::254/128",
+      "CapabilityBoundingSet": "",
+      "User": "powerflow-api",
+      "Group": "powerflow-api",
+      "PrivateTmp": "yes",
+      "PrivateDevices": "yes",
+      "ProtectHome": "yes",
+      "ProtectSystem": "strict",
+      "NoNewPrivileges": "yes",
+      "ActiveState": "active",
+      "SubState": "running"
+    }
+  ],
+  "staging_https": {
+    "sha256": "ba9cc88e8a9b8f9401a713ccc2289f1c4375aa734745a6bfdbb431ce240e96ba",
+    "matches_placeholder": false,
+    "matches_candidate": true
+  },
+  "strict_review": {
+    "passed": false,
+    "error_type": "RuntimeError",
+    "safe_error": "invalid_directive_end"
+  },
+  "parser_fault": [
+    {
+      "error": "invalid_directive_end",
+      "source": "/etc/nginx/conf.d/powerflow-staging-https.conf",
+      "context": [
+        "http",
+        "server",
+        "location"
+      ],
+      "parser_line": 169,
+      "terminator_repr": "''",
+      "directive_name": "proxy_set_header",
+      "matching_source_lines": [
+        {
+          "line": 41,
+          "directive": "proxy_set_header Connection \"\";"
+        }
+      ]
+    }
+  ],
+  "candidate": {
+    "exit_status": 0,
+    "properties": {
+      "MainPID": "1824094",
+      "NRestarts": "0",
+      "ControlGroup": "/system.slice/powerflow-candidate-api.service",
+      "MemoryCurrent": "64405504",
+      "MemoryHigh": "402653184",
+      "MemoryMax": "536870912",
+      "MemorySwapMax": "0",
+      "IPAddressDeny": "169.254.169.254/32 fd00:ec2::254/128",
+      "CapabilityBoundingSet": "",
+      "User": "powerflow-api",
+      "Group": "powerflow-api",
+      "PrivateTmp": "yes",
+      "PrivateDevices": "yes",
+      "ProtectHome": "yes",
+      "ProtectSystem": "strict",
+      "NoNewPrivileges": "yes",
+      "LoadState": "loaded",
+      "ActiveState": "active",
+      "SubState": "running"
+    }
+  },
+  "cgroup": {
+    "memory.high": "402653184",
+    "memory.max": "536870912",
+    "memory.swap.max": "0",
+    "memory.current": "64405504",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+  },
+  "candidate_listener": {
+    "exit_status": 0,
+    "output": "LISTEN 0      2048   127.0.0.1:8010 0.0.0.0:* users:((\"uvicorn\",pid=1824094,fd=6))"
+  },
+  "retained_BPF_evidence": [
+    {
+      "ingress": [
+        425
+      ],
+      "egress": [
+        424
+      ]
+    }
+  ],
+  "candidate_HTTP": {
+    "/health": 200,
+    "/ready": 200
+  },
+  "production_services_match": true,
+  "production_config_and_ACME": {
+    "/etc/nginx/conf.d/powerflow.conf": true,
+    "/etc/nginx/conf.d/powerflow-staging-acme.conf": true
+  },
+  "production_certificate_match": true,
+  "status": "complete"
+}

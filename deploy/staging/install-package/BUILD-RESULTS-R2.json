@@ -1,0 +1,57 @@
+{
+  "bundle_directory": "/private/tmp/powerflow-install-bundle-ojjp9f0y",
+  "bundle_sha256": "1a716274b69348a204cbc2300400b65a4485d33505ea4518c4bf7df4d5e815d8",
+  "bootstrap_sha256": "f5150eccae5247c57efd4a16a42c769e5ac7a0e552ab408e4ab6d4a6854f1445",
+  "release_id": "phase-staging-https-ready-20261026",
+  "publication_data_files": 13,
+  "publication_data_bytes": 102895837,
+  "private_transfer_bytes": 38127702,
+  "disk_budget_plus_3GiB_bytes": 3752865508,
+  "artifacts": [
+    {
+      "name": "release.tar.gz",
+      "bytes": 497556,
+      "sha256": "8a32da48575760f42b04043f249edeff7459c36212cf1d4eb09fbfb3e1479f3e"
+    },
+    {
+      "name": "wheels.tar.gz",
+      "bytes": 37533461,
+      "sha256": "d71db0518421463fa78edd1bcd8d6db8cc3bf6008ed62972be5affdfe9161e97"
+    },
+    {
+      "name": "linux-regression-unittest.py",
+      "bytes": 6126,
+      "sha256": "6c32ebfb0aa97bc5a8dd4517c5dd96fddc29ebb0d667d6394b71fb804d2a3580"
+    },
+    {
+      "name": "activate-staging-https.py",
+      "bytes": 19670,
+      "sha256": "9c9173cf3f8da0e004dd30e16ca320f19ab860fa0770fa6a87414869b3efa6d4"
+    },
+    {
+      "name": "staging-support.conf",
+      "bytes": 320,
+      "sha256": "bbfcc177625e6938aff1945e6435681cb39a83dc4b65624959af339e64b1b790"
+    }
+  ],
+  "control_hashes": {
+    "install.py": "6eac8ca4c357de1ef147426cfd12a8a64addb6b753db26ac4f1dd942745a1e02",
+    "publisher.py": "9fe702f963c85817783697a595ff7ce4cc0264e04f31e92b9eef93af1fbcab01",
+    "cgroup_bpf.py": "79282e3493e0cf447a13193ffa487ff3c3d7c7202ed9de136c7f5a2202084fb7",
+    "bootstrap.py": "f5150eccae5247c57efd4a16a42c769e5ac7a0e552ab408e4ab6d4a6854f1445"
+  },
+  "runner_sha256": "89c9621ff8cce664fc5f59993c4ae7f60bd74ac38b6bf99c87aeca8aab43ddd4",
+  "source_inspection_sha256": "963d288b322e697334b61c5252554e8a345a474f32512cdbbffa7ec077878298",
+  "local_tests": {
+    "passed": 47,
+    "warnings": 1,
+    "remote_mutations": false,
+    "revised_package_executed": false
+  },
+  "additional_hashes": {
+    "deploy/staging/diagnose-publication-drift.py": "969d619113f2c2b1af515c65d943dca1f62b6977a27ade7bcebe9b952cd1fb82",
+    "deploy/staging/prepare-publication-revision.py": "417cc5d709c78846afac9ecc744d9bf8e72947b8449e820c8434c67fbf37b86c",
+    "deploy/staging/PUBLICATION-REVISION-R2.json": "9c7e9aa35dd7f70c4abc8382b3de53279c26e6fb0bd2586399a08fe908551642",
+    "deploy/staging/install-package/build.py": "8aa5d870df5cced49c43c12ecde33861baf54af6e16bf807df22bee20ad33679"
+  }
+}

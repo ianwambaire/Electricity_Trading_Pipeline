@@ -5,10 +5,10 @@
     "run-preflight.py": "46f3ca0d682af3fb344e4dbd60564d986beca5cc265995084c6b82b9652cd6bd",
     "PREFLIGHT-RESULTS.json": "d6f23a38e5d3d2b482d80e0024f48fba510e9e4304220152feab90304b34b966",
     "BASELINE-COMPARISON.json": "aede05f12b63b2f42d4378b276244b0f551726d01e588859aa3e751cea2f57a0",
-    "deploy-template.py": "98ca911c536a3d48cf26a4c025212ca16bb23f6f03431dbb5fbac1dc86200141",
-    "deploy-capture.py": "842d3a0f222befb07221643159583ae307da853dfdcbb619138b5598305274f2",
-    "run-deployment.py": "72052dac88b5cc8eecba7f425327ab2125e66289dff63d734ea931ed2fa3147c",
-    "DEPLOYMENT-REVIEW-RESULTS.json": "54d58c293bba88e8c7268511585a431dc5485b18bf2a570e2cd0bdc15e3c05c3"
+    "deploy-template.py": "23fae4bc965c3bac3c94e6c00bdf05ea6082349a49c20c7e02411dcbe511e94b",
+    "deploy-capture.py": "81f2620e5da581fc5e81bdca4683b97491cdf28f97410f6a02e1b3a15beb16a7",
+    "run-deployment.py": "9c425a63e552dbc66e851f3bd457112819f75b0f598a158cf70a351b733fa3f8",
+    "DEPLOYMENT-REVIEW-RESULTS.json": "f4d3aa800d1dd3989946d79b2a94a604104f78bd949d06f364f2376b07b762a4"
   },
   "sources": {
     "src/models/next24h.py": {
@@ -27,6 +27,7 @@
       "bytes": 6613
     }
   },
-  "test_file_sha256": "8a8149e9bea8e947a06fd12654d6ed3f9333f4baabe747cb85765d38bdd7a847",
-  "supervisor_sha256": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
+  "test_file_sha256": "c791e6f30b5d6e5cb09b6a9873049cb065ac4a5f3fa825f13a14110e23a05482",
+  "supervisor_sha256": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40",
+  "supersedes_manifest_sha256": "bd70f27d2821fc1a6c0d0728cb9b39dbd6d5f4b8796c823352310b33138174c1"
 }

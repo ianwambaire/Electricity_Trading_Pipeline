@@ -52,5 +52,27 @@
   "prior_capture_tests_passed": 174,
   "frontend_tests_previously_passed": 92,
   "code_deployed": false,
-  "receipts_written_on_ec2": false
+  "receipts_written_on_ec2": false,
+  "local_correction": {
+    "production_access_in_this_task": false,
+    "deployment_executed": false,
+    "status": "LOCAL_TESTS_PASSED_NOT_DEPLOYED",
+    "implemented_guards": [
+      "independent_process_scan_all_visible_uids_and_proc_visibility",
+      "ram_swap_disk_pre_and_post",
+      "receipt_uid_gid_mode_readback",
+      "backup_hash_and_permission_readback",
+      "post_prefect_schedule_concurrency_collision",
+      "staging_https_react_asset_and_api_proxy",
+      "candidate_health_and_readiness",
+      "streamlit_and_production_api_availability",
+      "stable_six_service_identities",
+      "no_write_preflight",
+      "explicit_partial_installation_states"
+    ],
+    "package_safety_tests_passed": 80,
+    "total_targeted_python_tests_passed": 254,
+    "syntax_checks": "PASS",
+    "production_runtime_checks": "NOT_EXECUTED"
+  }
 }

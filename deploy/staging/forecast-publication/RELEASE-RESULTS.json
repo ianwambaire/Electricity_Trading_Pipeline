@@ -1,7 +1,7 @@
 {
-  "release_path": "/private/tmp/powerflow-overlay-candidate-xlgbvg1_/release",
-  "release_id": "phase-next24-overlay-20261029",
-  "manifest_sha256": "ff8cf370548ec94bf283ad9b13872631bc08a27533a7dfba9a3ab36ae51d0e00",
+  "release_path": "/private/tmp/powerflow-evidence-candidate-rtjpdv2s/release",
+  "release_id": "phase-next24-evidence-20261031",
+  "manifest_sha256": "f54241ec865493964a43365919113fc16e7e5f33e61b6a910993ce681af9577b",
   "verification_exit": 0,
   "deployed": false
 }

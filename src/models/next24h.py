@@ -112,6 +112,7 @@ def create_next24h_forecast(
     *,
     model_release: str,
     features=FINAL_FEATURES,
+    capture_input=None,
 ) -> pd.DataFrame:
     if len(issue_row) != 1:
         raise ValueError("Exactly one issue-time row is required.")
@@ -123,7 +124,10 @@ def create_next24h_forecast(
         raise ValueError("Forecast issue time must be an exact UTC hour.")
     if not model_release:
         raise ValueError("Candidate model release must be identified.")
-    predictions = np.asarray(model.predict(prepare_candidate_features(issue_row, features)))
+    matrix = prepare_candidate_features(issue_row, features)
+    if capture_input is not None:
+        capture_input(matrix.copy(deep=True))
+    predictions = np.asarray(model.predict(matrix))
     if predictions.shape != (1, len(HORIZONS)) or not np.isfinite(predictions).all():
         raise ValueError("Candidate model must return 24 finite hourly predictions.")
     return pd.DataFrame(

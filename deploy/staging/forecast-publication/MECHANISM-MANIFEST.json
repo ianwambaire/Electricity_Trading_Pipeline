@@ -7,11 +7,11 @@
     },
     "src/shared/forecast_publication.py": {
       "status": "created",
-      "sha256": "41fa76b884d48a4555af80208f3a4dee51c278588e129ad1099f19c534379a60"
+      "sha256": "264f3e33be1b2887174899473b7f955cc6fa8206ce1e0d7b0961da958eea5395"
     },
     "deploy/staging/forecast-publication/prepare.py": {
       "status": "created",
-      "sha256": "49b9c36926c0b59b07772a26175fbc41c9b343170943f88b83d7339399953a08"
+      "sha256": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14"
     },
     "deploy/staging/forecast-publication/publish.py": {
       "status": "created",
@@ -19,7 +19,7 @@
     },
     "deploy/staging/forecast-publication/README.md": {
       "status": "created",
-      "sha256": "67c4577dcd3123102637ad1dd55be32036f2c7b276eea568d5f8a0f324f35288"
+      "sha256": "76bebc939ee7d1a1317a7462417ca8a2d5d92a8782781cb1611d51e8f8551916"
     },
     "deploy/staging/forecast-publication/release-settings.json": {
       "status": "created",
@@ -59,7 +59,7 @@
     },
     "tests/test_forecast_publication.py": {
       "status": "created",
-      "sha256": "32b00e1b4208c40a304145c89778df5f2dd46bef69a8a53429b68d4ec83f934f"
+      "sha256": "64443e503ebf27501f3c194411e03ca77985ab7e3a081c33a2c86cc3da0f247a"
     },
     "frontend/tests/forecastPublication.test.ts": {
       "status": "created",
@@ -71,20 +71,36 @@
     },
     "deploy/staging/forecast-publication/RELEASE-RESULTS.json": {
       "status": "created",
-      "sha256": "c4230ea68c0830b72efa137a36b585fc494bf15f2b72d9b509ee17d32662045c"
+      "sha256": "b7e6dcf5f04fc773c8cd6046cae821529117a1f29d804e348ca2d70ee5f55b82"
     },
     "deploy/staging/forecast-publication/TOOLS-RESULTS.json": {
       "status": "created",
-      "sha256": "979717f00e2ca3a8682a8675d694715d3bc73375c37e86a038407218f954ea99"
+      "sha256": "415bff0fc82ae35ff06e8c7b7d511a580472b4d5f2ff1bd8a021e89f336a67b8"
+    },
+    "src/models/next24h.py": {
+      "status": "modified",
+      "sha256": "222c708d3a296cd31187efa7471c0c894076df4dc15a6e4a61168e0dd8c178fe"
+    },
+    "src/models/next24h_production.py": {
+      "status": "modified",
+      "sha256": "65c1514e96cc32360d7af462fc990a6c0d21d41f2dad69c9330c664c9901d65c"
+    },
+    "src/models/inference_evidence.py": {
+      "status": "created",
+      "sha256": "30f314fbc9cc2927e739f8f3fb8482c768331e5e0ed0aefaefae28c31769fbbb"
+    },
+    "tests/test_inference_evidence.py": {
+      "status": "created",
+      "sha256": "2718a33b17a2021030521b693bc4546429514e34d679416784a6cceb47af8eb6"
     }
   },
-  "python_tests_passed": 114,
+  "python_tests_passed": 174,
   "frontend_tests_passed": 92,
   "lint": "passed",
   "production_build": "passed",
   "staging_build": "passed",
   "release_files": 70,
-  "operator_packet_sha256": "919dba09e146d0871bae2678b2ccb05f4fca9ce0662427c2e9569f73c51a506b",
-  "release_manifest_sha256": "ff8cf370548ec94bf283ad9b13872631bc08a27533a7dfba9a3ab36ae51d0e00",
+  "operator_packet_sha256": "faeec014b4cde838fcffb3c285eef1995f38547d443162e529fa90ec7209a6b3",
+  "release_manifest_sha256": "f54241ec865493964a43365919113fc16e7e5f33e61b6a910993ce681af9577b",
   "production_data_included": false
 }

@@ -166,3 +166,31 @@ def read_active(root, now=None):
         return validate(raw,target.split("/")[1],now)
     except (OSError, ValueError, TypeError, KeyError, OverflowError) as error:
         raise Withheld("Forecast publication is withheld.") from error
+
+
+def verify_inference_receipt(proof, forecast_raw, provenance_raw, model_raw, rows, manifest):
+    """Require a versioned, cross-file receipt before building a publication."""
+    keys(proof, ('version', 'execution', 'inputs', 'inference', 'artifacts'))
+    require(type(proof['version']) is int and proof['version'] == 1)
+    keys(proof['artifacts'], ('forecast_sha256','provenance_sha256','model_manifest_sha256'))
+    require(proof['artifacts'] == dict(zip(
+        ('forecast_sha256','provenance_sha256','model_manifest_sha256'),
+        (hashlib.sha256(raw).hexdigest() for raw in (forecast_raw,provenance_raw,model_raw)))))
+    payload = {key: value for key,value in proof.items() if key != 'artifacts'}
+    binding = decode(provenance_raw).get('inference_evidence')
+    require(binding == {'schema_version':1, 'run_id':proof['execution']['run_id'],
+                        'payload_sha256':hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(',', ':'),allow_nan=False).encode()).hexdigest()})
+    inference = proof['inference']
+    keys(inference, ('feature_names','feature_values','issue_time','target_times','model','source_sha256','release_manifest_sha256'))
+    require(inference['feature_names'] == list(FEATURES))
+    values = inference['feature_values']
+    require(isinstance(values,list) and len(values) == len(FEATURES))
+    for value in values: number(value)
+    require(proof['inputs']['features'] == dict(zip(FEATURES,values)))
+    require(len(rows) == 24 and time(inference['issue_time']) == time(rows[0]['issue_time']))
+    require(isinstance(inference['target_times'],list) and len(inference['target_times']) == 24)
+    require([time(t) for t in inference['target_times']] == [time(row['target_time']) for row in rows])
+    require(inference['model'] == {key: manifest[key] for key in ('release_id','model_sha256','feature_contract_sha256')})
+    require(isinstance(inference['release_manifest_sha256'],str) and re.fullmatch('[0-9a-f]{64}',inference['release_manifest_sha256']))
+    keys(inference['source_sha256'], ('price','load','generation'))
+    require(all(isinstance(value,str) and re.fullmatch('[0-9a-f]{64}',value) for value in inference['source_sha256'].values()))

@@ -145,7 +145,18 @@ def test_offline_builder_projects_only_allowlisted_data(tmp_path):
         for r in b['forecasts']:w.writerow([r['issue_time'],r['target_time'],r['horizon_hours'],r['predicted_price_eur_mwh'],r['model_release']])
     provenance.write_text(json.dumps({'forecast_issue_time':ISSUE.isoformat(),'weather_hour':ISSUE.isoformat(),'weather_acquired_at_utc':b['provenance']['weather_acquired_at'],'weather_source':b['provenance']['weather_source'],'weather_endpoint':'unused-public-field'}))
     model.write_text(json.dumps({'feature_count':31,'features':list(contract.FEATURES),'horizons_hours':list(range(1,25)),'release_id':contract.RELEASE,'model_sha256':contract.MODEL_HASH,'feature_contract_sha256':contract.CONTRACT_HASH,'source_candidate_path':'excluded-internal-path'}))
-    evidence.write_text(json.dumps({'execution':b['execution'],'inputs':b['inputs']}))
+    proof = {'version':1,'execution':b['execution'],'inputs':b['inputs'],
+             'inference':{'feature_names':list(contract.FEATURES),'feature_values':[b['inputs']['features'][k] for k in contract.FEATURES],
+                          'issue_time':b['forecasts'][0]['issue_time'],'target_times':[r['target_time'] for r in b['forecasts']],
+                          'model':{k:json.loads(model.read_text())[k] for k in ['release_id','model_sha256','feature_contract_sha256']},
+                          'source_sha256':dict.fromkeys(['price','load','generation'],'a'*64),'release_manifest_sha256':'b'*64},
+             'artifacts':dict(zip(['forecast_sha256','provenance_sha256','model_manifest_sha256'],[hashlib.sha256(p.read_bytes()).hexdigest() for p in [forecast,provenance,model]]))}
+    payload = {key:value for key,value in proof.items() if key != 'artifacts'}
+    pr = json.loads(provenance.read_text())
+    pr['inference_evidence'] = {'schema_version':1,'run_id':proof['execution']['run_id'],'payload_sha256':hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
+    provenance.write_text(json.dumps(pr))
+    proof['artifacts']['provenance_sha256'] = hashlib.sha256(provenance.read_bytes()).hexdigest()
+    evidence.write_text(json.dumps(proof))
     files=[forecast,provenance,model,evidence];hashes=[hashlib.sha256(p.read_bytes()).hexdigest() for p in files]
     raw,digest=prepare.build(*files,hashes,NOW)
     assert contract.validate(raw,digest,NOW)==b

@@ -7,7 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
-from shared.forecast_publication import FEATURES, MAX_BYTES, require, safe_file, validate, decode
+from shared.forecast_publication import FEATURES, MAX_BYTES, require, safe_file, validate, decode, verify_inference_receipt
 
 
 def build(forecast, provenance, model, evidence, expected, now=None):
@@ -21,7 +21,7 @@ def build(forecast, provenance, model, evidence, expected, now=None):
         rows.append({'issue_time':row['forecast_issue_time'],'target_time':row['target_timestamp'],'horizon_hours':int(row['horizon_hours']),'predicted_price_eur_mwh':float(row['predicted_price_eur_mwh']),'model_release':row['model_release']})
     pr,manifest,proof=(decode(raw) for raw in blobs[1:])
     require(manifest.get('feature_count')==31 and manifest.get('features')==list(FEATURES) and manifest.get('horizons_hours')==list(range(1,25)))
-    require(set(proof)=={'execution','inputs'})
+    verify_inference_receipt(proof, *blobs[:3], rows, manifest)
     bundle={'version':1,'forecasts':rows,'model':{'release':manifest['release_id'],'model_sha256':manifest['model_sha256'],'feature_contract_sha256':manifest['feature_contract_sha256']},'provenance':{'issue_time':pr['forecast_issue_time'],'weather_hour':pr['weather_hour'],'weather_acquired_at':pr['weather_acquired_at_utc'],'weather_source':pr['weather_source']},'execution':proof['execution'],'inputs':proof['inputs']}
     raw=json.dumps(bundle,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
     digest=hashlib.sha256(raw).hexdigest();validate(raw,digest,now)

@@ -1,0 +1,56 @@
+{
+  "status": "PREPARED_NOT_DEPLOYED",
+  "inspection_exit": 0,
+  "inspection_observed_utc": "2026-10-31T10:47:04.606040+00:00",
+  "production_revision": "b165c8db5a208e8954058fac8cc415d7dfd53446",
+  "local_branch_revision": "19784139e406b66e1a0e504275d3ec1ecbf158ed",
+  "comparison": "exact_pre_capture_reconstruction_matches_remote_for_both_replaced_files",
+  "source_files": {
+    "src/models/next24h.py": {
+      "old_sha256": "6708af30d05d8f3f22cd7af0ad52de160c905fc40c25e586bcacded58a8fb4fd",
+      "new_sha256": "222c708d3a296cd31187efa7471c0c894076df4dc15a6e4a61168e0dd8c178fe",
+      "bytes": 9848
+    },
+    "src/models/next24h_production.py": {
+      "old_sha256": "403b20f8ad0d167848931a08117c4e6aea11455c2b39a10b258eab8799532419",
+      "new_sha256": "65c1514e96cc32360d7af462fc990a6c0d21d41f2dad69c9330c664c9901d65c",
+      "bytes": 19883
+    },
+    "src/models/inference_evidence.py": {
+      "old_sha256": null,
+      "new_sha256": "30f314fbc9cc2927e739f8f3fb8482c768331e5e0ed0aefaefae28c31769fbbb",
+      "bytes": 6613
+    }
+  },
+  "resources": {
+    "MemTotal": 2002505728,
+    "MemAvailable": 820158464,
+    "SwapTotal": 4294963200,
+    "SwapFree": 3206828032,
+    "swap_used_bytes": 1088135168,
+    "disk_available_bytes": 12229300224,
+    "disk_total_bytes": 21395124224
+  },
+  "receipt_parent_uid_gid": [
+    1000,
+    1000
+  ],
+  "receipt_directory_present": false,
+  "schedule_verified": true,
+  "active_runs_at_inspection": 0,
+  "next_scheduled_utc": "2026-10-31T11:45:00Z",
+  "preservation": {
+    "routing_certificate_hashes": true,
+    "forecast_hashes": true,
+    "service_identity_after_inspection": "INCONCLUSIVE_dynamic_MemoryCurrent_was_included_in_original_comparison"
+  },
+  "new_private_paths": [
+    "/home/ec2-user/powerflow-inference-evidence-backup-20261031-v1",
+    "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/next24h_inference"
+  ],
+  "local_safety_tests_passed": 7,
+  "prior_capture_tests_passed": 174,
+  "frontend_tests_previously_passed": 92,
+  "code_deployed": false,
+  "receipts_written_on_ec2": false
+}

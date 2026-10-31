@@ -1,0 +1,32 @@
+{
+  "status": "PROPOSED_CAPTURE_ONLY_NOT_EXECUTED",
+  "files": {
+    "preflight.py": "ee10b11239f68fe75d37a8b073f118cdc6404fef663d3d2add7ff8be165255ae",
+    "run-preflight.py": "46f3ca0d682af3fb344e4dbd60564d986beca5cc265995084c6b82b9652cd6bd",
+    "PREFLIGHT-RESULTS.json": "d6f23a38e5d3d2b482d80e0024f48fba510e9e4304220152feab90304b34b966",
+    "BASELINE-COMPARISON.json": "aede05f12b63b2f42d4378b276244b0f551726d01e588859aa3e751cea2f57a0",
+    "deploy-template.py": "98ca911c536a3d48cf26a4c025212ca16bb23f6f03431dbb5fbac1dc86200141",
+    "deploy-capture.py": "842d3a0f222befb07221643159583ae307da853dfdcbb619138b5598305274f2",
+    "run-deployment.py": "72052dac88b5cc8eecba7f425327ab2125e66289dff63d734ea931ed2fa3147c",
+    "DEPLOYMENT-REVIEW-RESULTS.json": "54d58c293bba88e8c7268511585a431dc5485b18bf2a570e2cd0bdc15e3c05c3"
+  },
+  "sources": {
+    "src/models/next24h.py": {
+      "old_sha256": "6708af30d05d8f3f22cd7af0ad52de160c905fc40c25e586bcacded58a8fb4fd",
+      "new_sha256": "222c708d3a296cd31187efa7471c0c894076df4dc15a6e4a61168e0dd8c178fe",
+      "bytes": 9848
+    },
+    "src/models/next24h_production.py": {
+      "old_sha256": "403b20f8ad0d167848931a08117c4e6aea11455c2b39a10b258eab8799532419",
+      "new_sha256": "65c1514e96cc32360d7af462fc990a6c0d21d41f2dad69c9330c664c9901d65c",
+      "bytes": 19883
+    },
+    "src/models/inference_evidence.py": {
+      "old_sha256": null,
+      "new_sha256": "30f314fbc9cc2927e739f8f3fb8482c768331e5e0ed0aefaefae28c31769fbbb",
+      "bytes": 6613
+    }
+  },
+  "test_file_sha256": "8a8149e9bea8e947a06fd12654d6ed3f9333f4baabe747cb85765d38bdd7a847",
+  "supervisor_sha256": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
+}

@@ -1,0 +1,379 @@
+{
+  "read_only": true,
+  "automatic_retry": false,
+  "stage": "complete",
+  "errors": [],
+  "revision": {
+    "head": "ref: refs/heads/main",
+    "commit": "b165c8db5a208e8954058fac8cc415d7dfd53446",
+    "method": "read_HEAD_ref_only_no_git_command"
+  },
+  "services": {
+    "powerflow-api.service": {
+      "MainPID": "1278418",
+      "MemoryCurrent": "5058560",
+      "WorkingDirectory": "/home/ec2-user/Electricity_Trading_Pipeline",
+      "User": "ec2-user",
+      "Group": "ec2-user",
+      "Id": "powerflow-api.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "ActiveEnterTimestampMonotonic": "2228242060719"
+    },
+    "powerflow-streamlit.service": {
+      "MainPID": "1475479",
+      "MemoryCurrent": "179372032",
+      "WorkingDirectory": "/home/ec2-user/Electricity_Trading_Pipeline",
+      "User": "ec2-user",
+      "Group": "ec2-user",
+      "Id": "powerflow-streamlit.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "ActiveEnterTimestampMonotonic": "2572171060717"
+    },
+    "powerflow-prefect-worker.service": {
+      "MainPID": "1319862",
+      "MemoryCurrent": "531886080",
+      "WorkingDirectory": "/home/ec2-user/Electricity_Trading_Pipeline",
+      "User": "ec2-user",
+      "Group": "ec2-user",
+      "Id": "powerflow-prefect-worker.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "ActiveEnterTimestampMonotonic": "2299816951223"
+    },
+    "powerflow-prefect-server.service": {
+      "MainPID": "1942",
+      "MemoryCurrent": "177963008",
+      "WorkingDirectory": "/home/ec2-user/Electricity_Trading_Pipeline",
+      "User": "ec2-user",
+      "Group": "ec2-user",
+      "Id": "powerflow-prefect-server.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "ActiveEnterTimestampMonotonic": "6140909"
+    },
+    "postgresql.service": {
+      "MainPID": "1899",
+      "MemoryCurrent": "136458240",
+      "WorkingDirectory": "",
+      "User": "postgres",
+      "Group": "postgres",
+      "Id": "postgresql.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "ActiveEnterTimestampMonotonic": "5881680"
+    }
+  },
+  "code": {
+    "src/models/next24h.py": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 9724,
+      "mtime_utc": "2026-09-21T15:57:50.825450+00:00",
+      "sha256": "6708af30d05d8f3f22cd7af0ad52de160c905fc40c25e586bcacded58a8fb4fd"
+    },
+    "src/models/next24h_production.py": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 18136,
+      "mtime_utc": "2026-09-21T18:46:46.774214+00:00",
+      "sha256": "403b20f8ad0d167848931a08117c4e6aea11455c2b39a10b258eab8799532419"
+    },
+    "src/models/inference_evidence.py": {
+      "exists": false
+    },
+    "src/processing/build_silver_dataset.py": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 8238,
+      "mtime_utc": "2026-09-21T17:14:07.799179+00:00",
+      "sha256": "91103a3435949b2341adc35d30dec17881040f0ca728b7a9bdb8273b35276cc4"
+    },
+    "src/ingestion/fetch_weather_data.py": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 11254,
+      "mtime_utc": "2026-09-21T17:14:07.799179+00:00",
+      "sha256": "f802b3b6436393a2f33168dcf31658189ba97a7c3fdeb86cfc92419b21804f2f"
+    },
+    "src/models/final_evaluation.py": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 11336,
+      "mtime_utc": "2026-09-19T10:08:49.041845+00:00",
+      "sha256": "2b9403ef20f4373bbf5f1d1ab42df18b74ea5e07aca645190b34b132118950c6"
+    },
+    "src/scheduled_pipeline.py": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 48549,
+      "mtime_utc": "2026-10-16T09:21:37.384396+00:00",
+      "sha256": "571e3b56c34bc17a38dc13bad066def40c9c711bf51f74aff466014b9afcce8b"
+    },
+    "artifacts/models/releases/next24h/next24h_release_manifest.json": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o644",
+      "bytes": 2774,
+      "mtime_utc": "2026-09-21T17:14:07.799179+00:00",
+      "sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650"
+    }
+  },
+  "directories": {
+    "data": {
+      "exists": true,
+      "symlink": false,
+      "regular": false,
+      "directory": true,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o755",
+      "bytes": 96,
+      "mtime_utc": "2026-10-15T13:16:10.623913+00:00"
+    },
+    "data/reports": {
+      "exists": true,
+      "symlink": false,
+      "regular": false,
+      "directory": true,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o755",
+      "bytes": 16384,
+      "mtime_utc": "2026-10-31T10:46:46.659481+00:00"
+    },
+    "data/reports/next24h_inference": {
+      "exists": false
+    },
+    "src/models": {
+      "exists": true,
+      "symlink": false,
+      "regular": false,
+      "directory": true,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o755",
+      "bytes": 16384,
+      "mtime_utc": "2026-10-12T14:07:24.479228+00:00"
+    }
+  },
+  "forecast_baselines": {
+    "data/reports/next24h_forecast.csv": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o600",
+      "bytes": 2476,
+      "mtime_utc": "2026-10-31T10:46:45.052656+00:00",
+      "sha256": "f0d6c569368aa379d9515af6049b9c7b03bcf59cf55da2c071755045a15b5382"
+    },
+    "data/reports/next24h_forecast_history.csv": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o600",
+      "bytes": 1281406,
+      "mtime_utc": "2026-10-31T10:46:45.035997+00:00",
+      "sha256": "91406e4a7ebf7728c9c96a4c037457d081d7f095caab90c3351c4b81822a20a7"
+    },
+    "data/reports/next24h_forecast_provenance.json": {
+      "exists": true,
+      "symlink": false,
+      "regular": true,
+      "directory": false,
+      "uid": 1000,
+      "gid": 1000,
+      "mode": "0o600",
+      "bytes": 534,
+      "mtime_utc": "2026-10-31T10:46:45.058899+00:00",
+      "sha256": "75487b83f57e1fb67c340ac630d7ea8b46523aae4c94f5fda411efbd8130ddfc"
+    }
+  },
+  "database_metadata": {
+    "exists": true,
+    "symlink": false,
+    "regular": true,
+    "directory": false,
+    "uid": 1000,
+    "gid": 1000,
+    "mode": "0o644",
+    "bytes": 16367616,
+    "mtime_utc": "2026-10-31T10:46:59.311620+00:00"
+  },
+  "source_sizes": {
+    "prices": 3243121,
+    "load": 9713097,
+    "generation": 41292708
+  },
+  "capacity": {
+    "MemTotal": 2002505728,
+    "MemAvailable": 820158464,
+    "SwapTotal": 4294963200,
+    "SwapFree": 3206828032,
+    "swap_used_bytes": 1088135168,
+    "disk_available_bytes": 12229300224,
+    "disk_total_bytes": 21395124224
+  },
+  "python": {
+    "version": "3.14.7",
+    "packages": {
+      "pandas": "2.3.3",
+      "numpy": "2.4.6",
+      "joblib": "1.5.3",
+      "scikit-learn": "1.8.0"
+    }
+  },
+  "deployment": {
+    "id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+    "paused": false,
+    "status": "READY",
+    "schedules": [
+      {
+        "id": "9319f665-9836-4120-9801-031e23ad2b4a",
+        "active": true,
+        "schedule": {
+          "cron": "45 * * * *",
+          "timezone": "UTC",
+          "day_or": true
+        }
+      }
+    ],
+    "concurrency": {
+      "limit": 1,
+      "active": true,
+      "active_slots": 0
+    },
+    "collision_policy": null
+  },
+  "schedule_verified": true,
+  "active_runs": [],
+  "queued_runs": [
+    {
+      "id": "01a19122-c2c3-74dc-b8f1-c50878686a66",
+      "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+      "expected_start_time": "2026-10-31T11:45:00Z",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-31T08:45:36.842256Z",
+      "state": {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-10-31T08:45:36.835904Z"
+      }
+    },
+    {
+      "id": "01a19159-c938-70aa-ab70-bdbbc90dc833",
+      "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+      "expected_start_time": "2026-10-31T12:45:00Z",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-31T09:45:42.972380Z",
+      "state": {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-10-31T09:45:42.968581Z"
+      }
+    },
+    {
+      "id": "01a19190-d059-77f4-8bd6-a6551880062c",
+      "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+      "expected_start_time": "2026-10-31T13:45:00Z",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-31T10:45:49.277211Z",
+      "state": {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-10-31T10:45:49.273296Z"
+      }
+    }
+  ],
+  "recent_runs": [
+    {
+      "id": "01a19190-d059-77f4-8bd6-a6551880062c",
+      "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+      "expected_start_time": "2026-10-31T13:45:00Z",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-31T10:45:49.277211Z",
+      "state": {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-10-31T10:45:49.273296Z"
+      }
+    },
+    {
+      "id": "01a19159-c938-70aa-ab70-bdbbc90dc833",
+      "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+      "expected_start_time": "2026-10-31T12:45:00Z",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-31T09:45:42.972380Z",
+      "state": {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-10-31T09:45:42.968581Z"
+      }
+    },
+    {
+      "id": "01a19122-c2c3-74dc-b8f1-c50878686a66",
+      "deployment_id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+      "expected_start_time": "2026-10-31T11:45:00Z",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-31T08:45:36.842256Z",
+      "state": {
+        "type": "SCHEDULED",
+        "name": "Scheduled",
+        "timestamp": "2026-10-31T08:45:36.835904Z"
+      }
+    }
+  ],
+  "observed_at_utc": "2026-10-31T10:47:04.606040+00:00",
+  "next_cron_occurrence_utc": "2026-10-31T11:45:00+00:00",
+  "seconds_to_next_cron": 3475.39396,
+  "services_unchanged": false,
+  "routing_certificate_hashes_unchanged": true,
+  "forecast_files_unchanged": true
+}

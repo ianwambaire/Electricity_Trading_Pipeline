@@ -1,0 +1,12 @@
+{
+  "src/models/next24h.py": {
+    "reconstructed_pre_capture_sha256": "6708af30d05d8f3f22cd7af0ad52de160c905fc40c25e586bcacded58a8fb4fd",
+    "verified_remote_sha256": "6708af30d05d8f3f22cd7af0ad52de160c905fc40c25e586bcacded58a8fb4fd",
+    "matches": true
+  },
+  "src/models/next24h_production.py": {
+    "reconstructed_pre_capture_sha256": "403b20f8ad0d167848931a08117c4e6aea11455c2b39a10b258eab8799532419",
+    "verified_remote_sha256": "403b20f8ad0d167848931a08117c4e6aea11455c2b39a10b258eab8799532419",
+    "matches": true
+  }
+}

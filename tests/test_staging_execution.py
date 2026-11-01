@@ -22,9 +22,10 @@ def test_smoke_covers_pages_roles_and_withheld_without_writes():
             return httpx.Response(401 if not token else 403 if token=='Bearer analyst' else 404)
         if path=='/api/auth/me':return httpx.Response(200,json={'role':'Analyst' if req.headers['authorization']=='Bearer analyst' else 'Admin'})
         if path=='/api/forecast/next24':return httpx.Response(404)
+        if path=='/api/operations/summary':return httpx.Response(200,json={'completeness_note':'Historical snapshot'})
         return httpx.Response(200)
     with httpx.Client(base_url='https://staging.powerflowenergy.dev',transport=httpx.MockTransport(handler)) as c:
-        assert m.verify(c,'analyst','admin')['analyst_admin_denials']==7
+        assert m.verify(c,'analyst','admin',expected_publication='HISTORICAL')['analyst_admin_denials']==7
     assert len([q for q in calls if q.url.path in m.PAGES])==7
 
 
@@ -35,7 +36,7 @@ def test_smoke_fails_if_analyst_has_admin_access():
         if req.url.path=='/api/admin/operations' and not req.headers.get('authorization'):return httpx.Response(401)
         return httpx.Response(200)
     with httpx.Client(base_url='https://staging.powerflowenergy.dev',transport=httpx.MockTransport(handler)) as c:
-        with pytest.raises(AssertionError):m.verify(c,'analyst','admin')
+        with pytest.raises(AssertionError):m.verify(c,'analyst','admin',expected_publication='HISTORICAL')
 
 
 def test_staging_virtual_host_never_claims_apex_and_hides_internal_routes():

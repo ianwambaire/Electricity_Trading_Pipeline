@@ -40,7 +40,8 @@ def frontend_rehearsal(dist, backend):
             route='/'+path[4:]
             if route.split('/')[1] in {'ready','docs','redoc','openapi.json'}:
                 return Response(status_code=404,headers={'Cache-Control':'no-store'})
-            result=backend.get(route)
+            headers = {'Authorization': request.headers['authorization']} if 'authorization' in request.headers else {}
+            result=backend.get(route, params=request.query_params, headers=headers)
             headers={key:value for key,value in result.headers.items() if key.lower() not in {'content-length','content-encoding'}}
             return Response(result.content,status_code=result.status_code,headers=headers)
         if path=='api' or any(part.startswith('.') for part in path.split('/')) or path.split('/')[0] in {'src','tests','node_modules','deploy','database','data','artifacts'}:

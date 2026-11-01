@@ -22,7 +22,7 @@ export function ObservedPriceComparison({forecastAverage}:{forecastAverage:numbe
   return <ApiPanel title="Forecast and observed price comparison" state={state}>{data=><><p className="data-note">{data.provenance}</p><Facts items={[["Observed history through",formatTime(data.latest_timestamp)],['Latest complete observed price · EUR/MWh',numberLabel(data.latest_price)],['Previous 24-hour observed mean · EUR/MWh',numberLabel(data.previous_24h_average)],['7-day observed mean · EUR/MWh',numberLabel(data.seven_day_average)],['Retained next24h report average · EUR/MWh',numberLabel(forecastAverage)]]}/><p className="data-note">Display-only comparison across explicitly dated evidence. A retained forecast average inherits its availability classification above; these are not same-period model evaluation metrics.</p></>}</ApiPanel>
 }
 
-export function ForecastProvenanceEvidence() {
-  const state=useApi(api.forecastProvenance)
+export function ForecastProvenanceEvidence({issue,completed}:{issue:string;completed?:string}) {
+  const state=useApi(useCallback(signal=>api.forecastProvenance(issue,completed,signal),[issue,completed]))
   return <ApiPanel title="Administrative forecast issuance provenance" state={state}>{data=><><Facts items={[["Report issue hour",formatTime(data.issue_time)],['Actual recorded issuance',formatTime(data.issued_at_utc)],['Issuance evidence',data.issuance_evidence.replaceAll('_',' ')],['Provenance evidence',data.provenance_evidence.replaceAll('_',' ')],['Market data through',formatTime(data.market_latest_complete_hour)],['Weather acquired',formatTime(data.weather_acquired_at_utc)],['Recorded weather source',data.weather_source??'Not provided']]}/><p className="data-note">{data.note}</p></>}</ApiPanel>
 }

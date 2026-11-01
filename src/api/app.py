@@ -27,7 +27,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .market_data import MarketChart, MarketSummary, market_chart, market_summary, MarketCoverage, MarketHistory, MarketStore
 from .anomalies import AnomalySummary, AnomalyEvents, anomaly_summary, anomaly_events
-from .operations_summary import OperationsSummary, operations_summary
+from .operations_summary import OperationsSummary, operations_summary, unavailable_operations
+from .forecast_source import select_publication
 from typing import Literal
 from .model_summaries import ModelsResponse, model_summaries
 
@@ -400,8 +401,18 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         return AccountResponse(subject=user.subject, role=user.role, email=user.email, display_name=user.display_name)
 
     @application.get("/admin/forecast/provenance", response_model=ForecastProvenance, dependencies=[Depends(require_admin)], tags=["Admin reports"])
-    def admin_forecast_provenance():
-        return forecast_provenance(configured.public_metadata_root, _next24_report(configured.next24_forecast).forecasts)
+    def admin_forecast_provenance(issue_time: datetime | None = None, completed_at: datetime | None = None):
+        if configured.next24_publication_root is not None:
+            selected = select_publication(configured.next24_publication_root)
+            selected.match(issue_time, completed_at)
+            return selected.provenance()
+        report = _next24_report(configured.next24_forecast)
+        if issue_time is not None and issue_time != report.forecasts[0].issue_time:
+            raise HTTPException(409, 'The forecast changed. Refresh the forecast before requesting its evidence.')
+        result = forecast_provenance(configured.public_metadata_root, report.forecasts)
+        if completed_at is not None:
+            raise HTTPException(409, 'A legacy snapshot has no publication completion identity.')
+        return result
 
     @application.get("/admin/monitoring/forecast-vintages", response_model=VintageDiagnostics, dependencies=[Depends(require_admin)], tags=["Admin reports"])
     def admin_vintages():
@@ -437,11 +448,8 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         response.headers["Cache-Control"] = "no-store"
         if configured.next24_publication_root is None:
             return _next24_report(configured.next24_forecast)
-        from shared.forecast_publication import read_active, Withheld, time as publication_time, MAX_AGE
-        try:
-            bundle = read_active(configured.next24_publication_root)
-        except Withheld as error:
-            raise HTTPException(503, detail={"code": "FORECAST_WITHHELD"}, headers={"Cache-Control": "no-store"}) from error
+        from shared.forecast_publication import time as publication_time, MAX_AGE
+        bundle = select_publication(configured.next24_publication_root).require_valid()
         issue = publication_time(bundle["forecasts"][0]["issue_time"])
         return Next24ForecastResponse(row_count=24, forecasts=bundle["forecasts"], publication=ForecastPublication(
             status="VALID", issue_time=issue, expires_at=issue+MAX_AGE,
@@ -497,12 +505,24 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
 
     @application.get("/operations/summary", response_model=OperationsSummary)
     def public_operations_summary():
+        if configured.next24_publication_root is not None:
+            selected = select_publication(configured.next24_publication_root)
+            try:
+                recorded = operations_summary(configured)
+            except HTTPException:
+                recorded = unavailable_operations()
+            return selected.operations(recorded)
         issue, invalid = None, False
         try:
             issue = _next24_report(configured.next24_forecast).forecasts[0].issue_time
         except HTTPException as error:
             invalid = error.status_code != 404
-        return operations_summary(configured, issue, invalid)
+        result = operations_summary(configured, issue, invalid)
+        return result.model_copy(update={
+            'explanation': 'Recorded snapshot assessment, not live pipeline health. ' + result.explanation,
+            'forecast_reason_provenance': 'Historical recorded pipeline evidence; execution success is not a current forecast attestation.',
+            'completeness_note': 'Historical operational snapshot; any retained forecast is reference data, not a validated publication. ' + result.completeness_note,
+        })
 
     from .feature_parity import MarketExploration, ForecastContext, RealizedEvaluation, PriceComparison, market_exploration, forecast_context, realized_evaluation, price_comparison
     from .admin_operations import AdminOperations, admin_operations

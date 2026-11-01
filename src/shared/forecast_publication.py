@@ -19,6 +19,12 @@ FEATURES = ('hour', 'day_of_week', 'month', 'is_weekend', 'price_eur_mwh', 'pric
 class Withheld(ValueError):
     """A publication cannot be served or activated safely."""
 
+class ExpiredPublication(Withheld):
+    """Otherwise valid publication whose existing freshness window has elapsed."""
+
+class MissingPublication(Withheld):
+    """No publication root or active pointer exists; never use historical fallback."""
+
 def require(condition):
     if not condition:
         raise Withheld("Forecast publication is withheld.")
@@ -66,7 +72,7 @@ def _validate(raw, expected_hash, now=None):
     require(isinstance(rows, list) and len(rows) == 24)
     issue = time(rows[0].get("issue_time")) if isinstance(rows[0], dict) else None
     require(issue is not None and issue.minute == issue.second == issue.microsecond == 0)
-    require(dt.timedelta(0) <= now - issue <= MAX_AGE)
+    require(dt.timedelta(0) <= now - issue)
     for horizon, row in enumerate(rows, 1):
         keys(row, ("issue_time", "target_time", "horizon_hours", "predicted_price_eur_mwh", "model_release"))
         require(time(row["issue_time"]) == issue and type(row["horizon_hours"]) is int and row["horizon_hours"] == horizon)
@@ -136,11 +142,17 @@ def _validate(raw, expected_hash, now=None):
     require(total != 0 and math.isclose(features["renewable_generation_mw"],renewable) and math.isclose(features["renewable_share"],renewable/total))
     # The complete generation issue hour must have finished before issuance.
     require(issue+dt.timedelta(hours=1) <= started)
+    # Classify expiry only after all integrity/completeness checks. Expired
+    # artifacts remain rejected at actual UTC; no backdated validation is used.
+    if now - issue > MAX_AGE:
+        raise ExpiredPublication("Forecast publication is withheld.")
     return bundle
 
 def validate(raw, expected_hash, now=None):
     try:
         return _validate(raw, expected_hash, now)
+    except ExpiredPublication:
+        raise
     except (ValueError, TypeError, KeyError, OverflowError, AttributeError, IndexError) as error:
         raise Withheld("Forecast publication is withheld.") from error
 
@@ -156,14 +168,23 @@ def read_active(root, now=None):
     """Resolve current exactly once; concurrent publications cannot mix files."""
     root = Path(root)
     try:
+        try:
+            root.lstat()
+        except FileNotFoundError:
+            raise MissingPublication("Forecast publication is withheld.") from None
         for directory in (root, root/"releases"):
             require(directory.is_dir() and not directory.is_symlink() and directory.stat().st_uid in (0,os.geteuid()) and not directory.stat().st_mode & 0o022)
-        target = os.readlink(root/"current")
+        try:
+            target = os.readlink(root/"current")
+        except FileNotFoundError:
+            raise MissingPublication("Forecast publication is withheld.") from None
         require(re.fullmatch(r"releases/[0-9a-f]{64}", target) is not None)
         directory = root/target
         require(directory.is_dir() and not directory.is_symlink() and directory.stat().st_uid in (0,os.geteuid()) and not directory.stat().st_mode & 0o022)
         raw = safe_file(directory/"bundle.json")
         return validate(raw,target.split("/")[1],now)
+    except (ExpiredPublication, MissingPublication):
+        raise
     except (OSError, ValueError, TypeError, KeyError, OverflowError) as error:
         raise Withheld("Forecast publication is withheld.") from error
 

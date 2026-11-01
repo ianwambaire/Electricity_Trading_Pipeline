@@ -51,7 +51,11 @@ export const api = {
   updateProfile: (body: {name?:string;preferred_username?:string}, signal?: AbortSignal) => request('/account/profile', parseAccountAction, signal, {method:'PATCH',body}),
   changePassword: (body: {current_password:string;new_password:string}, signal?: AbortSignal) => request('/account/password', parseAccountAction, signal, {method:'POST',body}),
   signOutAll: (signal?: AbortSignal) => request('/account/sign-out-all', parseAccountAction, signal, {method:'POST'}),
-  forecastProvenance: (signal?: AbortSignal) => request('/admin/forecast/provenance', parseForecastProvenance, signal),
+  forecastProvenance: (issue: string, completed: string | undefined, signal?: AbortSignal) => request(`/admin/forecast/provenance?${new URLSearchParams({issue_time: issue, ...(completed ? {completed_at: completed} : {})})}`, value => {
+    const data = parseForecastProvenance(value)
+    if (Date.parse(data.issue_time) !== Date.parse(issue)) throw new ApiError('Forecast evidence changed. Refresh the forecast before continuing.')
+    return data
+  }, signal),
   influence: (signal?: AbortSignal) => request('/admin/models/linear-feature-influence', parseInfluence, signal),
   adminOperations: (signal?: AbortSignal) => request('/admin/operations', parseAdminOperations, signal),
   exploration: (query: string, signal?: AbortSignal) => request(`/market/exploration${query ? `?${query}` : ''}`, parseExploration, signal),

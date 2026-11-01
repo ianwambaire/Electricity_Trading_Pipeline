@@ -187,3 +187,17 @@ def operations_summary(settings, forecast_issue=None, forecast_invalid=False):
         quality_history=history, sources=sources, products=products,
         incident_evidence="Admin-only recorded evidence" if "operational_incidents" in tables else "Missing local evidence; details require authentication",
         timing_evidence="Admin-only recorded evidence" if "pipeline_stage_timings" in tables else "Missing local evidence; details require authentication")
+
+
+def unavailable_operations():
+    """No operational attestation; forecast publication can remain independent."""
+    return OperationsSummary(
+        assessed_at=datetime.now(timezone.utc), health='Unavailable',
+        explanation='Operational snapshot evidence is unavailable; current pipeline health cannot be established.',
+        health_rules='Unavailable evidence never establishes healthy operation.',
+        latest_run_status=None, latest_run_time=None, latest_success_time=None,
+        latest_complete_market_hour=None, forecast_status=None, forecast_reason=None,
+        s3_sync_status=None, recent_checks_passed=None, recent_checks_failed=None,
+        recent_checks_warning=None, continuity_warning_sources=None,
+        quality_history=[], sources=[], products=[],
+        incident_evidence='Unavailable operational evidence', timing_evidence='Unavailable operational evidence')

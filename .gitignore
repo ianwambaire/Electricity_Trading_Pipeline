@@ -253,3 +253,30 @@ temp/
 Thumbs.db
 # Local dataset snapshots
 data/snapshots/
+
+# Private PowerFlow diagnostic captures and reviewed execution package
+# Keep reusable templates visible; ignore only named generated/private files.
+/deploy/staging/inference-evidence-verification/RESULTS.json
+/deploy/staging/inference-evidence-verification/LOCAL-BINDINGS.json
+/deploy/staging/inference-evidence-verification/inspect.py
+/deploy/staging/inference-evidence-verification/run.py
+/deploy/staging/inference-evidence-validation/RESULTS.json
+/deploy/staging/inference-evidence-validation/LOCAL-BINDINGS.json
+/deploy/staging/inference-evidence-validation/inspect.py
+/deploy/staging/inference-evidence-validation/run.py
+/deploy/staging/inference-receipt-outcome/RESULTS.json
+/deploy/staging/inference-receipt-outcome/LOCAL-BINDINGS.json
+/deploy/staging/inference-receipt-outcome/inspect.py
+/deploy/staging/inference-receipt-outcome/run.py
+/deploy/staging/internal-run-association/RESULTS.json
+/deploy/staging/internal-run-association/LOCAL-BINDINGS.json
+/deploy/staging/internal-run-association/inspect.py
+/deploy/staging/internal-run-association/run.py
+/deploy/staging/price-history-inspection/RESULTS.json
+/deploy/staging/price-history-inspection/LOCAL-BINDINGS.json
+/deploy/staging/price-history-inspection/inspect.py
+/deploy/staging/price-history-inspection/run.py
+# Historical diagnostic with the incorrect Prefect/internal run-ID comparison.
+/deploy/staging/inference-receipt-outcome/inspect-template.py
+# Temporary exclusion: retain the complete reviewed package unchanged locally.
+/deploy/staging/a03-price-recovery/final/

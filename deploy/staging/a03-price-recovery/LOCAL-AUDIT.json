@@ -1,0 +1,7 @@
+{
+  "scope": "local source only; not current production",
+  "rows": 92470,
+  "status": "UNVERIFIED",
+  "reason": "resolution_metadata_unavailable",
+  "causation": "Cannot attribute gaps to A03 without resolution metadata and original XML"
+}

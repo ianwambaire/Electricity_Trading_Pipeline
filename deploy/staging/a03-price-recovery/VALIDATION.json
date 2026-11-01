@@ -1,0 +1,21 @@
+{
+  "scope": "LOCAL ONLY; no production access or changes",
+  "python": "3.14",
+  "tests": {
+    "passed": 256,
+    "failed": 0,
+    "command": "MPLBACKEND=Agg venv/bin/python -B -m pytest tests/test_price_a03.py tests/test_incremental_pipeline.py tests/test_next24h*.py tests/test_inference_evidence.py tests/test_forecast_publication.py tests/test_api_price_aggregation.py tests/test_entsoe_forecast*.py -q"
+  },
+  "a01_a03_repair_regression_cases": 30,
+  "syntax": "5 Python files parsed successfully",
+  "existing_web_release": {
+    "release_id": "phase-next24-evidence-20261031",
+    "files": 70,
+    "verification": "PASS",
+    "rebuilt": false,
+    "includes_new_parser_fix": false
+  },
+  "initial_test_attempt": "macOS Matplotlib GUI abort; subsequent runs use MPLBACKEND=Agg and pass",
+  "frontend": "Not changed; frontend tests/build not rerun",
+  "production_ready": "Parser correction tested; fresh baseline/XML and a reviewed hash-bound production execution runner remain required"
+}

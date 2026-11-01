@@ -1,4 +1,5 @@
 import argparse
+import math
 import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -182,52 +183,85 @@ def fetch_timestamp_range(
 
 
 def parse_price_observations(xml_text: str) -> pd.DataFrame:
-    """Keep each explicit ENTSO-E price point and its declared period resolution."""
+    """Decode A01 points and A03 blocks without filling genuine missing data.
+
+    Legacy responses without curveType retain explicit-point (A01) semantics.
+    A03 positions mark block starts, not individual missing observations.
+    """
     root = ElementTree.fromstring(xml_text)
 
     def child_text(parent, name):
-        child = parent.find(f"{{*}}{name}")
-        if child is None or child.text is None:
-            raise ValueError(f"ENTSO-E price response is missing {name}.")
-        return child.text
+        children = parent.findall(f"{{*}}{name}")
+        if len(children) != 1 or children[0].text is None:
+            raise ValueError(f"ENTSO-E price response is missing or ambiguous {name}.")
+        return children[0].text.strip()
 
-    rows = []
+    rows, intervals, diagnostics = [], [], []
     for series in root.findall(".//{*}TimeSeries"):
+        curves = series.findall("{*}curveType")
+        curve = child_text(series, "curveType") if curves else "A01"
+        if curve not in {"A01", "A03"}:
+            raise ValueError("Unsupported ENTSO-E price curve type.")
         for period in series.findall("{*}Period"):
             interval = period.find("{*}timeInterval")
-            if interval is None:
-                raise ValueError("ENTSO-E price period has no time interval.")
+            if interval is None or len(period.findall("{*}timeInterval")) != 1:
+                raise ValueError("ENTSO-E price period has no unique time interval.")
             start = pd.Timestamp(child_text(interval, "start"))
             end = pd.Timestamp(child_text(interval, "end"))
-            if start.tzinfo is None or end.tzinfo is None:
+            if pd.isna(start) or pd.isna(end) or start.tzinfo is None or end.tzinfo is None:
                 raise ValueError("ENTSO-E price interval must specify a timezone.")
             start, end = start.tz_convert("UTC"), end.tz_convert("UTC")
             resolution = child_text(period, "resolution")
             if resolution not in {"PT15M", "PT60M"}:
                 raise ValueError(f"Unsupported ENTSO-E price resolution: {resolution}")
             step = pd.Timedelta(minutes=15 if resolution == "PT15M" else 60)
+            duration = end - start
+            if duration <= pd.Timedelta(0) or duration % step or start.value % step.value:
+                raise ValueError("ENTSO-E price period has invalid duration or alignment.")
+            slots = int(duration / step)
+            if slots > 100000 or len(rows) + slots > 1000000:
+                raise ValueError("ENTSO-E price response exceeds bounded coverage.")
+            if any(start < old_end and end > old_start for old_start, old_end in intervals):
+                raise ValueError("ENTSO-E price response contains overlapping periods or duplicate timestamps.")
+            if intervals and start < intervals[-1][0]:
+                raise ValueError("ENTSO-E price periods are out of order.")
+            intervals.append((start, end))
+            points = []
             for point in period.findall("{*}Point"):
-                position = int(child_text(point, "position"))
-                timestamp = start + (position - 1) * step
-                if position < 1 or timestamp >= end:
+                text = child_text(point, "position")
+                if not text.isascii() or not text.isdecimal():
+                    raise ValueError("Invalid ENTSO-E price position.")
+                position = int(text)
+                if position < 1 or position > slots:
                     raise ValueError("ENTSO-E price point falls outside its period.")
-                rows.append(
-                    (
-                        timestamp,
-                        float(child_text(point, "price.amount")),
-                        resolution,
-                    )
-                )
+                if points and position <= points[-1][0]:
+                    raise ValueError("ENTSO-E price points are duplicate or out of order.")
+                value = float(child_text(point, "price.amount"))
+                if not math.isfinite(value):
+                    raise ValueError("ENTSO-E price point is not finite.")
+                points.append((position, value))
+            if not points or (curve == "A03" and points[0][0] != 1):
+                raise ValueError("ENTSO-E price period has incomplete initial coverage.")
+            for i, (position, value) in enumerate(points):
+                stop = (points[i + 1][0] if i + 1 < len(points) else slots + 1) if curve == "A03" else position + 1
+                for slot in range(position, stop):
+                    rows.append((start + (slot - 1) * step, value, resolution))
+            diagnostics.append({
+                "curve_type": curve, "start_utc": start.isoformat(),
+                "end_utc": end.isoformat(), "explicit_points": len(points),
+                "expected_slots": slots,
+                "decoded_slots": slots if curve == "A03" else len(points),
+                "classification": "decoded_a03_blocks" if curve == "A03" else (
+                    "complete_a01" if len(points) == slots else "upstream_missing_a01_points"
+                ),
+            })
 
-    result = pd.DataFrame(
-        rows, columns=["timestamp", "price_eur_mwh", "source_resolution"]
-    )
-    if result.empty:
-        return result.set_index("timestamp")
-    result = result.sort_values("timestamp")
-    if result["timestamp"].duplicated().any():
+    result = pd.DataFrame(rows, columns=["timestamp", "price_eur_mwh", "source_resolution"])
+    if not result.empty and result["timestamp"].duplicated().any():
         raise ValueError("ENTSO-E price response contains duplicate timestamps.")
-    return result.set_index("timestamp")
+    result = result.set_index("timestamp")
+    result.attrs["price_decode_diagnostics"] = diagnostics
+    return result
 
 
 def query_price_observations(client, country_code, start, end):
@@ -240,7 +274,18 @@ def query_price_observations(client, country_code, start, end):
             end=end,
             sequence=1,
         )
-        return parse_price_observations(xml_text)
+        observations = parse_price_observations(xml_text)
+        for diagnostic in observations.attrs.get("price_decode_diagnostics", []):
+            if diagnostic["classification"] != "complete_a01":
+                print(
+                    "ENTSO-E price decode: "
+                    f"{diagnostic['classification']}; "
+                    f"period={diagnostic['start_utc']}..{diagnostic['end_utc']}; "
+                    f"explicit={diagnostic['explicit_points']}; "
+                    f"decoded={diagnostic['decoded_slots']}; "
+                    f"expected={diagnostic['expected_slots']}"
+                )
+        return observations
     return client.query_day_ahead_prices(country_code, start=start, end=end)
 
 

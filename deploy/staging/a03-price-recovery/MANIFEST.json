@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "scope": "local parser fix and offline two-quarter repair preparation; no production execution authorized",
+  "historical_production_baseline": {
+    "path": "src/ingestion/fetch_entsoe_data.py",
+    "sha256": "ee1d225895fbf929127a577ca4f85a6855643186a7590cda5eaa27ac6aa21a2a",
+    "verified_at_utc": "2026-10-31T14:20:24Z",
+    "requires_fresh_reverification": true
+  },
+  "artifacts": [
+    {
+      "path": "src/ingestion/fetch_entsoe_data.py",
+      "bytes": 42598,
+      "sha256": "8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f"
+    },
+    {
+      "path": "tests/test_price_a03.py",
+      "bytes": 9112,
+      "sha256": "54d7983bddbd196a08d5cf472cf1c8a40b6f80c36dd5a4b35727203e60cc64f6"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/LOCAL-AUDIT.json",
+      "bytes": 241,
+      "sha256": "04bc49531d699a0f345a1c1688e10eddcb705d7d25916ac945501fe3737a4011"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/REVIEW.md",
+      "bytes": 7848,
+      "sha256": "99973f258113ed9b71aa3342ddd6585eb4b6e517dfa721235587500bac891c71"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/VALIDATION.json",
+      "bytes": 998,
+      "sha256": "ab6c1ca52f036699a63ee0aedd52a65a46a94d2c2850d40b405625f84f203d70"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/audit.py",
+      "bytes": 1728,
+      "sha256": "d5d64c781b5244ee5419ed6868eb06cc01d269d5fb8c2057d6b6dc208ac7c9eb"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/repair.py",
+      "bytes": 5173,
+      "sha256": "7c40d4f9af17d1c8024c826e1d5449b691f579afc06bdf1564fae83eea85dd8e"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/verify-package.py",
+      "bytes": 773,
+      "sha256": "afe6394ab4712267535f6636c5b6cafc438baace6590247df5009fbceee009d2"
+    }
+  ]
+}

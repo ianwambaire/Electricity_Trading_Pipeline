@@ -207,3 +207,22 @@ test('Dashboard missing publication stays WITHHELD despite a historical GENERATE
  assert.equal(view.container.querySelector('.availability strong')?.textContent,'WITHHELD')
  assert.ok(!view.container.textContent?.includes('No usable 24-hour forecast report has been retrieved.'))
 })
+
+test('valid forecast and chart precede supporting historical market context',async()=>{
+ const issue=Date.now()-2*3600000
+ const hour=new Date(Math.floor(issue/3600000)*3600000).toISOString()
+ const completed=new Date(Date.parse(hour)+3600000).toISOString()
+ const coverage={source:'Synthetic test Silver',market_area:'DE-LU',resolution:'hourly',snapshot_id:'silver-fixture',row_count:1,first_observation:hour,latest_observation:hour,missing_hours_in_span:0,renewable_definition:'Selected-source mix'}
+ globalThis.fetch=async(input)=>{
+  if(String(input)==='/api/market/summary')return Response.json({coverage,matched_rows:1,latest_observation:{timestamp:hour,price_eur_mwh:100,load_mw:110,wind_solar_mw:20,gap_before:false},mean_load_mw:110,minimum_price:100,maximum_price:100,average_price:100,sample_price_std:null,recent:[]})
+  if(String(input)==='/api/forecast/next24')return Response.json({row_count:24,forecasts:Array.from({length:24},(_,i)=>({issue_time:hour,target_time:new Date(Date.parse(hour)+(i+1)*3600000).toISOString(),horizon_hours:i+1,predicted_price_eur_mwh:100+i,model_release:'next24h-hgb-2026-09-21-v1'})),publication:{status:'VALID',issue_time:hour,expires_at:new Date(Date.parse(hour)+3*3600000).toISOString(),completed_at:completed}})
+  return new Response('',{status:404})
+ }
+ const view=render(<AuthContext.Provider value={auth}><ServerAccountContext.Provider value={roles('Analyst')}><MemoryRouter initialEntries={['/forecasting']}><Suspense><WorkspaceRoutes/></Suspense></MemoryRouter></ServerAccountContext.Provider></AuthContext.Provider>)
+ await waitFor(()=>assert.ok(view.getByText('Valid published forecast')))
+ await waitFor(()=>assert.ok(view.getByRole('heading',{name:'Latest persisted market context'})))
+ const headings=[...view.container.querySelectorAll('h2')].map(n=>n.textContent)
+ assert.ok(headings.indexOf('24-hour forecast report')<headings.indexOf('Latest persisted market context'))
+ assert.ok(view.getByText('Inference completed'))
+ assert.ok(view.getByText('Freshness cutoff'))
+})

@@ -20,6 +20,10 @@ export function ForecastSummary({ report, pipeline, errorCode }: { errorCode?: s
     {pipeline.data && <p className="data-note">Historical pipeline snapshot (not current publication availability): {formatTime(pipeline.data.latest_run_timestamp)}. Reported forecast status: {pipeline.data.forecast_status ?? 'Not provided'}. This status may itself be old.</p>}
     {first && <Facts items={[
       ['Model release', first.model_release], ['Issue time', formatTime(first.issue_time)],
+      ...(visibleReport?.publication ? [
+        ['Inference completed', formatTime(visibleReport.publication.completed_at)],
+        ['Freshness cutoff', formatTime(visibleReport.publication.expires_at)],
+      ] as [string,string][] : []),
       ['Target start', formatTime(first.target_time)], ['Target end', formatTime(visibleReport!.forecasts.at(-1)!.target_time)],
       ['Forecast rows', visibleReport!.row_count], ['Still future targets', visibleReport!.forecasts.filter(row => Date.parse(row.target_time) > now).length],
     ]} />}

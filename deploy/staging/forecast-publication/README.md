@@ -163,3 +163,61 @@ PYTHONPATH=src venv/bin/python -B deploy/staging/forecast-publication/prepare.py
 5. **Rollback:** stop using the new capture code through a separately approved source rollback; retain all receipt/partial directories and existing history, with no deletion. Independently restore the recorded staging code/static pointers and original candidate env if needed. Publication rollback/withdrawal commands above remain unchanged and cannot reactivate stale data. Cleanup/retention and any service action require separate approval.
 
 Regression coverage includes authentic matrix capture, pre-predict ordering/mutation isolation, same-source hashes, full builder/validator acceptance, private permissions, commit interruption, duplicate prevention, raw-source read drift, missing/malformed/versioned evidence, cross-run binding, forecast/provenance/model tampering and expiry. Synthetic market/weather fixtures only; no historical inference evidence is fabricated. The tests exercise production orchestration with a recording test model, plus the existing frozen-model regressions; no training occurs.
+
+## Local HGB integration verification — 2026-11-02
+
+The operational estimator remains `next24h-hgb-2026-09-21-v1`: 24 direct
+`HistGradientBoostingRegressor` outputs, the original 31 ordered finite features,
+and the unchanged model/feature-contract hashes. `scheduled_pipeline.py` calls
+`run_next24h_forecast`; the operational assembler uses exact price/load histories,
+complete generation quarters and issue-hour operational weather. Calendar features
+and target steps are UTC; no new future weather features, scaler or model are added.
+
+`test_frozen_hgb_through_receipt_bundle_and_api` runs the REAL frozen HGB on
+explicitly SYNTHETIC price/load/generation/weather fixtures, captures its exact
+matrix, builds the existing four-input bundle, then checks FastAPI values,
+provenance authorization, cache headers and expiry. Both German DST transitions
+are covered with 24 unique UTC targets. This is contract/integration evidence, not
+authentic current market inference or an accuracy evaluation.
+
+Actual local inputs were separately inspected: Silver/prices end 2026-09-12,
+load/generation 2026-09-19, and historical weather 2026-09-13. There is no completed
+local inference receipt or latest next24 CSV. Actual-clock inference correctly
+rejects this stale Silver. An IN-MEMORY replay of the real September12 Silver with
+the real HGB produced24 finite historical outputs; it was not persisted as a
+forecast, converted into a receipt, or published. Do not backdate validation to
+turn historical replay into a current candidate. Historical archive weather is
+not a substitute for the required operational-weather acquisition provenance.
+
+No missing production inference/bundle/atomic-reader implementation was found.
+The missing operational link is a fresh, verified receipt from a successful actual
+scheduled run plus its separately approved controlled publication. Legacy latest
+CSV/provenance files alone cannot satisfy the authentic evidence contract.
+
+Minimum next steps, separately authorized where remote actions are involved:
+1. Activate the EXISTING guarded staging release with its unchanged manifest,
+   transaction/collision/live gates and conditional rollback; missing publication
+   must remain503/FORECAST_WITHHELD/no-store and MISSING_PUBLICATION.
+2. Review/authorize the NEW follow-up static/API package independently. It uses the
+   existing forecast-consistency release builder and includes the committed
+   Dashboard withholding correction, inference completion/cutoff labels and
+   foregrounded forecast/chart. It never includes model binaries, market data,
+   test receipts or private input vectors. Original preserved release is unchanged.
+3. Read-only verify a fresh normally completed scheduled production run and its
+   exact immutable receipt association, four artifact hashes, model hashes,
+   completeness and actual-UTC expiry. No manual pipeline trigger or inference.
+4. If genuine inputs still fail quality gates, address that exact source defect
+   under its own approval (including the separately controlled A03 recovery if
+   evidence requires it). Do not refresh hashes or reduce thresholds.
+5. Separately approve publication tools/root creation and candidate-group access
+   for `/srv/powerflow/forecast-publications`; the root is not created by
+   reactivation. Then use the existing four-input `prepare.py` command above and
+   publisher's guarded expected-current operation for that exact fresh bundle.
+6. Verify200/no-store/24 aligned finite HGB predictions, matching Admin provenance
+   and operations, all seven pages and automatic expiry back to503. Static/code
+   rollback and publication withdrawal remain independent approvals.
+
+S3 mappings for legacy next24 forecast files exist and are invoked conditionally
+by storage-sync stages. Source inspection does NOT establish that S3 is enabled or
+holds a current valid forecast. Private receipts and the staging overlay are not
+made public or added to S3 synchronization by this work.

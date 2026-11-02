@@ -18,12 +18,17 @@ test('fresh publication renders actual synthetic values despite historical withh
  const view=render(<ForecastSummary report={report()} pipeline={pipeline}/>)
  assert.ok(view.getByText('Valid published forecast'))
  assert.ok(view.getByText('Average · EUR/MWh'))
+ assert.ok(view.getByText('Inference completed'))
+ assert.ok(view.getByText('Freshness cutoff'))
+ assert.ok(view.getByText('next24h-hgb-2026-09-21-v1'))
  assert.ok(view.getByText(/Historical pipeline snapshot \(not current publication availability\):/))
 })
 test('expired publication renders WITHHELD and removes statistics and download',()=>{
  const view=render(<ForecastSummary report={report(true)} pipeline={pipeline}/>)
  assert.ok(view.getByText('WITHHELD'))
  assert.equal(view.queryByText('Average · EUR/MWh'),null)
+ assert.equal(view.queryByText('Inference completed'),null)
+ assert.equal(view.queryByText('Freshness cutoff'),null)
  assert.equal(view.queryByRole('button',{name:/Download/}),null)
 })
 test('withheld API state never renders chart/content children',()=>{

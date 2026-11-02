@@ -134,3 +134,66 @@ def test_source_read_drift_is_rejected(tmp_path,monkeypatch):
         return raw
     monkeypatch.setattr(Path,'read_bytes',changing)
     with pytest.raises(ValueError,match='changed during read'):snapshot(path)
+
+
+def test_frozen_hgb_through_receipt_bundle_and_api(tmp_path,monkeypatch):
+    """Real frozen estimator; synthetic source/weather and historical test clock only.
+
+    This is an integration test, not a genuine current operational publication.
+    No production files or provider endpoints are accessed.
+    """
+    from joserfc import jwk
+    from sklearn.ensemble import HistGradientBoostingRegressor
+    from test_forecast_source_consistency import make_client, write_bundle, admin
+    paths, session, issue = operational_inputs(tmp_path)
+    model, features, manifest = production.load_next24h_release()
+    assert manifest['release_id']=='next24h-hgb-2026-09-21-v1'
+    assert all(isinstance(estimator,HistGradientBoostingRegressor) for estimator in model.estimators_)
+    assert len(features)==31
+    # Use the production loader/model; do not patch predict or substitute an estimator.
+    now=issue+pd.Timedelta(hours=1,minutes=30)
+    forecast,_=production.run_next24h_forecast(
+        prices_path=paths[0],load_path=paths[1],generation_path=paths[2],
+        latest_path=tmp_path/'latest.csv',history_path=tmp_path/'history.csv',
+        provenance_path=tmp_path/'provenance.json',evidence_root=tmp_path/'receipts',
+        now=now,weather_session=session)
+    directory=tmp_path/'receipts'/forecast.attrs['inference_receipt_id']
+    proof=json.loads((directory/'evidence.json').read_bytes())
+    matrix=pd.DataFrame([proof['inference']['feature_values']],columns=proof['inference']['feature_names'])
+    assert np.array_equal(model.predict(matrix)[0],forecast['predicted_price_eur_mwh'].to_numpy())
+    raw,sha=build(directory,now);bundle=validate(raw,sha,now)
+    signing=jwk.RSAKey.generate_key(2048,parameters={'kid':'key-one','alg':'RS256','use':'sig'})
+    client,settings,root,clock,_=make_client(tmp_path,monkeypatch,signing)
+    clock[0]=now.to_pydatetime();write_bundle(root,bundle)
+    historical=settings.next24_forecast.read_bytes()
+    with client:
+        response=client.get('/forecast/next24');assert response.status_code==200
+        data=response.json();assert data['row_count']==24
+        assert 'no-store' in response.headers['cache-control']
+        assert [row['predicted_price_eur_mwh'] for row in data['forecasts']]==forecast['predicted_price_eur_mwh'].tolist()
+        assert client.get('/operations/summary').json()['forecast_status']=='VALID'
+        assert client.get('/admin/forecast/provenance').status_code==401
+        evidence=client.get('/admin/forecast/provenance',headers=admin(signing),params={
+            'issue_time':data['publication']['issue_time'],'completed_at':data['publication']['completed_at']})
+        assert evidence.status_code==200 and evidence.json()['provenance_evidence']=='available'
+        clock[0]=(issue+pd.Timedelta(hours=3,microseconds=1)).to_pydatetime()
+        expired=client.get('/forecast/next24')
+        assert expired.status_code==503 and expired.json()=={'detail':{'code':'FORECAST_WITHHELD'}}
+        assert 'no-store' in expired.headers['cache-control']
+        assert client.get('/operations/summary').json()['forecast_status']=='EXPIRED'
+    assert settings.next24_forecast.read_bytes()==historical
+
+
+@pytest.mark.parametrize('stamp',['2026-03-28T23:00:00Z','2026-10-24T23:00:00Z'])
+def test_hgb_direct_horizons_stay_24_utc_hours_across_german_dst(stamp):
+    """Real estimator, deliberately synthetic feature vector; not operational inputs."""
+    model,features,manifest=production.load_next24h_release()
+    issue=pd.Timestamp(stamp)
+    matrix=pd.DataFrame([{name:1.0 for name in features}]);matrix['forecast_issue_time']=issue
+    forecast=create_next24h_forecast(matrix,model,features=features,model_release=manifest['release_id'])
+    targets=pd.to_datetime(forecast['target_timestamp'],utc=True)
+    assert len(targets)==24 and targets.nunique()==24
+    assert targets.tolist()==[issue+pd.Timedelta(hours=h) for h in range(1,25)]
+    assert np.isfinite(forecast['predicted_price_eur_mwh']).all()
+    local=targets.dt.tz_convert('Europe/Berlin')
+    assert len(set(local.dt.strftime('%z')))==2

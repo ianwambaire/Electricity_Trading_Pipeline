@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/pipeline-window-diagnostic/REVIEW.md": {
+      "bytes": 4411,
+      "sha256": "fa97172223a3b088a0dea3bc811346a78f03502c8ae1c3d10aaea98290526e89"
+    },
+    "deploy/staging/pipeline-window-diagnostic/inspect.py": {
+      "bytes": 7485,
+      "sha256": "456891624ee7dab1e6a392ec6619ce8d3e4f2d92ead7f3b82749c4b24ea07777"
+    },
+    "deploy/staging/pipeline-window-diagnostic/run.py": {
+      "bytes": 4841,
+      "sha256": "cbcca7109fb27a5aab1c8f87895a78cae7d22d98bff3ffbb0c2aafbb2df9baf6"
+    },
+    "tests/test_pipeline_window_diagnostic.py": {
+      "bytes": 5358,
+      "sha256": "aba402d78a39496bd663210451395610d9db98f77eb8f47c1938e0fded78f171"
+    }
+  },
+  "remote_payload_sha256": "fe7ed8ac74109c024e1a1ef045f429c102f0eea85e85f55bd560d7442a5c992a",
+  "schema_version": 1
+}

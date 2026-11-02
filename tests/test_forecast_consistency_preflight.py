@@ -97,7 +97,7 @@ def test_transport_failures_no_retry_or_leak(tmp_path,code,error,category):
     calls=[]
     def run(argv,**kw):
         calls.append((argv,kw));kw['stderr'].write(error);return SimpleNamespace(returncode=code)
-    result=W.execute(b'PAYLOAD',Path('/supervisor'),{'identity_file':'PRIVATE','known_hosts':'PINNED','target':'APPROVED'},tmp_path,run)
+    result=W.execute(b'PAYLOAD',b'# verified supervisor fixture',{'identity_file':'PRIVATE','known_hosts':'PINNED','target':'APPROVED'},tmp_path,run)
     assert result['failure_category']==category and result['exit_status']==code and not result['report_produced']
     assert len(calls)==1 and calls[0][1]['input']==b'PAYLOAD' and calls[0][1]['timeout']==190
     assert 'secret-sentinel' not in json.dumps(result)
@@ -106,14 +106,14 @@ def test_transport_failures_no_retry_or_leak(tmp_path,code,error,category):
 @pytest.mark.parametrize('raw',[b'{bad json',b'{"secret":"secret-sentinel"}',b'[]',b'{}\nsecret-sentinel'])
 def test_unexpected_stdout_not_exposed(tmp_path,raw):
     def run(argv,**kw):kw['stdout'].write(raw);return SimpleNamespace(returncode=0)
-    result=W.execute(b'x',Path('/supervisor'),{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
+    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
     assert result['failure_category']=='UNEXPECTED_OUTPUT' and not result['report_produced']
     assert 'secret-sentinel' not in json.dumps(result)
 
 def test_mocked_end_to_end_blocked_report(tmp_path):
     r=report()
     def run(argv,**kw):kw['stdout'].write(json.dumps(r).encode());return SimpleNamespace(returncode=1)
-    result=W.execute(b'x',Path('/supervisor'),{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
+    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
     assert result['report_produced'] and result['failure_category']=='CHECKS_BLOCKED' and result['report']==r
 
 def test_missing_dependency_is_unverified(monkeypatch,capsys):
@@ -214,3 +214,105 @@ def test_environment_text_and_process_argv_cannot_be_emitted():
     assert all(not ({'environment','argv','ExecStart','credentials','token'} & fields) for fields in P.FIELDS.values())
     r=report();r['checks']['environment']['facts']['sha256']='not-a-hash secret-sentinel'
     with pytest.raises(ValueError):P.validate_report(r)
+
+
+def test_executable_artifacts_read_once_and_retained(monkeypatch):
+    original=W.file_bytes
+    paths={W.HERE/'preflight_readonly.py',W.ROOT/'deploy/remediation/a3-bounded-local.py'}
+    counts={p:0 for p in paths}
+    def once(path,*args,**kwargs):
+        if path in paths:
+            counts[path]+=1
+            if counts[path]>1:raise AssertionError('Executable reopened after verification')
+        return original(path,*args,**kwargs)
+    monkeypatch.setattr(W,'file_bytes',once)
+    # Stub preserved-package reads so this regression is clean-clone portable.
+    review=json.loads(original(DIR/'PREFLIGHT-REVIEW.json'))
+    release_raw=json.dumps({'files':{}}).encode();tools_raw=json.dumps({'artifacts':[]}).encode()
+    def fixture(path,*a,**kw):
+        if path==W.PRIVATE/'release/release-manifest.json':return release_raw
+        if path==W.PRIVATE/'TOOLS-MANIFEST.json':return tools_raw
+        return once(path,*a,**kw)
+    monkeypatch.setattr(W,'file_bytes',fixture)
+    monkeypatch.setattr(W,'RELEASE_SHA',W.sha(release_raw));monkeypatch.setattr(W,'TOOLS_SHA',W.sha(tools_raw))
+    payload,supervisor=W.verify_package(W.sha(original(DIR/'PREFLIGHT-REVIEW.json')))
+    assert payload==original(DIR/'preflight_readonly.py')
+    assert supervisor==original(ROOT/'deploy/remediation/a3-bounded-local.py')
+    assert all(n==1 for n in counts.values())
+
+
+def test_execution_and_validator_use_retained_bytes_after_substitution(tmp_path,monkeypatch):
+    payload=(DIR/'preflight_readonly.py').read_bytes()
+    supervisor=b"print('ORIGINAL_SUPERVISOR')\n"
+    old_payload=tmp_path/'payload.py';old_supervisor=tmp_path/'supervisor.py'
+    old_payload.write_bytes(payload);old_supervisor.write_bytes(supervisor)
+    # Simulate files changing after a successful verification snapshot.
+    old_payload.write_bytes(b"raise RuntimeError('SUBSTITUTED_VALIDATOR')")
+    old_supervisor.write_bytes(b"raise RuntimeError('SUBSTITUTED_SUPERVISOR')")
+    reads=W.file_bytes
+    def no_source_reopens(path,*a,**kw):
+        assert path not in {DIR/'preflight_readonly.py',old_payload,old_supervisor}
+        return reads(path,*a,**kw)
+    monkeypatch.setattr(W,'file_bytes',no_source_reopens)
+    calls=[]
+    def fake(command,**kwargs):
+        calls.append(command)
+        assert command[1:4]==['-I','-B','-c']
+        assert str(old_supervisor) not in command
+        assert kwargs['input']==payload
+        # Execute only the harmless local supervisor fixture; NEVER SSH.
+        local=subprocess.run(command[:5],capture_output=True,check=True,timeout=5)
+        assert local.stdout==b'ORIGINAL_SUPERVISOR\n'
+        kwargs['stdout'].write(json.dumps(report()).encode())
+        return SimpleNamespace(returncode=1)
+    result=W.execute(payload,supervisor,{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,fake)
+    assert len(calls)==1 and result['report_produced'] and result['failure_category']=='CHECKS_BLOCKED'
+
+
+@pytest.mark.parametrize('reason',['hash_mismatch','artifact_size','review_scope','supervisor_hash'])
+def test_package_rejection_prevents_transport(reason,monkeypatch,capsys):
+    monkeypatch.setattr(W.sys,'argv',['run_preflight.py','--review-sha256','0'*64])
+    def fail(expected):raise ValueError(reason)
+    monkeypatch.setattr(W,'verify_package',fail)
+    monkeypatch.setattr(W,'execute',lambda *a,**k:pytest.fail('SSH must not begin'))
+    monkeypatch.setattr(W,'profile',lambda:pytest.fail('profile not needed on rejected package'))
+    assert W.main()==1
+    assert json.loads(capsys.readouterr().out)['failure_category']=='LOCAL_VERIFICATION_FAILURE'
+
+
+def test_real_verified_supervisor_bootstrap_preserves_stdin_and_arguments(tmp_path):
+    payload=(DIR/'preflight_readonly.py').read_bytes()
+    supervisor=(ROOT/'deploy/remediation/a3-bounded-local.py').read_bytes()
+    def fake(command,**kwargs):
+        # Real retained supervisor; substitute ONLY its child with harmless local
+        # Python. Never launch the SSH argv constructed for future authorization.
+        child="import sys; raw=sys.stdin.buffer.read(); print(len(raw))"
+        local=subprocess.run(command[:5]+['--',W.sys.executable,'-I','-B','-c',child],
+            input=kwargs['input'],capture_output=True,timeout=5,check=True)
+        assert local.stdout==str(len(payload)).encode()+b'\n'
+        kwargs['stdout'].write(json.dumps(report()).encode())
+        return SimpleNamespace(returncode=1)
+    assert W.execute(payload,supervisor,{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,fake)['report_produced']
+
+
+@pytest.mark.parametrize('mutation,expected_error',[
+    ('payload_hash','hash_mismatch'),('payload_size','artifact_size'),
+    ('unexpected_dependency','review_scope'),
+])
+def test_real_package_verifier_rejects_changed_artifacts_before_transport(mutation,expected_error,monkeypatch):
+    original=W.file_bytes
+    review_path=DIR/'PREFLIGHT-REVIEW.json'
+    review=json.loads(original(review_path))
+    payload_rel='deploy/staging/forecast-consistency-release/preflight_readonly.py'
+    if mutation=='payload_size':review['artifacts'][payload_rel]['bytes']+=1
+    if mutation=='unexpected_dependency':
+        review['artifacts']['unapproved/helper.py']={'bytes':0,'sha256':W.sha(b'')}
+    raw=json.dumps(review).encode()
+    def substituted(path,*args,**kwargs):
+        if path==W.HERE/'PREFLIGHT-REVIEW.json':return raw
+        if mutation=='payload_hash' and path==W.ROOT/payload_rel:
+            return original(path)+b'\n# substituted after review\n'
+        return original(path,*args,**kwargs)
+    monkeypatch.setattr(W,'file_bytes',substituted)
+    monkeypatch.setattr(W.subprocess,'run',lambda *a,**kw:pytest.fail('No transport allowed'))
+    with pytest.raises(ValueError,match=expected_error):W.verify_package(W.sha(raw))

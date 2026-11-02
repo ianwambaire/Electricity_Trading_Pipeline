@@ -3,7 +3,6 @@ Only local private captures/profile are written. No arbitrary remote command API
 """
 import argparse
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -43,17 +42,16 @@ def verify_package(expected):
     if re.fullmatch('[0-9a-f]{64}',expected) is None:raise ValueError('invalid_review_hash')
     raw=verify_hash(HERE/'PREFLIGHT-REVIEW.json',expected); review=json.loads(raw)
     if set(review['artifacts'])!=ARTIFACTS or review['schema_version']!=1:raise ValueError('review_scope')
+    verified={}
     for rel,d in review['artifacts'].items():
         content=verify_hash(ROOT/rel,d['sha256'])
         if len(content)!=d['bytes']: raise ValueError('artifact_size')
-    supervisor=ROOT/'deploy/remediation/a3-bounded-local.py'
-    verify_hash(supervisor,SUPERVISOR_SHA)
+        verified[rel]=content
+    supervisor=verified['deploy/remediation/a3-bounded-local.py']
+    if sha(supervisor)!=SUPERVISOR_SHA:raise ValueError('supervisor_hash')
     # Verify preserved originals without regenerating/repackaging either manifest.
     release=PRIVATE/'release'
-    manifests=[release/'release-manifest.json']
-    matches=[p for p in manifests if sha(file_bytes(p))==RELEASE_SHA]
-    if len(matches)!=1:raise ValueError('preserved_release_manifest')
-    manifest=json.loads(file_bytes(matches[0]))
+    manifest=json.loads(verify_hash(release/'release-manifest.json',RELEASE_SHA))
     for name,item in manifest['files'].items():
         rel=Path(name)
         if rel.is_absolute() or '..' in rel.parts:raise ValueError('release_path')
@@ -64,7 +62,7 @@ def verify_package(expected):
         rel=Path(item['path'])
         if rel.is_absolute() or '..' in rel.parts:raise ValueError('tools_path')
         verify_hash(PRIVATE/'tooling'/rel,item['sha256'])
-    payload=file_bytes(HERE/'preflight_readonly.py')
+    payload=verified['deploy/staging/forecast-consistency-release/preflight_readonly.py']
     return payload,supervisor
 
 def private_file(path):
@@ -109,7 +107,11 @@ def failure_category(code,stderr):
 def execute(payload,supervisor,p,destination,run=subprocess.run):
     # Single supervisor invocation, no loops/retries. Payload travels exclusively on stdin.
     stdout=destination/'stdout.private';stderr=destination/'stderr.private'
-    command=[sys.executable,'-I','-B',str(supervisor),'--',*ssh_argv(p)]
+    if type(payload)is not bytes or type(supervisor)is not bytes:raise ValueError('verified_bytes_required')
+    # Python -c receives the retained bytes, never a source pathname. stdin remains
+    # available for the unchanged supervisor's SSH child and remote payload.
+    bootstrap="exec(compile("+repr(supervisor)+", '<verified-supervisor>', 'exec'))"
+    command=[sys.executable,'-I','-B','-c',bootstrap,'--',*ssh_argv(p)]
     with os.fdopen(os.open(stdout,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb') as out,os.fdopen(os.open(stderr,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb') as err:
         result=run(command,input=payload,stdout=out,stderr=err,timeout=190,check=False,
                    env={'PATH':'/usr/bin:/bin','LANG':'C'},cwd='/')
@@ -117,9 +119,9 @@ def execute(payload,supervisor,p,destination,run=subprocess.run):
     summary={'exit_status':code,'report_produced':False,'failure_category':None,'report':None}
     raw=file_bytes(stdout,131072);error=file_bytes(stderr,131072)
     try:
-        spec=importlib.util.spec_from_file_location('readonly_contract',HERE/'preflight_readonly.py')
-        contract=importlib.util.module_from_spec(spec);spec.loader.exec_module(contract)
-        report=contract.validate_report(json.loads(raw))
+        contract={'__name__':'verified_readonly_contract'}
+        exec(compile(payload,'<verified-readonly-contract>','exec'),contract)
+        report=contract['validate_report'](json.loads(raw))
         if (code==0)!=(report['status']=='PASS'):raise ValueError('exit_status_mismatch')
         summary.update(report_produced=True,report=report,failure_category=None if code==0 else 'CHECKS_BLOCKED')
     except Exception:

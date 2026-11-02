@@ -148,3 +148,40 @@ HTTP requests may generate normal access logs, sudo/SSH normal audit records;
 NOATIME is required for explicit file reads. Python import machinery may read
 library metadata; bytecode writes are disabled. No guarantees about incidental
 kernel counters/access accounting. No nginx -t/-T, Certbot or external requests.
+
+## TOCTOU correction — retained executable bytes
+
+The wrapper retains each artifact's immutable `bytes` value from the SAME read
+whose hash and size were checked. The remote stdin payload is taken from that
+verified snapshot; it is never read again. The supervisor's snapshot is checked
+against both the review manifest and its existing fixed digest, then passed to
+isolated Python through a fixed `-c` bootstrap using `compile(bytes, ...)`.
+The supervisor's source pathname is never executed. Its original argument layout,
+stdin inheritance, 180-second bound and five-second process-group escalation are
+unchanged. The output validator is compiled from the SAME retained remote payload
+with a non-main module name, so neither a source loader nor a subsequent file read
+can substitute its executable code. Preserved release-manifest parsing also uses
+the exact hash-verified bytes, without reopening the manifest.
+
+A file changed before/during the checked read must match its approved digest and
+size or fail before transport. A file changed after verification has no influence
+on the retained payload, supervisor or validator. This assumes the initially
+invoked reviewed wrapper and local Python/OS are trusted; it is not a defense
+against a compromised interpreter or modification of a running process's memory.
+No filesystem permission change, temporary executable copy or remote write is
+introduced. Future invocation syntax and SSH bindings above are unchanged; use
+the NEW separately approved review-manifest digest. Exact current script digests
+and sizes are recorded in PREFLIGHT-REVIEW.json (no circular self-hash in this
+review document).
+
+This correction resolves ONLY the executable-reopen finding. Runtime import
+closure/side effects, streaming output limits, semantic report validation,
+publication access depth, preservation coverage and failure-reporting findings
+remain open. Do not interpret these tests as remote execution authorization or a
+complete security approval.
+
+Additional deterministic regression coverage exercises the real package verifier
+with substituted payload bytes, a changed declared size and an unexpected helper
+dependency. Each is rejected before transport, without relying on a mocked
+verification failure. Post-verification substitution tests separately confirm
+execution/transmission remains bound to the original retained snapshots.

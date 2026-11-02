@@ -367,3 +367,125 @@ def test_reactivation_corrupt_fresh_backup_blocks_candidate_changes(retained,mon
     with pytest.raises(D.Stop,match='BACKUP_ENV_VERIFY'):D.reactivate()
     assert D.ENV.read_bytes()==retained.host.env and D.BACKEND_LINK.resolve()==retained.host.old_api
     assert_legacy_unchanged(retained)
+
+
+@pytest.mark.parametrize('step',sorted(D.BACKEND_STEPS))
+@pytest.mark.parametrize('error,cause',[
+    (PermissionError(13,'PRIVATE_SENTINEL','/secret/path'),'PERMISSION_DENIED'),
+    (FileNotFoundError(2,'PRIVATE_SENTINEL','/secret/path'),'MISSING_FILE'),
+    (TimeoutError('PRIVATE_SENTINEL'),'TIMEOUT'),
+    (OSError(5,'PRIVATE_SENTINEL'),'OS_ERROR'),
+    (ValueError('PRIVATE_SENTINEL'),'VALUE_ERROR'),
+    (KeyError('PRIVATE_SENTINEL'),'MISSING_KEY'),
+    (RuntimeError('PRIVATE_SENTINEL'),'UNEXPECTED_EXCEPTION'),
+])
+def test_backend_unexpected_exceptions_have_safe_substep_codes(step,error,cause):
+    def fail():raise error
+    with pytest.raises(D.Stop) as caught:D.backend_step(step,fail)
+    reason='BACKEND_'+step+'_'+cause
+    assert str(caught.value)==reason and 'PRIVATE_SENTINEL' not in str(caught.value)
+    report={'status':'PARTIAL','phase':'BACKEND_ACTIVATION','reason':reason,'automatic_rollback':False}
+    assert R.validate_report(report,'reactivate',1)==report
+
+
+def test_backend_substep_preserves_explicit_gate_and_return_value():
+    original=D.Stop('SANDBOX_PROPERTIES')
+    def fail():raise original
+    with pytest.raises(D.Stop) as caught:D.backend_step('RUNTIME',fail)
+    assert caught.value is original
+    assert D.backend_step('RECORD_SAVE',lambda a,b:a+b,1,2)==3
+    with pytest.raises(D.Stop,match='ACTION_SCOPE'):D.backend_step('UNREVIEWED',lambda:pytest.fail('Not reached'))
+
+
+@pytest.mark.parametrize('step',sorted(D.BACKEND_STEPS))
+def test_activation_failure_identifies_substep_and_never_switches_static(retained,monkeypatch,step):
+    original=D.backend_step;seen=[]
+    def execute(label,function,*args):
+        seen.append(label)
+        if label==step:
+            def fail():raise PermissionError(13,'PRIVATE_SENTINEL')
+            return original(label,fail)
+        return original(label,function,*args)
+    monkeypatch.setattr(D,'backend_step',execute)
+    with pytest.raises(D.Stop,match='BACKEND_'+step+'_PERMISSION_DENIED'):D.reactivate()
+    assert seen[-1]==step and D.PHASE=='BACKEND_ACTIVATION'
+    assert D.STATIC_LINK.resolve()==retained.host.old_static
+    assert_legacy_unchanged(retained)
+
+
+@pytest.fixture
+def diagnostic(retained,monkeypatch):
+    D.reactivate();D.rollback();D.PHASE='PREFLIGHT';D.CHANGED=False
+    calls=[]
+    def command(argv,**kwargs):
+        calls.append((argv,kwargs))
+        assert argv==['/usr/bin/systemctl','show',D.UNIT,'--property='+D.SERVICE_PROPERTIES]
+        assert kwargs=={'timeout':8,'limit':16384,'grace':5}
+        return {'returncode':0,'failure':None,'stderr':b'PRIVATE_SENTINEL',
+            'stdout':('Id='+D.UNIT+'\nUser=powerflow-api\nGroup=powerflow-api\nActiveState=active\nSubState=running\nResult=success\nExecMainCode=0\nExecMainStatus=0\nStatusErrno=0\nNRestarts=0\n').encode()}
+    monkeypatch.setitem(D.BASE,'bounded_run',command)
+    for name in ('create','atomic_file','pointer','state_save','run','candidate_ready','runtime','request_api','probe','idle_capacity','production'):
+        monkeypatch.setattr(D,name,lambda *a,**kw:pytest.fail('Diagnostic must not mutate, probe or inspect unrelated services'))
+    return retained,calls
+
+
+def test_readonly_diagnostic_uses_only_candidate_metadata_and_preserves_all_files(diagnostic):
+    retained,calls=diagnostic
+    root=retained.legacy.parent.parent
+    before={str(p):p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    result=D.diagnose_backend();assert R.validate_report(result,'diagnose-backend',0)==result
+    assert result['status']=='DIAGNOSTIC_COMPLETE' and result['historical_failure_proven'] is False
+    for key in ('candidate_active','candidate_running','unit_identity_match','transaction_record_valid','transaction_rolled_back','backup_hash_valid','backend_original','static_original','env_original','env_safe','parent_permissions_safe'):assert result['facts'][key] is True
+    assert result['facts']['backend_release'] is False and result['facts']['env_installed'] is False
+    assert before=={str(p):p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    assert len(calls)==1 and not D.CHANGED
+    assert 'PRIVATE_SENTINEL' not in json.dumps(result)
+    assert_legacy_unchanged(retained)
+
+
+@pytest.mark.parametrize('failure',['timeout','exit','output','unknown_property','bad_record','permission'])
+def test_diagnostic_failures_are_unverified_and_redacted(diagnostic,monkeypatch,failure):
+    retained,_=diagnostic
+    if failure in ('timeout','exit','output','unknown_property'):
+        monkeypatch.setitem(D.BASE,'bounded_run',lambda *a,**k:{'returncode':1 if failure=='exit' else 0,'failure':'TIMEOUT' if failure=='timeout' else 'OUTPUT_LIMIT' if failure=='output' else None,'stdout':b'Environment=PRIVATE_SENTINEL\n','stderr':b'PRIVATE_SENTINEL'})
+    if failure=='bad_record':
+        record=json.loads((D.CONTROL/'state.json').read_bytes());record['transaction_id']='b'*32
+        (D.CONTROL/'state.json').write_text(json.dumps(record))
+    if failure=='permission':monkeypatch.setattr(D,'safe',lambda *a:(_ for _ in ()).throw(PermissionError(13,'PRIVATE_SENTINEL')))
+    result=D.diagnose_backend();assert result['status']=='UNVERIFIED' and result['cause_codes']
+    assert R.validate_report(result,'diagnose-backend',0)==result
+    assert not result['historical_failure_proven'] and 'PRIVATE_SENTINEL' not in json.dumps(result)
+    assert not D.CHANGED
+
+
+def test_diagnostic_report_rejects_unbounded_or_private_output(diagnostic):
+    result=D.diagnose_backend()
+    for report in [dict(result,raw_stderr='PRIVATE_SENTINEL'),dict(result,historical_failure_proven=True),
+        dict(result,cause_codes=['PRIVATE_SENTINEL']),dict(result,facts=dict(result['facts'],last_unit_result='PRIVATE_SENTINEL')),
+        dict(result,facts=dict(result['facts'],exec_main_status=True)),dict(result,facts=dict(result['facts'],candidate_active='yes'))]:
+        with pytest.raises(ValueError):R.validate_report(report,'diagnose-backend',0)
+
+
+def test_diagnostic_and_backend_code_allowlists_match():
+    for key in ('BACKEND_STEPS','ERROR_CAUSES','DIAGNOSTIC_STEPS','DIAGNOSTIC_BOOLS','DIAGNOSTIC_INTS','UNIT_RESULTS'):
+        assert getattr(D,key)==getattr(R,key)
+    source=ast.parse((DIR/'deploy.py').read_text())
+    function=next(n for n in source.body if isinstance(n,ast.FunctionDef) and n.name=='diagnose_backend')
+    calls={n.func.id for n in ast.walk(function) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name)}
+    assert not calls & {'create','atomic_file','pointer','state_save','run','runtime','request_api','probe','production','idle_capacity','apply','reactivate','rollback'}
+
+
+def test_diagnostic_supervisor_uses_one_fixed_bounded_command(tmp_path,monkeypatch,diagnostic,capsys):
+    import sys
+    report=D.diagnose_backend();(tmp_path/'preflight').mkdir();calls=[]
+    def bounded(argv,**kwargs):
+        calls.append((argv,kwargs))
+        assert argv==['/verified/ssh','sudo -n /usr/bin/timeout --signal=TERM --kill-after=5s 30s /usr/bin/python3 -I -S -B -']
+        assert kwargs=={'input':b'verified-diagnostic','timeout':90,'limit':131072,'grace':5}
+        return {'returncode':0,'failure':None,'stdout':json.dumps(report).encode(),'stderr':b''}
+    wrapper={'profile':lambda:{},'ssh_argv':lambda p:['/verified/ssh','fixed-placeholder'],'PRIVATE':tmp_path}
+    monkeypatch.setattr(R,'verify',lambda digest,action:(b'verified-diagnostic',wrapper,{'bounded_run':bounded}))
+    monkeypatch.setattr(sys,'argv',['run.py','diagnose-backend','--manifest-sha256','a'*64])
+    assert R.main()==0 and len(calls)==1
+    output=json.loads(capsys.readouterr().out);assert output['report']==report
+    assert len(list((tmp_path/'preflight').iterdir()))==1

@@ -55,7 +55,7 @@ def release_files():
 
 
 def assemble(blobs,files,action,transaction_id):
-    if action not in ('reactivate','rollback') or type(transaction_id)is not str or re.fullmatch('[0-9a-f]{32}',transaction_id) is None:raise ValueError('action_or_transaction')
+    if action not in ('reactivate','rollback','diagnose-backend') or type(transaction_id)is not str or re.fullmatch('[0-9a-f]{32}',transaction_id) is None:raise ValueError('action_or_transaction')
     text=''
     for label,key in [('BASE',BASE),('ROLLBACK',RB)]:
         text+=label+"={'__name__':'verified_dependency'}\nexec(compile("+repr(blobs[key])+",'<verified-dependency>','exec'),"+label+")\n"
@@ -83,10 +83,44 @@ def verify(expected,action):
 
 
 FAILURE_REASONS=set(['ACTION_SCOPE', 'ADDRESS_FAMILIES', 'ADMIN_AUTH_BOUNDARY', 'API_BODY_BOUND', 'API_PROBE_SCOPE', 'ASSET_COLLISION', 'ATOMIC_FILE_VERIFY', 'BACKEND_BASELINE_DRIFT', 'BACKUP_ENV_VERIFY', 'BODY_MISMATCH', 'BPF_ATTACHMENTS', 'CACHE_MISMATCH', 'CANDIDATE_IDENTITY', 'CANDIDATE_NOT_RUNNING', 'CANDIDATE_RESTART_FAILED', 'CANDIDATE_SWAP_ACTIVITY', 'CGROUP_LAYOUT', 'CGROUP_LIMITS', 'COMMAND_SCOPE', 'CONTROL_PERMISSIONS', 'DEPENDENCY_METADATA', 'DESTINATION_CONFLICT', 'DISK_GATE', 'ENTRY_ASSETS', 'ENV_BASELINE_DRIFT', 'ENV_DRIFT', 'ENV_KEY_ALREADY_PRESENT', 'ENV_PERMISSIONS', 'HISTORICAL_API', 'HISTORICAL_SEPARATION', 'HTTPS_ASSET_HASH', 'HTTPS_INDEX_HASH', 'HTTP_ACCEPTANCE', 'IMDS_DENY', 'INPUT_COUNTS', 'INPUT_HASH', 'INPUT_PATH', 'INPUT_SCOPE', 'INSPECTION_OR_INSTALLATION_FAILED', 'INSTALLED_HASH', 'INSTALLED_TARGET_DRIFT', 'LEGACY_ASSET_MISMATCH', 'LEGACY_BACKUP_MISMATCH', 'LEGACY_CONTROL_PERMISSIONS', 'LEGACY_FILE_PERMISSIONS', 'LEGACY_RECORD_DRIFT', 'LEGACY_RECORD_MISMATCH', 'LEGACY_STATIC_MISMATCH', 'LISTENER_OWNERSHIP', 'OLD_ASSET_DRIFT', 'PIPELINE_OR_WINDOW_GATE', 'POINTER_DRIFT', 'POINTER_LAYOUT', 'POINTER_REQUIRED', 'POINTER_VERIFY', 'PROCESS_SECURITY', 'PRODUCTION_DRIFT', 'PRODUCTION_SERVICE_STATE', 'RAM_GATE', 'RESTORED_POINTER_MISMATCH', 'RETAINED_DIRECTORY_PERMISSIONS', 'RETAINED_FILE_HASH', 'RETAINED_FILE_PERMISSIONS', 'RETAINED_MISSING_FILE_OR_DIRECTORY', 'RETAINED_PATH_SCOPE', 'RETAINED_SCAN_BOUND', 'RETAINED_SYMLINK', 'RETAINED_UNEXPECTED_DIRECTORY', 'RETAINED_UNEXPECTED_FILE', 'RETAINED_VENV', 'ROLLBACK_ALREADY_COMPLETE', 'ROLLBACK_BACKEND_HASH', 'ROLLBACK_ENV_DRIFT', 'ROLLBACK_ENV_HASH', 'ROLLBACK_HTTPS', 'ROLLBACK_POINTER_DRIFT', 'ROLLBACK_POSTCHECK', 'ROLLBACK_RECORD', 'ROLLBACK_STATE', 'ROLLBACK_STATIC_HASH', 'ROLLBACK_TARGET_SCOPE', 'ROOT_REQUIRED', 'RUNNING_CODE_TARGET', 'SANDBOX_PROPERTIES', 'SELECTOR_MISSING', 'SINGLE_WORKER', 'STARTUP_READINESS', 'STATIC_INDEX_MISSING', 'STATIC_INVENTORY_BOUND', 'STATIC_SIZE_BOUND', 'STATUS_MISMATCH', 'TRANSACTION_BASELINE', 'TRANSACTION_COLLISION', 'TRANSACTION_HASH', 'TRANSACTION_ID', 'TRANSACTION_INVENTORY', 'TRANSACTION_ORIGINAL_STATE', 'TRANSACTION_PARENT_PERMISSIONS', 'TRANSACTION_RECORD_MISMATCH', 'TRANSACTION_RECORD_SCHEMA', 'TRANSACTION_TARGET_MISMATCH', 'UNEXPECTED_PUBLICATION_ROOT', 'UNSAFE_PATH', 'VENV_TARGET'])
+BACKEND_STEPS={'RECORD_SAVE','ENV_UPDATE','POINTER_SWITCH','RESTART','READINESS','RUNTIME',
+    'FORECAST_CONTRACT','PRESERVATION','CAPACITY','RUNTIME_RECHECK','PRESERVATION_RECHECK','RETAINED_RECHECK'}
+ERROR_CAUSES={'PERMISSION_DENIED','MISSING_FILE','TIMEOUT','OS_ERROR','VALUE_ERROR','MISSING_KEY','UNEXPECTED_EXCEPTION'}
+FAILURE_REASONS|={'BACKEND_'+step+'_'+cause for step in BACKEND_STEPS for cause in ERROR_CAUSES}
+DIAGNOSTIC_STEPS={'SERVICE_METADATA','TRANSACTION','POINTERS','ENVIRONMENT','PERMISSIONS'}
+DIAGNOSTIC_BOOLS={'candidate_active','candidate_running','unit_identity_match','transaction_record_valid',
+    'transaction_rolled_back','backup_hash_valid','backend_original','backend_release','static_original',
+    'env_original','env_installed','env_safe','parent_permissions_safe'}
+DIAGNOSTIC_INTS={'exec_main_code','exec_main_status','status_errno','restart_count'}
+UNIT_RESULTS={'success','exit-code','signal','core-dump','timeout','watchdog','start-limit-hit','resources','protocol','oom-kill','OTHER'}
+
+
+def validate_diagnostic(report,code):
+    fields={'status','phase','facts','cause_codes','historical_failure_proven'}
+    if code!=0 or type(report)is not dict or set(report)!=fields:raise ValueError('diagnostic_schema')
+    if report['phase']!='DIAGNOSTIC' or report['historical_failure_proven'] is not False:raise ValueError('diagnostic_evidence')
+    facts=report['facts'];causes=report['cause_codes']
+    if type(facts)is not dict or set(facts)!=DIAGNOSTIC_BOOLS|DIAGNOSTIC_INTS|{'last_unit_result'}:raise ValueError('diagnostic_fields')
+    for key,value in facts.items():
+        if value is None:continue
+        if key in DIAGNOSTIC_BOOLS and type(value)is not bool:raise ValueError('diagnostic_boolean')
+        if key in DIAGNOSTIC_INTS and (type(value)is not int or not 0<=value<2**63):raise ValueError('diagnostic_number')
+        if key=='last_unit_result' and (type(value)is not str or value not in UNIT_RESULTS):raise ValueError('diagnostic_result')
+    allowed={step+'_'+cause for step in DIAGNOSTIC_STEPS for cause in ERROR_CAUSES}
+    if type(causes)is not list or len(causes)>5 or any(type(x)is not str or x not in allowed for x in causes) or len(set(causes))!=len(causes):raise ValueError('diagnostic_causes')
+    expected='UNVERIFIED' if causes else 'DIAGNOSTIC_COMPLETE'
+    if report['status']!=expected or (not causes and any(v is None for v in facts.values())):raise ValueError('diagnostic_status')
+    return report
+
+
 PHASES={'PREFLIGHT','INSTALL','BACKEND_ACTIVATION','STATIC_ACTIVATION','COMPLETE','ROLLBACK','ROLLED_BACK'}
 
 
 def validate_report(report,action,code):
+    if action=='diagnose-backend':
+        if code==0:return validate_diagnostic(report,code)
+        if type(report)is not dict or report.get('phase')!='PREFLIGHT' or report.get('status')!='BLOCKED':raise ValueError('diagnostic_failure')
+        return validate_report(report,'rollback',code)
     action='apply' if action=='reactivate' else action
     if action not in ('apply','rollback') or type(code)is not int or type(report)is not dict:raise ValueError('report_schema')
     success='DEPLOYED' if action=='apply' else 'ROLLED_BACK'
@@ -106,13 +140,13 @@ def validate_report(report,action,code):
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('reactivate','rollback'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('reactivate','rollback','diagnose-backend'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
     capture=None;summary={'exit_status':None,'failure_category':'LOCAL_VERIFICATION_FAILURE','report':None}
     try:
         payload,wrapper,base=verify(a.manifest_sha256,a.action)
         if a.local_check:print('{"local_integrity":"PASS","remote_attempts":0}');return 0
         command=wrapper['ssh_argv'](wrapper['profile']())
-        seconds=300 if a.action=='reactivate' else 180
+        seconds=300 if a.action=='reactivate' else 30 if a.action=='diagnose-backend' else 180
         command[-1]='sudo -n /usr/bin/timeout --signal=TERM --kill-after=5s '+str(seconds)+'s /usr/bin/python3 -I -S -B -'
         capture=Path(tempfile.mkdtemp(prefix='staging-'+a.action+'-',dir=wrapper['PRIVATE']/'preflight'));capture.chmod(0o700)
         result=base['bounded_run'](command,input=payload,timeout=seconds+60,limit=131072,grace=5)
@@ -132,6 +166,6 @@ def main():
         except Exception:summary['failure_category']='REPORT_WRITE_FAILURE'
     try:print(json.dumps(summary,sort_keys=True))
     except OSError:return 1
-    return 0 if summary['exit_status']==0 and summary['failure_category'] is None and summary['report'] and summary['report']['status'] in ('DEPLOYED','ROLLED_BACK') else 1
+    return 0 if summary['exit_status']==0 and summary['failure_category'] is None and summary['report'] and summary['report']['status'] in ('DEPLOYED','ROLLED_BACK','DIAGNOSTIC_COMPLETE') else 1
 
 if __name__=='__main__':raise SystemExit(main())

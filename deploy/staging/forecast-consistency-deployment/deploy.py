@@ -2,6 +2,7 @@
 CONFIG, BASE and ACTION are injected from independently verified retained bytes.
 """
 import base64
+import errno
 import hashlib
 import json
 import os
@@ -255,16 +256,48 @@ def apply():
     runtime(old_backend);need(production()==before,'PRODUCTION_DRIFT')
     return activate(record,old_backend,old_static,env,installed_env,resources,before)
 
+BACKEND_STEPS={'RECORD_SAVE','ENV_UPDATE','POINTER_SWITCH','RESTART','READINESS',
+    'RUNTIME','FORECAST_CONTRACT','PRESERVATION','CAPACITY','RUNTIME_RECHECK',
+    'PRESERVATION_RECHECK','RETAINED_RECHECK'}
+ERROR_CAUSES={'PERMISSION_DENIED','MISSING_FILE','TIMEOUT','OS_ERROR','VALUE_ERROR',
+    'MISSING_KEY','UNEXPECTED_EXCEPTION'}
+
+
+def exception_cause(error):
+    # Fixed labels only: never str(error), traceback, filename, body or stderr.
+    if isinstance(error,TimeoutError):return 'TIMEOUT'
+    if isinstance(error,OSError):
+        if error.errno in (errno.EACCES,errno.EPERM):return 'PERMISSION_DENIED'
+        if error.errno==errno.ENOENT:return 'MISSING_FILE'
+        return 'OS_ERROR'
+    if isinstance(error,ValueError):return 'VALUE_ERROR'
+    if isinstance(error,KeyError):return 'MISSING_KEY'
+    return 'UNEXPECTED_EXCEPTION'
+
+
+def backend_step(label,function,*args):
+    need(label in BACKEND_STEPS,'ACTION_SCOPE')
+    try:return function(*args)
+    except Stop:raise # Preserve existing explicit gate codes and fail-closed behavior.
+    except Exception as error:raise Stop('BACKEND_'+label+'_'+exception_cause(error)) from None
+
+
 def activate(record,old_backend,old_static,env,installed_env,resources,before,recheck=None):
     global PHASE
     if recheck is not None:recheck()
-    PHASE='BACKEND_ACTIVATION';record['phase']=PHASE;state_save(record)
-    atomic_file(ENV,installed_env,0o600);pointer(BACKEND_LINK,API)
-    run(['/usr/bin/systemctl','restart',UNIT]);candidate_ready();runtime(API);missing_acceptance()
-    need(production()==before,'PRODUCTION_DRIFT')
-    idle_capacity(0)
-    runtime(API);need(production()==before,'PRODUCTION_DRIFT')
-    if recheck is not None:recheck()
+    PHASE='BACKEND_ACTIVATION';record['phase']=PHASE
+    backend_step('RECORD_SAVE',state_save,record)
+    backend_step('ENV_UPDATE',atomic_file,ENV,installed_env,0o600)
+    backend_step('POINTER_SWITCH',pointer,BACKEND_LINK,API)
+    backend_step('RESTART',run,['/usr/bin/systemctl','restart',UNIT])
+    backend_step('READINESS',candidate_ready)
+    backend_step('RUNTIME',runtime,API)
+    backend_step('FORECAST_CONTRACT',missing_acceptance)
+    need(backend_step('PRESERVATION',production)==before,'PRODUCTION_DRIFT')
+    backend_step('CAPACITY',idle_capacity,0)
+    backend_step('RUNTIME_RECHECK',runtime,API)
+    need(backend_step('PRESERVATION_RECHECK',production)==before,'PRODUCTION_DRIFT')
+    if recheck is not None:backend_step('RETAINED_RECHECK',recheck)
     PHASE='STATIC_ACTIVATION';record['phase']=PHASE;state_save(record);pointer(STATIC_LINK,STATIC)
     html=probe(443,'/',200);need(sha(html)==CONFIG['files']['static/index.html']['sha256'],'HTTPS_INDEX_HASH')
     assets=re.findall(rb'(?:src|href)="(/assets/[A-Za-z0-9_-]+\.(?:js|css))"',html);need(0<len(assets)<=16,'ENTRY_ASSETS')
@@ -402,9 +435,81 @@ def rollback():
     PHASE='ROLLED_BACK';record['phase']=PHASE;state_save(record)
     return {'status':'ROLLED_BACK','phase':PHASE,'production_preserved':True}
 
+DIAGNOSTIC_STEPS={'SERVICE_METADATA','TRANSACTION','POINTERS','ENVIRONMENT','PERMISSIONS'}
+SERVICE_PROPERTIES='Id,User,Group,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,StatusErrno,NRestarts'
+DIAGNOSTIC_BOOLS={'candidate_active','candidate_running','unit_identity_match',
+    'transaction_record_valid','transaction_rolled_back','backup_hash_valid',
+    'backend_original','backend_release','static_original','env_original','env_installed',
+    'env_safe','parent_permissions_safe'}
+DIAGNOSTIC_INTS={'exec_main_code','exec_main_status','status_errno','restart_count'}
+UNIT_RESULTS={'success','exit-code','signal','core-dump','timeout','watchdog',
+    'start-limit-hit','resources','protocol','oom-kill','OTHER'}
+
+
+def diagnose_backend():
+    # No application imports/probes, journals, process environments or service action.
+    need(os.geteuid()==0,'ROOT_REQUIRED');select_transaction()
+    facts={key:None for key in DIAGNOSTIC_BOOLS|DIAGNOSTIC_INTS|{'last_unit_result'}}
+    causes=[];record=None
+    def observe(label,function):
+        try:function()
+        except Exception as error:causes.append(label+'_'+exception_cause(error))
+    def service():
+        command=['/usr/bin/systemctl','show',UNIT,'--property='+SERVICE_PROPERTIES]
+        result=BASE['bounded_run'](command,timeout=8,limit=16384,grace=5)
+        if result['failure']=='TIMEOUT':raise TimeoutError()
+        if result['failure'] or result['returncode']!=0:raise ValueError()
+        values={}
+        for line in result['stdout'].decode('utf-8').splitlines():
+            key,separator,value=line.partition('=')
+            if not separator or key not in SERVICE_PROPERTIES.split(',') or key in values:raise ValueError()
+            values[key]=value
+        if set(values)!=set(SERVICE_PROPERTIES.split(',')) or values['Id']!=UNIT:raise ValueError()
+        observed={'unit_identity_match':values['User']==values['Group']=='powerflow-api','candidate_active':values['ActiveState']=='active',
+            'candidate_running':values['SubState']=='running',
+            'last_unit_result':values['Result'] if values['Result'] in UNIT_RESULTS else 'OTHER'}
+        for key,source in [('exec_main_code','ExecMainCode'),('exec_main_status','ExecMainStatus'),
+                           ('status_errno','StatusErrno'),('restart_count','NRestarts')]:
+            value=int(values[source])
+            if not 0<=value<2**63:raise ValueError()
+            observed[key]=value
+        facts.update(observed)
+    def transaction():
+        nonlocal record
+        safe(CONTROL)
+        for directory in (TRANSACTION_PARENT,CONTROL):
+            st=directory.lstat()
+            if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_gid!=0 or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError()
+        for path in (CONTROL/'state.json',CONTROL/'previous-api.env'):
+            st=path.lstat()
+            if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_gid!=0 or stat.S_IMODE(st.st_mode)!=0o600:raise ValueError()
+        item=json.loads(read(CONTROL/'state.json',131072));validate_transaction_record(item)
+        facts['transaction_record_valid']=True;facts['transaction_rolled_back']=item['phase']=='ROLLED_BACK'
+        facts['backup_hash_valid']=digest(CONTROL/'previous-api.env')==item['original_env_sha256']
+        record=item
+    def pointers():
+        if record is None:raise KeyError()
+        backend=target(BACKEND_LINK,API.parent);static=target(STATIC_LINK,STATIC.parent)
+        facts.update(backend_original=str(backend)==record['previous_backend'],backend_release=backend==API,
+                     static_original=str(static)==record['previous_static'])
+    def environment():
+        safe(ENV);st=ENV.lstat()
+        facts['env_safe']=stat.S_ISREG(st.st_mode) and st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o600
+        if record is None:raise KeyError()
+        value=digest(ENV);facts['env_original']=value==record['original_env_sha256'];facts['env_installed']=value==record['installed_env_sha256']
+    def permissions():
+        for path in (ENV.parent,BACKEND_LINK.parent,STATIC_LINK.parent,API,API/'src',TRANSACTION_PARENT,CONTROL):
+            safe(path)
+            if not stat.S_ISDIR(path.lstat().st_mode):raise ValueError()
+        facts['parent_permissions_safe']=True
+    for label,function in [('SERVICE_METADATA',service),('TRANSACTION',transaction),('POINTERS',pointers),
+                           ('ENVIRONMENT',environment),('PERMISSIONS',permissions)]:observe(label,function)
+    return {'status':'UNVERIFIED' if causes else 'DIAGNOSTIC_COMPLETE','phase':'DIAGNOSTIC',
+        'facts':facts,'cause_codes':causes,'historical_failure_proven':False}
+
 if __name__=='__main__':
     try:
-        result=reactivate() if ACTION=='reactivate' else apply() if ACTION=='apply' else rollback() if ACTION=='rollback' else (_ for _ in ()).throw(Stop('ACTION_SCOPE'))
+        result=diagnose_backend() if ACTION=='diagnose-backend' else reactivate() if ACTION=='reactivate' else apply() if ACTION=='apply' else rollback() if ACTION=='rollback' else (_ for _ in ()).throw(Stop('ACTION_SCOPE'))
         print(json.dumps(result,sort_keys=True))
     except Exception as error:
         reason=str(error) if type(error)is Stop and re.fullmatch('[A-Z_]+',str(error)) else 'INSPECTION_OR_INSTALLATION_FAILED'

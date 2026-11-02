@@ -162,3 +162,61 @@ approved real valid publication, never a manufactured forecast. Missing-root beh
 in the actual unit proves no fallback, not future bundle readability or freshness.
 Prior resource/evidence measurements are historical; fresh gates are mandatory.
 Stop for manual commit and new exact-hash authorization. No server was accessed.
+
+## Backend failure diagnosis — local preparation after rollback
+
+Observed reactivation report: exit1, PARTIAL/BACKEND_ACTIVATION,
+INSPECTION_OR_INSTALLATION_FAILED; stderr was empty. Authorized rollback then
+returned exit0/ROLLED_BACK/production_preserved=true. These captures do NOT establish
+which backend operation threw. The last confirmed boundary is the retained-tree
+recheck before entering BACKEND_ACTIVATION. Even saving that phase record may have
+failed: setting the in-memory phase precedes its durable write. Do not claim a
+successful restart, runtime acceptance or a specific permission failure from this.
+
+Proven local diagnostic defect: unexpected exceptions from record save, environment
+replacement, backend pointer switch, restart, readiness, runtime checks, forecast
+contract parsing, preservation, capacity and retained-file recheck shared a generic
+catch. Each backend operation now retains the existing explicit Stop gate codes;
+other exceptions produce BACKEND_<SUBSTEP>_<CAUSE>. Causes are fixed labels:
+PERMISSION_DENIED, MISSING_FILE, TIMEOUT, OS_ERROR, VALUE_ERROR, MISSING_KEY and
+UNEXPECTED_EXCEPTION. Exception messages, paths, response bodies and stderr are never
+included. Operation order, mutation boundaries, acceptance and rollback are unchanged.
+This fixes reporting; it does NOT prove or repair the historical activation failure.
+
+### Separate read-only diagnostic authorization
+
+The existing full preflight cannot perform this candidate/transaction-only check.
+The new explicit diagnose-backend action is manifest-bound and dispatches ONLY the
+read-only function; it cannot fall through to activation or rollback. Exact future
+command, requiring a new reviewed manifest hash and separate authorization:
+
+```sh
+venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py diagnose-backend \
+  --manifest-sha256 APPROVED_NEW_MANIFEST_SHA256
+```
+
+Append --local-check for zero connections. One strict pinned SSH attempt; fixed
+sudo -n timeout30s, local90s, TERM/KILL5s; streams capped131072 bytes. No retries.
+
+Inspection is limited to the candidate unit's systemctl show properties Id, User, Group,
+ActiveState, SubState, Result, ExecMainCode, ExecMainStatus, StatusErrno, NRestarts
+(one command,8s,16384-byte cap), this manifest's transaction record/environment
+backup, current backend/static pointers, environment file HASH/mode/ownership and
+approved candidate parent directories. Reads use the retained NOATIME helper.
+No journals, ExecStart/Environment values, process environments, application imports,
+network probes, unrelated service inspection or remote writes. Output is fixed
+booleans/nulls, bounded integers, an allowlisted unit-result label and fixed cause
+codes. Errors become UNVERIFIED; no raw exception text or private paths are output.
+
+The diagnostic does not prove that a previous restart succeeded or explain an erased
+historical exception: rollback restarted the old candidate and overwrote the live
+phase record. historical_failure_proven is always false. Current metadata may expose
+an ownership/state problem, but a healthy restored candidate does not prove the
+retained release can start. Any remaining ambiguity must be reported, not guessed.
+
+Transaction 51788d41661b41ae89a564a17f5730db has already been consumed and rolled back.
+Keep it bound here for diagnosis; do NOT authorize another reactivate with this
+transaction. Reuse of immutable API/static files remains possible only after fresh
+integrity/live gates. A later deployment package needs a newly reviewed transaction
+ID/hash binding and fresh backups. Do not overwrite or clean up this transaction.
+No remote command or service operation was run during this local correction.

@@ -75,7 +75,7 @@ export const api = {
   health: (signal?: AbortSignal) => request('/health', parseHealth, signal),
   pipeline: (signal?: AbortSignal) => request('/pipeline/status', parsePipeline, signal),
   next24: (signal?: AbortSignal) => request('/forecast/next24', parseNext24, signal),
-  oneHour: (signal?: AbortSignal) => request('/forecast/one-hour', parseOneHour, signal),
+  oneHour: (signal?: AbortSignal) => request('/forecast/one-hour?limit=500&offset=0', parseOneHour, signal),
   vintages: (signal?: AbortSignal) => request('/admin/monitoring/forecast-vintages', parseVintages, signal),
   readiness: (signal?: AbortSignal) => request('/admin/monitoring/exogenous-readiness', parseReadiness, signal),
 }

@@ -63,3 +63,15 @@ test('monitoring success is parsed without unsafe unknown fields', () => {
   assert.ok(!JSON.stringify(r).includes('private'))
   assert.equal(parsePipeline({ ...pipeline, latest_run_status: 'credential-like-unexpected-value' }).latest_run_status, 'Unrecognized status')
 })
+
+test('historical comparison client requests a bounded latest-500 page', async () => {
+  const original = globalThis.fetch
+  try {
+    globalThis.fetch = async (input) => {
+      assert.equal(input, '/api/forecast/one-hour?limit=500&offset=0')
+      return Response.json({ row_count: 1, total_rows: 15000, limit: 500, offset: 0, has_more: true, forecasts: [{ target_time: new Date(issue).toISOString(), actual_price_eur_mwh: 55, predicted_price_eur_mwh: 53 }] })
+    }
+    const { api } = await import('../src/api/client.ts')
+    assert.equal((await api.oneHour()).row_count, 1)
+  } finally { globalThis.fetch = original }
+})

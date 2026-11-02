@@ -101,6 +101,7 @@ def test_missing_acceptance_requires_exact_status_code_and_no_store(monkeypatch)
     def api(path):
         if path=='/forecast/next24':return 503,{'Cache-Control':'no-store'},b'{"detail":{"code":"FORECAST_WITHHELD"}}'
         if path=='/operations/summary':return 200,{},b'{"forecast_status":"MISSING_PUBLICATION","health":"Historical snapshot","completeness_note":"Historical operational snapshot only"}'
+        if path=='/forecast/one-hour?limit=24&offset=0':return 200,{},b'{"row_count":1,"total_rows":1,"limit":24,"offset":0,"has_more":false,"forecasts":[{}]}'
         return (401 if path.startswith('/admin/') else 200),{},b'{}'
     monkeypatch.setattr(D,'request_api',api);D.missing_acceptance()
     monkeypatch.setattr(D,'request_api',lambda p:(500,{},b'{}'))
@@ -506,6 +507,7 @@ def test_operations_timeout_reproduces_recorded_latency_and_preserves_contract(m
             assert limit==1000001
             if self.path=='/forecast/next24':return b'{"detail":{"code":"FORECAST_WITHHELD"}}'
             if self.path=='/operations/summary':return b'{"forecast_status":"MISSING_PUBLICATION","health":"Historical snapshot","completeness_note":"Historical evidence only"}'
+            if self.path=='/forecast/one-hour?limit=24&offset=0':return b'{"row_count":1,"total_rows":1,"limit":24,"offset":0,"has_more":false,"forecasts":[{}]}'
             return b'{}'
     class Connection:
         def __init__(self,host,port,timeout):assert (host,port)==('127.0.0.1',8010);self.timeout=timeout
@@ -581,3 +583,103 @@ def test_malformed_http_and_oversized_response_fail_closed(monkeypatch):
         def read(self,limit):return b'x'*limit
     monkeypatch.setattr(Connection,'getresponse',lambda self:Response())
     with pytest.raises(D.Stop,match='API_BODY_BOUND'):D.request_api('/forecast/next24')
+
+
+def test_paginated_historical_acceptance_rejects_ignored_or_false_limits():
+    valid={'row_count':24,'total_rows':15000,'limit':24,'offset':0,'has_more':True,'forecasts':[{}]*24}
+    D.validate_one_hour_page(valid)
+    for change in ({'forecasts':[{}]*25,'row_count':25}, {'limit':500}, {'offset':1}, {'has_more':False}, {'row_count':True}, {'total_rows':12}, {'forecasts':None}):
+        with pytest.raises(D.Stop,match='API_PAGINATION_CONTRACT'):D.validate_one_hour_page(dict(valid,**change))
+    with pytest.raises(D.Stop,match='API_PAGINATION_CONTRACT'):D.validate_one_hour_page({'row_count':24,'forecasts':[{}]*24})
+
+
+def test_body_bound_reports_only_allowlisted_metadata(monkeypatch):
+    import http.client
+    class Response:
+        status=200
+        def read(self,limit):assert limit==1_000_001;return b'x'*limit
+        def getheader(self,key,default=None):return {'Content-Length':'1694070','Content-Type':'application/json'}.get(key,default)
+    class Connection:
+        def __init__(self,*a,**kw):pass
+        def request(self,method,path):assert path=='/forecast/one-hour?limit=24&offset=0'
+        def getresponse(self):return Response()
+        def close(self):pass
+    monkeypatch.setattr(http.client,'HTTPConnection',Connection)
+    with pytest.raises(D.Stop,match='API_BODY_BOUND') as caught:D.request_api('/forecast/one-hour?limit=24&offset=0')
+    evidence=caught.value.api_body_bound
+    R.validate_body_bound(evidence)
+    assert evidence['endpoint']=='/forecast/one-hour' and evidence['query_scope']=='LATEST_24'
+    assert evidence['measured_bytes']==1_000_001 and evidence['content_length']==1694070
+    report={'status':'PARTIAL','phase':'BACKEND_ACTIVATION','reason':'API_BODY_BOUND','automatic_rollback':False,'api_body_bound':evidence}
+    assert R.validate_report(report,'apply',1)==report
+    for change in ({'endpoint':'/private'}, {'query_scope':'PRIVATE_SENTINEL'}, {'content_type':'PRIVATE_SENTINEL'}, {'measured_bytes':1}, {'content_length':-1}):
+        with pytest.raises(ValueError):R.validate_body_bound(dict(evidence,**change))
+
+
+def test_correct_page_remains_under_body_bound(monkeypatch):
+    import http.client
+    page={'row_count':24,'total_rows':15000,'limit':24,'offset':0,'has_more':True,'forecasts':[{}]*24}
+    raw=json.dumps(page).encode()
+    class Response:
+        status=200
+        def read(self,limit):return raw[:limit]
+        def getheaders(self):return [('Content-Type','application/json')]
+    class Connection:
+        def __init__(self,*a,**kw):pass
+        def request(self,*a):pass
+        def getresponse(self):return Response()
+        def close(self):pass
+    monkeypatch.setattr(http.client,'HTTPConnection',Connection)
+    code,_,body=D.request_api('/forecast/one-hour?limit=24&offset=0')
+    assert code==200;D.validate_one_hour_page(json.loads(body))
+
+
+def test_production_preservation_requires_exact_deployed_a03_parser(monkeypatch):
+    monkeypatch.setattr(D,'BASE',{'services':lambda:{'production':{'ActiveState':'active','SubState':'running'}},'fingerprints':lambda units:'stable'},raising=False)
+    expected='8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f'
+    monkeypatch.setattr(D,'digest',lambda p:expected)
+    assert len(D.production())==64
+    monkeypatch.setattr(D,'digest',lambda p:'0'*64)
+    with pytest.raises(D.Stop,match='APPROVED_PARSER_DRIFT'):D.production()
+
+
+def test_new_release_apply_uses_fresh_transaction_and_independent_rollback(retained,monkeypatch):
+    # Install a NEW release; never edit the consumed retained release or record.
+    old_retained_api=D.API;old_retained_static=D.STATIC
+    before_api={str(p.relative_to(D.API)):p.read_bytes() for p in D.API.rglob('*') if p.is_file()}
+    monkeypatch.setattr(D,'API',D.API.parent/'new-paginated-release')
+    monkeypatch.setattr(D,'STATIC',D.STATIC.parent/'new-paginated-release')
+    D.apply()
+    assert D.CONTROL.name=='1'*32 and D.CONTROL!=retained.legacy
+    record=json.loads((D.CONTROL/'state.json').read_bytes())
+    assert record['transaction_id']=='1'*32 and record['legacy_record_sha256']==D.digest(retained.legacy/'state.json')
+    assert D.digest(D.CONTROL/'previous-api.env')==D.ENV_BASELINE
+    D.rollback()
+    assert D.BACKEND_LINK.resolve()==retained.host.old_api and D.STATIC_LINK.resolve()==retained.host.old_static
+    assert D.ENV.read_bytes()==retained.host.env
+    assert old_retained_static.exists() and before_api=={str(p.relative_to(old_retained_api)):p.read_bytes() for p in old_retained_api.rglob('*') if p.is_file()}
+    assert_legacy_unchanged(retained)
+
+
+def test_new_release_apply_rejects_existing_transaction_without_mutation(retained,monkeypatch):
+    monkeypatch.setattr(D,'API',D.API.parent/'new-paginated-release')
+    monkeypatch.setattr(D,'STATIC',D.STATIC.parent/'new-paginated-release')
+    D.TRANSACTION_PARENT.mkdir(mode=0o700)
+    (D.TRANSACTION_PARENT/('1'*32)).mkdir(mode=0o700)
+    with pytest.raises(D.Stop,match='DESTINATION_CONFLICT'):D.apply()
+    assert D.BACKEND_LINK.resolve()==retained.host.old_api and D.ENV.read_bytes()==retained.host.env
+    assert not D.API.exists();assert_legacy_unchanged(retained)
+
+
+@pytest.mark.parametrize('failure',['legacy_backup','legacy_state','transaction_mode'])
+def test_new_apply_drift_stops_before_any_new_write(retained,monkeypatch,failure):
+    monkeypatch.setattr(D,'API',D.API.parent/'new-paginated-release')
+    monkeypatch.setattr(D,'STATIC',D.STATIC.parent/'new-paginated-release')
+    if failure=='legacy_backup':(retained.legacy/'previous-api.env').write_bytes(b'drift')
+    elif failure=='legacy_state':
+        p=retained.legacy/'state.json';r=json.loads(p.read_bytes());r['phase']='COMPLETE';p.write_text(json.dumps(r))
+    else:D.TRANSACTION_PARENT.mkdir(mode=0o755)
+    with pytest.raises(D.Stop):D.apply()
+    assert not D.CHANGED and not D.API.exists() and not D.STATIC.exists()
+    assert not (D.TRANSACTION_PARENT/('1'*32)).exists()
+    assert D.ENV.read_bytes()==retained.host.env and D.BACKEND_LINK.resolve()==retained.host.old_api

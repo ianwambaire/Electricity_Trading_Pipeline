@@ -167,6 +167,7 @@ def test_one_hour_endpoint_exposes_only_existing_report(tmp_path):
     assert response.status_code == 200
     assert response.json() == {
         "row_count": 1,
+        "total_rows": 1, "limit": 500, "offset": 0, "has_more": False,
         "forecasts": [
             {
                 "target_time": "2026-10-15T13:00:00Z",
@@ -263,3 +264,55 @@ def test_api_never_invokes_production_inference(tmp_path, monkeypatch):
     assert response.status_code == 200
     assert response.json()["row_count"] == 24
 
+
+@pytest.fixture
+def large_one_hour_report(tmp_path):
+    import csv
+    from datetime import datetime, timedelta, timezone
+    settings = _settings(tmp_path)
+    settings.one_hour_forecast.parent.mkdir(parents=True, exist_ok=True)
+    with settings.one_hour_forecast.open('w', newline='') as stream:
+        writer = csv.writer(stream)
+        writer.writerow(['timestamp', 'actual_price', 'predicted_price'])
+        for i in range(15000):
+            writer.writerow([(datetime(2024, 1, 1, tzinfo=timezone.utc) + timedelta(hours=i)).isoformat(), 55.25, 53.5])
+    return settings
+
+
+def test_large_one_hour_history_is_paginated_without_changing_source(large_one_hour_report):
+    from api.app import _one_hour_report
+    settings = large_one_hour_report
+    before = hashlib.sha256(settings.one_hour_forecast.read_bytes()).hexdigest()
+    # Reproduce the original unpaged serialization of a legitimate >1 MB report.
+    unpaged = _one_hour_report(settings.one_hour_forecast, limit=15000)
+    assert len(unpaged.model_dump_json().encode()) > 1_000_000
+    client = TestClient(create_app(settings))
+    first = client.get('/forecast/one-hour?limit=24&offset=0')
+    second = client.get('/forecast/one-hour?limit=24&offset=24')
+    assert first.status_code == second.status_code == 200
+    page = first.json()
+    assert len(first.content) < 1_000_000
+    assert (page['row_count'], page['total_rows'], page['limit'], page['offset'], page['has_more']) == (24, 15000, 24, 0, True)
+    assert len(page['forecasts']) == 24
+    assert second.json()['forecasts'][-1]['target_time'] < page['forecasts'][0]['target_time']
+    default = client.get('/forecast/one-hour').json()
+    assert default['row_count'] == default['limit'] == 500
+    assert len(client.get('/forecast/one-hour?limit=2000').content) < 1_000_000
+    end = client.get('/forecast/one-hour?limit=24&offset=14999').json()
+    assert end['row_count'] == 1 and end['has_more'] is False
+    empty = client.get('/forecast/one-hour?limit=24&offset=15000').json()
+    assert empty['row_count'] == 0 and empty['has_more'] is False
+    assert hashlib.sha256(settings.one_hour_forecast.read_bytes()).hexdigest() == before
+
+
+@pytest.mark.parametrize('query', ['limit=0','limit=2001','limit=no','offset=-1','offset=2000001'])
+def test_one_hour_rejects_invalid_pagination(tmp_path, query):
+    assert _client(tmp_path).get('/forecast/one-hour?' + query).status_code == 422
+
+
+def test_pagination_does_not_hide_invalid_historical_values(tmp_path):
+    settings = _settings(tmp_path)
+    _write_one_hour(settings.one_hour_forecast)
+    with settings.one_hour_forecast.open('a') as stream:
+        stream.write('2020-01-01T00:00:00Z,nan,1\n')
+    assert _client(tmp_path).get('/forecast/one-hour?limit=1&offset=0').status_code == 503

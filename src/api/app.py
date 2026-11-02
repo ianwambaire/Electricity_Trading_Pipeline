@@ -123,6 +123,10 @@ class OneHourForecastRow(StrictResponseModel):
 class OneHourForecastResponse(StrictResponseModel):
     row_count: int
     forecasts: list[OneHourForecastRow]
+    total_rows: int
+    limit: int
+    offset: int
+    has_more: bool
 
 
 def _utc_datetime(value: Any, field_name: str) -> datetime:
@@ -296,7 +300,7 @@ def _next24_report(path: Path) -> Next24ForecastResponse:
     return Next24ForecastResponse(row_count=len(forecasts), forecasts=forecasts)
 
 
-def _one_hour_report(path: Path) -> OneHourForecastResponse:
+def _one_hour_report(path: Path, limit: int = 500, offset: int = 0) -> OneHourForecastResponse:
     rows = _read_csv_rows(path, "One-hour forecast report")
     required = {"timestamp", "actual_price", "predicted_price"}
     if not rows:
@@ -323,7 +327,13 @@ def _one_hour_report(path: Path) -> OneHourForecastResponse:
         raise HTTPException(
             status_code=503, detail="One-hour forecast report is invalid."
         ) from exc
-    return OneHourForecastResponse(row_count=len(forecasts), forecasts=forecasts)
+    # Page from the newest observations, then return chronological chart order.
+    # Validate the full persisted report first: pagination must not hide bad rows.
+    forecasts.sort(key=lambda row: row.target_time, reverse=True)
+    total = len(forecasts)
+    page = sorted(forecasts[offset:offset + limit], key=lambda row: row.target_time)
+    return OneHourForecastResponse(row_count=len(page), forecasts=page,
+        total_rows=total, limit=limit, offset=offset, has_more=offset + len(page) < total)
 
 
 def create_app(settings: APISettings | None = None, *, security_settings: SecuritySettings | None = None, runtime_settings: RuntimeSettings | None = None) -> FastAPI:
@@ -456,8 +466,9 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
             completed_at=bundle["execution"]["completed_at"]))
 
     @application.get("/forecast/one-hour", response_model=OneHourForecastResponse)
-    def one_hour_forecast() -> OneHourForecastResponse:
-        return _one_hour_report(configured.one_hour_forecast)
+    def one_hour_forecast(limit: int = Query(default=500, ge=1, le=2000),
+                          offset: int = Query(default=0, ge=0, le=2_000_000)) -> OneHourForecastResponse:
+        return _one_hour_report(configured.one_hour_forecast, limit, offset)
 
     @application.get("/monitoring/forecast-vintages", response_model=VintageDiagnostics, dependencies=[Depends(require_admin)], deprecated=True, tags=["Deprecated Admin aliases"])
     def forecast_vintage_monitoring() -> dict[str, Any]:

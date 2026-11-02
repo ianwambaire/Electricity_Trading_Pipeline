@@ -1,16 +1,16 @@
 {
   "artifacts": {
     "deploy/staging/forecast-consistency-deployment/REVIEW.md": {
-      "bytes": 17877,
-      "sha256": "01c868af8bd45bd750301df632c8f63ce041100e3fed38752101a7862132395d"
+      "bytes": 11584,
+      "sha256": "27980cdb1ad99f9eb19fc95958f288cb1b43efa061886f2b5e57b4dc9f5c9c51"
     },
     "deploy/staging/forecast-consistency-deployment/deploy.py": {
-      "bytes": 35263,
-      "sha256": "06921f768ff42dbe06a17dd9ae14f4acff4cfcd4edeaa69a7001cdee7808583c"
+      "bytes": 38703,
+      "sha256": "5472edead490afa26a05dcf86b6a5fb7982ed7df5babad3cc651896c794a76ce"
     },
     "deploy/staging/forecast-consistency-deployment/run.py": {
-      "bytes": 13747,
-      "sha256": "3b157cb9e1ada14b0c3da4058ed4a434b235a3ef00e6fcd8f9c50683e21b28fc"
+      "bytes": 16127,
+      "sha256": "f624d8d1db4b3935efe314e75f21722a3419c37e3b7607fc9eb568ff3c603ec0"
     },
     "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
       "bytes": 34587,
@@ -29,16 +29,17 @@
       "sha256": "930f135efade4502d216d727c69aa71a3b1abc5a56b37847824dce8e18453612"
     },
     "tests/test_forecast_consistency_deployment.py": {
-      "bytes": 36767,
-      "sha256": "e71d77ad0cd8f638199a7f175697de765644272101428aab85ce6bc6c67ca2ad"
+      "bytes": 43112,
+      "sha256": "a625900f0221868f5a1f754e6501745b94384f0856395ecac94e053b8ddb6f7b"
     }
   },
   "assembled_sha256": {
-    "diagnose-backend": "0d1a613274babb3f390f72a4ba34fd4891c259adfdd848111d44f3c3acad4c55",
-    "reactivate": "430f22ebec992b04c6d70f29046a85a02254fbe6c63e1ffd9ce2a444b95c88df",
-    "rollback": "a05bbe5571b953236698e098e197270308ead3309fa46b66ca46ee29b7ed2003"
+    "apply": "c3643cd31577321707ee09dc81dbb7a9e7ab1f70273e0c023d2079eab54fc822",
+    "reactivate": "f26bce5ff0cd3f441d1abe6721b79ccdc46f02f2f644a834d16e55885d0ad300",
+    "rollback": "8b85d1a61509c6720d86acdcd271cad13013df67300b2cbbb23f97f0af86439e",
+    "diagnose-backend": "abaa5ea697de7b1c867ee4941109eca7b5a54f111f7da8b5db1f46b199f1c980"
   },
-  "release_manifest_sha256": "9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19",
+  "release_manifest_sha256": "dc2fd9aa9cb0e961fd3859aa63b946a307c43f8a31ed6d8ac0ef4529c32f2045",
   "schema_version": 1,
-  "transaction_id": "3b6717574fe046c9a0d23ec046b03513"
+  "transaction_id": "f2f195174eda43daa8e5593087fbe1d3"
 }

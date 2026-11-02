@@ -18,7 +18,8 @@ JOB='deploy/staging/forecast-consistency-deployment/deploy.py'
 BASE=PREF+'preflight_readonly.py'
 WRAPPER=PREF+'run_preflight.py'
 RB=PREF+'rollback_state.py'
-RELEASE_SHA='9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19'
+RELEASE_ID='phase-api-body-bound-20261102-v2'
+RELEASE_SHA='dc2fd9aa9cb0e961fd3859aa63b946a307c43f8a31ed6d8ac0ef4529c32f2045'
 ARTIFACTS={JOB,'deploy/staging/forecast-consistency-deployment/run.py','deploy/staging/forecast-consistency-deployment/REVIEW.md',BASE,WRAPPER,RB,'scripts/smoke_staging.py','tests/test_forecast_consistency_deployment.py'}
 
 
@@ -38,10 +39,20 @@ def namespace(raw,name,file=None):
 
 
 def release_files():
-    root=ROOT/'data/backups/private-staging-releases/phase-forecast-consistency-20261101-v1/release'
+    # The previous reviewed immutable package is evidence, never an edit target.
+    original=ROOT/'data/backups/private-staging-releases/phase-forecast-consistency-20261101-v1/release'
+    original_raw=read(original/'release-manifest.json')
+    if hashlib.sha256(original_raw).hexdigest()!='9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19':raise ValueError('original_manifest')
+    for name,item in json.loads(original_raw)['files'].items():
+        p=Path(name)
+        if p.is_absolute() or '..' in p.parts:raise ValueError('original_path')
+        raw=read(original/p)
+        if len(raw)!=item['bytes'] or hashlib.sha256(raw).hexdigest()!=item['sha256']:raise ValueError('original_hash')
+    root=ROOT/('data/backups/private-staging-releases/'+RELEASE_ID+'/release')
     raw=read(root/'release-manifest.json')
     if hashlib.sha256(raw).hexdigest()!=RELEASE_SHA:raise ValueError('release_manifest')
     manifest=json.loads(raw);result={}
+    if manifest.get('release_id')!=RELEASE_ID:raise ValueError('release_identity')
     for name,item in manifest['files'].items():
         p=Path(name)
         if p.is_absolute() or '..' in p.parts:raise ValueError('release_path')
@@ -55,7 +66,7 @@ def release_files():
 
 
 def assemble(blobs,files,action,transaction_id):
-    if action not in ('reactivate','rollback','diagnose-backend') or type(transaction_id)is not str or re.fullmatch('[0-9a-f]{32}',transaction_id) is None:raise ValueError('action_or_transaction')
+    if action not in ('apply','reactivate','rollback','diagnose-backend') or type(transaction_id)is not str or re.fullmatch('[0-9a-f]{32}',transaction_id) is None:raise ValueError('action_or_transaction')
     text=''
     for label,key in [('BASE',BASE),('ROLLBACK',RB)]:
         text+=label+"={'__name__':'verified_dependency'}\nexec(compile("+repr(blobs[key])+",'<verified-dependency>','exec'),"+label+")\n"
@@ -116,6 +127,7 @@ def validate_diagnostic(report,code):
 API_LABELS={'FORECAST','OPERATIONS','ONE_HOUR','COVERAGE','PIPELINE','MODELS','ADMIN'}
 API_PHASES={'REQUEST','HEADERS','BODY'}
 API_CAUSES={'TIMEOUT','CONNECTION_REFUSED','UNREACHABLE','CONNECTION_RESET','PERMISSION_DENIED','HTTP_PROTOCOL','OS_ERROR'}
+FAILURE_REASONS|={'API_PAGINATION_CONTRACT','APPROVED_PARSER_DRIFT'}
 FAILURE_REASONS|={'API_'+label+'_'+phase+'_'+cause for label in API_LABELS for phase in API_PHASES for cause in API_CAUSES}
 PHASES={'PREFLIGHT','INSTALL','BACKEND_ACTIVATION','STATIC_ACTIVATION','COMPLETE','ROLLBACK','ROLLED_BACK'}
 
@@ -137,20 +149,36 @@ def validate_report(report,action,code):
             values=report['resources_before']
             if type(values)is not dict or set(values)!={'available_bytes','swap_used_bytes'} or any(type(x)is not int or not 0<=x<2**63 for x in values.values()) or values['available_bytes']<768*1024**2:raise ValueError('resource_evidence')
     else:
-        if code!=1 or set(report)!={'status','phase','reason','automatic_rollback'} or report['status'] not in ('BLOCKED','PARTIAL') or report['phase'] not in PHASES or report['reason'] not in FAILURE_REASONS or report['automatic_rollback'] is not False:raise ValueError('failure_evidence')
+        expected={'status','phase','reason','automatic_rollback'}
+        if 'api_body_bound' in report:
+            validate_body_bound(report['api_body_bound'])
+            if report.get('reason')!='API_BODY_BOUND':raise ValueError('bound_reason')
+            expected.add('api_body_bound')
+        if code!=1 or set(report)!=expected or report['status'] not in ('BLOCKED','PARTIAL') or report['phase'] not in PHASES or report['reason'] not in FAILURE_REASONS or report['automatic_rollback'] is not False:raise ValueError('failure_evidence')
         allowed={'PREFLIGHT','ROLLBACK'} if action=='rollback' else PHASES-{'ROLLBACK','ROLLED_BACK'}
         if report['phase'] not in allowed:raise ValueError('action_phase')
     return report
 
 
+def validate_body_bound(value):
+    fields={'endpoint','query_scope','limit_bytes','measured_bytes','size_is_lower_bound','status','content_type','content_length'}
+    if type(value)is not dict or set(value)!=fields:raise ValueError('bound_schema')
+    paths={'/forecast/next24','/operations/summary','/forecast/one-hour','/market/coverage','/pipeline/status','/models/summary','/admin/forecast/provenance'}
+    if value['endpoint'] not in paths or value['query_scope'] not in {'LATEST_24','UNPAGED'}:raise ValueError('bound_scope')
+    if value['query_scope']=='LATEST_24' and value['endpoint']!='/forecast/one-hour':raise ValueError('bound_query')
+    if type(value['limit_bytes'])is not int or value['limit_bytes']!=1_000_000 or type(value['measured_bytes'])is not int or value['measured_bytes']!=1_000_001 or value['size_is_lower_bound'] is not True:raise ValueError('bound_measurement')
+    if type(value['status'])is not int or not 100<=value['status']<=599 or value['content_type'] not in {'JSON','OTHER'}:raise ValueError('bound_response')
+    if value['content_length'] is not None and (type(value['content_length'])is not int or not 0<=value['content_length']<10**18):raise ValueError('bound_length')
+
+
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('reactivate','rollback','diagnose-backend'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('apply','reactivate','rollback','diagnose-backend'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
     capture=None;summary={'exit_status':None,'failure_category':'LOCAL_VERIFICATION_FAILURE','report':None}
     try:
         payload,wrapper,base=verify(a.manifest_sha256,a.action)
         if a.local_check:print('{"local_integrity":"PASS","remote_attempts":0}');return 0
         command=wrapper['ssh_argv'](wrapper['profile']())
-        seconds=300 if a.action=='reactivate' else 30 if a.action=='diagnose-backend' else 180
+        seconds=300 if a.action in ('apply','reactivate') else 30 if a.action=='diagnose-backend' else 180
         command[-1]='sudo -n /usr/bin/timeout --signal=TERM --kill-after=5s '+str(seconds)+'s /usr/bin/python3 -I -S -B -'
         capture=Path(tempfile.mkdtemp(prefix='staging-'+a.action+'-',dir=wrapper['PRIVATE']/'preflight'));capture.chmod(0o700)
         result=base['bounded_run'](command,input=payload,timeout=seconds+60,limit=131072,grace=5)

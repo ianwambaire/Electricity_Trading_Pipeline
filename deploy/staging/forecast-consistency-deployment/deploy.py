@@ -13,7 +13,7 @@ import socket
 import time
 import uuid
 
-ID='phase-forecast-consistency-20261101-v1'
+ID='phase-api-body-bound-20261102-v2'
 API=Path('/opt/powerflow/releases')/ID
 STATIC=Path('/var/www/powerflow-staging/releases')/ID
 LEGACY_CONTROL=Path('/var/lib/powerflow-staging/forecast-consistency-20261101-v1')
@@ -93,7 +93,10 @@ def inventory(root):
 def production():
     units=BASE['services']()
     need(all(v.get('ActiveState')=='active' and v.get('SubState')=='running' for k,v in units.items() if k!=UNIT),'PRODUCTION_SERVICE_STATE')
-    return BASE['fingerprints']({k:v for k,v in units.items() if k!=UNIT})
+    parser=digest(Path('/home/ec2-user/Electricity_Trading_Pipeline/src/ingestion/fetch_entsoe_data.py'))
+    need(parser=='8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f','APPROVED_PARSER_DRIFT')
+    return sha(json.dumps({'existing':BASE['fingerprints']({k:v for k,v in units.items() if k!=UNIT}),
+        'approved_parser':parser},sort_keys=True).encode())
 
 def idle_capacity(extra):
     facts,ok=BASE['pipeline']();need(ok,'PIPELINE_OR_WINDOW_GATE')
@@ -146,7 +149,7 @@ def candidate_ready():
     raise Stop('STARTUP_READINESS')
 
 API_LABELS={'/forecast/next24':'FORECAST','/operations/summary':'OPERATIONS',
-    '/forecast/one-hour':'ONE_HOUR','/market/coverage':'COVERAGE','/pipeline/status':'PIPELINE',
+    '/forecast/one-hour':'ONE_HOUR','/forecast/one-hour?limit=24&offset=0':'ONE_HOUR','/market/coverage':'COVERAGE','/pipeline/status':'PIPELINE',
     '/models/summary':'MODELS','/admin/forecast/provenance':'ADMIN'}
 API_PHASES={'REQUEST','HEADERS','BODY'}
 API_CAUSES={'TIMEOUT','CONNECTION_REFUSED','UNREACHABLE','CONNECTION_RESET','PERMISSION_DENIED','HTTP_PROTOCOL','OS_ERROR'}
@@ -163,7 +166,17 @@ def request_api(path):
     try:
         connection.request('GET',path);phase='HEADERS';r=connection.getresponse()
         phase='BODY';raw=r.read(1_000_001)
-        need(len(raw)<=1_000_000,'API_BODY_BOUND');return r.status,dict(r.getheaders()),raw
+        if len(raw)>1_000_000:
+            error=Stop('API_BODY_BOUND')
+            length=r.getheader('Content-Length') if hasattr(r,'getheader') else None
+            kind=r.getheader('Content-Type','') if hasattr(r,'getheader') else ''
+            error.api_body_bound={'endpoint':path.split('?')[0],
+                'query_scope':'LATEST_24' if '?' in path else 'UNPAGED',
+                'limit_bytes':1_000_000,'measured_bytes':len(raw),'size_is_lower_bound':True,
+                'status':r.status,'content_type':'JSON' if kind.startswith('application/json') else 'OTHER',
+                'content_length':int(length) if length and length.isdigit() and len(length)<19 else None}
+            raise error
+        return r.status,dict(r.getheaders()),raw
     except Stop:raise
     except (OSError,http.client.HTTPException) as error:
         # socket.timeout is NOT built-in TimeoutError on system Python3.9.
@@ -195,7 +208,18 @@ def missing_acceptance():
     code,_,raw=request_api('/operations/summary');summary=json.loads(raw)
     need(code==200 and summary.get('forecast_status')=='MISSING_PUBLICATION' and summary.get('health') in ('Historical snapshot','Unavailable') and 'Historical' in summary.get('completeness_note',''),'HISTORICAL_SEPARATION')
     need(request_api('/admin/forecast/provenance')[0]==401,'ADMIN_AUTH_BOUNDARY')
-    for path in ('/forecast/one-hour','/market/coverage','/pipeline/status','/models/summary'):need(request_api(path)[0]==200,'HISTORICAL_API')
+    code,_,raw=request_api('/forecast/one-hour?limit=24&offset=0')
+    need(code==200,'HISTORICAL_API');validate_one_hour_page(json.loads(raw))
+    for path in ('/market/coverage','/pipeline/status','/models/summary'):need(request_api(path)[0]==200,'HISTORICAL_API')
+
+def validate_one_hour_page(page):
+    need(type(page)is dict,'API_PAGINATION_CONTRACT')
+    rows=page.get('forecasts');total=page.get('total_rows');count=page.get('row_count')
+    need(type(rows)is list and type(total)is int and type(count)is int and
+        0<count<=24 and count==len(rows)==min(24,total) and
+        type(page.get('limit'))is int and page['limit']==24 and
+        type(page.get('offset'))is int and page['offset']==0 and
+        type(page.get('has_more'))is bool and page['has_more']==(total>count),'API_PAGINATION_CONTRACT')
 
 def validate_inputs():
     need(set(CONFIG) in ({'files'},{'files','transaction_id'}) and len(CONFIG['files'])==63,'INPUT_SCOPE')
@@ -238,10 +262,14 @@ def state_save(record):atomic_file(CONTROL/'state.json',json.dumps(record,sort_k
 def apply():
     global PHASE,CHANGED
     need(os.geteuid()==0,'ROOT_REQUIRED');validate_inputs()
+    if 'transaction_id' in CONFIG:select_transaction()
     for p in (API,STATIC,CONTROL):need(not os.path.lexists(p),'DESTINATION_CONFLICT')
     safe(API.parent);safe(STATIC.parent)
     if CONTROL.parent.exists():safe(CONTROL.parent)
     else:safe(CONTROL.parent.parent)
+    if 'transaction_id' in CONFIG and CONTROL.parent.exists():
+        st=CONTROL.parent.lstat()
+        need(stat.S_ISDIR(st.st_mode) and st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o700,'TRANSACTION_PARENT_PERMISSIONS')
     need(not os.path.lexists(OVERLAY),'UNEXPECTED_PUBLICATION_ROOT')
     old_backend=target(BACKEND_LINK,API.parent);old_static=target(STATIC_LINK,STATIC.parent)
     need(sha(str(old_backend).encode())==BACKEND_TARGET_SHA and sha(str(old_static).encode())==STATIC_TARGET_SHA,'INSTALLED_TARGET_DRIFT')
@@ -259,6 +287,16 @@ def apply():
     resources=idle_capacity(sum(x['bytes'] for x in CONFIG['files'].values())+8*1024**2)
     before=production()
     record={'version':1,'previous_backend':str(old_backend),'previous_static':str(old_static),'new_backend':str(API),'new_static':str(STATIC),'original_env_sha256':sha(env),'installed_env_sha256':sha(installed_env),'previous_service_state':'active','production_fingerprint':before,'old_static_files':previous_static,'retained_assets':retained,'phase':'BACKUPS'}
+    if 'transaction_id' in CONFIG:
+        safe(LEGACY_CONTROL)
+        need(stat.S_IMODE(LEGACY_CONTROL.stat().st_mode)==0o700,'LEGACY_CONTROL_PERMISSIONS')
+        for name in ('state.json','previous-api.env'):
+            st=(LEGACY_CONTROL/name).lstat()
+            need(stat.S_ISREG(st.st_mode) and st.st_uid==st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o600,'LEGACY_FILE_PERMISSIONS')
+        legacy_raw=read(LEGACY_CONTROL/'state.json',131072);legacy=json.loads(legacy_raw)
+        need(legacy.get('phase')=='ROLLED_BACK' and legacy.get('previous_backend')==str(old_backend) and legacy.get('previous_static')==str(old_static),'LEGACY_RECORD_MISMATCH')
+        need(legacy.get('original_env_sha256')==ENV_BASELINE and digest(LEGACY_CONTROL/'previous-api.env')==ENV_BASELINE,'LEGACY_BACKUP_MISMATCH')
+        record.update(transaction_id=CONFIG['transaction_id'],legacy_record_sha256=sha(legacy_raw))
     validate_rollback(record)
     CHANGED=True
     if not CONTROL.parent.exists():CONTROL.parent.mkdir(mode=0o700);os.chown(CONTROL.parent,0,0)
@@ -278,7 +316,12 @@ def apply():
     idle_capacity(0);need(digest(ENV)==sha(env),'ENV_DRIFT')
     need(target(BACKEND_LINK,API.parent)==old_backend and target(STATIC_LINK,STATIC.parent)==old_static,'POINTER_DRIFT')
     runtime(old_backend);need(production()==before,'PRODUCTION_DRIFT')
-    return activate(record,old_backend,old_static,env,installed_env,resources,before)
+    def verify_installed():
+        expected_api={name[4:]:item['sha256'] for name,item in CONFIG['files'].items() if name.startswith('api/')}
+        expected_static=dict(retained)
+        expected_static.update({name[7:]:item['sha256'] for name,item in CONFIG['files'].items() if name.startswith('static/')})
+        retained_tree(API,expected_api,venv);retained_tree(STATIC,expected_static)
+    return activate(record,old_backend,old_static,env,installed_env,resources,before,verify_installed)
 
 BACKEND_STEPS={'RECORD_SAVE','ENV_UPDATE','POINTER_SWITCH','RESTART','READINESS',
     'RUNTIME','FORECAST_CONTRACT','PRESERVATION','CAPACITY','RUNTIME_RECHECK',
@@ -537,4 +580,6 @@ if __name__=='__main__':
         print(json.dumps(result,sort_keys=True))
     except Exception as error:
         reason=str(error) if type(error)is Stop and re.fullmatch('[A-Z_]+',str(error)) else 'INSPECTION_OR_INSTALLATION_FAILED'
-        print(json.dumps({'status':'PARTIAL' if CHANGED else 'BLOCKED','phase':PHASE,'reason':reason,'automatic_rollback':False}));raise SystemExit(1)
+        report={'status':'PARTIAL' if CHANGED else 'BLOCKED','phase':PHASE,'reason':reason,'automatic_rollback':False}
+        if type(error)is Stop and reason=='API_BODY_BOUND' and hasattr(error,'api_body_bound'):report['api_body_bound']=error.api_body_bound
+        print(json.dumps(report));raise SystemExit(1)

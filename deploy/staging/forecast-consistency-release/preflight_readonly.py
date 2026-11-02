@@ -50,12 +50,25 @@ FIELDS = {
 }
 STATES = {'PASS','FAIL','UNVERIFIED','NOT_RUN'}
 
+PUBLICATION_PHASES={'ANCESTRY','ROOT','RELEASES','POINTER','TARGET','BUNDLE_METADATA','BUNDLE_READ','BUNDLE_HASH','BUNDLE_FORMAT','POINTER_RECHECK'}
+PUBLICATION_CAUSES={'MISSING_PATH','PERMISSION_DENIED','IO_ERROR','UNSAFE_METADATA','POINTER_ESCAPE','HASH_MISMATCH','MALFORMED_BUNDLE','POINTER_DRIFT','UNEXPECTED_ERROR'}
+
+class PublicationInspectionError(ValueError):
+    def __init__(self,phase,cause):
+        if phase not in PUBLICATION_PHASES or cause not in PUBLICATION_CAUSES:raise ValueError('diagnostic_schema')
+        self.phase=phase;self.cause=cause
+        super().__init__('publication_inspection_unverified')
+
 def validate_report(report):
     if set(report)!={'schema_version','status','checks'} or type(report['schema_version'])is not int or report['schema_version']!=1:
         raise ValueError('report_schema')
     if report['status'] not in {'PASS','BLOCKED'} or set(report['checks'])!=set(FIELDS):raise ValueError('report_schema')
     for name,item in report['checks'].items():
-        if set(item)!={'status','facts'} or item['status'] not in STATES or not isinstance(item['facts'],dict):raise ValueError('report_schema')
+        if set(item) not in ({'status','facts'},{'status','facts','diagnostic'}) or item['status'] not in STATES or not isinstance(item['facts'],dict):raise ValueError('report_schema')
+        if 'diagnostic' in item:
+            d=item['diagnostic']
+            if name!='publication_metadata' or item['status']!='UNVERIFIED' or type(d)is not dict or set(d)!={'phase','cause'}:raise ValueError('diagnostic_schema')
+            if d['phase'] not in PUBLICATION_PHASES or d['cause'] not in PUBLICATION_CAUSES:raise ValueError('diagnostic_value')
         facts=item['facts']
         if not set(facts)<=FIELDS[name] or (item['status']=='PASS' and set(facts)!=FIELDS[name]):raise ValueError('report_fields')
         for key,value in facts.items():
@@ -330,36 +343,61 @@ def passive_installation():
     return facts,facts['versions_match'] and facts['version_metadata_match']
 
 def publication_metadata():
-    def directory(path):
-        st=path.lstat()
-        if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_gid!=992 or stat.S_IMODE(st.st_mode)!=0o750:raise ValueError('publication_directory')
-    # Reject symlink ancestry, including ancestors outside the publication root.
-    for ancestor in reversed(PUBLICATION.parents):
-        st=ancestor.lstat()
-        if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:raise ValueError('publication_ancestry')
-    directory(PUBLICATION);directory(PUBLICATION/'releases')
-    pointer=PUBLICATION/'current'
-    if not stat.S_ISLNK(pointer.lstat().st_mode) or pointer.lstat().st_uid!=0:raise ValueError('publication_pointer')
-    target=os.readlink(pointer)
-    if re.fullmatch(r'releases/[0-9a-f]{64}',target) is None:raise ValueError('publication_escape')
-    release=PUBLICATION/target;directory(release)
-    bundle=release/'bundle.json';st=bundle.lstat()
-    if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_gid!=992 or stat.S_IMODE(st.st_mode)!=0o640:raise ValueError('publication_artifact')
-    raw=read(bundle,2_000_000)
-    if sha(raw)!=target.split('/')[1]:raise ValueError('publication_hash')
-    parsed=json.loads(raw)
-    if type(parsed)is not dict or parsed.get('version')!=1:raise ValueError('publication_format')
-    if os.readlink(pointer)!=target:raise ValueError('publication_pointer_drift')
-    return {'present':True,'chain_safe':True,'bundle_hash_match':True,'passive_permissions':True},True
+    phase='ANCESTRY'
+    try:
+        def directory(path):
+            st=path.lstat()
+            if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_gid!=992 or stat.S_IMODE(st.st_mode)!=0o750:raise ValueError('publication_directory')
+        # Reject symlink ancestry, including ancestors outside the publication root.
+        phase='ANCESTRY'
+        for ancestor in reversed(PUBLICATION.parents):
+            st=ancestor.lstat()
+            if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:raise ValueError('publication_ancestry')
+        phase='ROOT';directory(PUBLICATION)
+        phase='RELEASES';directory(PUBLICATION/'releases')
+        phase='POINTER'
+        pointer=PUBLICATION/'current'
+        if not stat.S_ISLNK(pointer.lstat().st_mode) or pointer.lstat().st_uid!=0:raise ValueError('publication_pointer')
+        target=os.readlink(pointer)
+        if re.fullmatch(r'releases/[0-9a-f]{64}',target) is None:raise ValueError('publication_escape')
+        phase='TARGET'
+        release=PUBLICATION/target;directory(release)
+        phase='BUNDLE_METADATA'
+        bundle=release/'bundle.json';st=bundle.lstat()
+        if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_gid!=992 or stat.S_IMODE(st.st_mode)!=0o640:raise ValueError('publication_artifact')
+        phase='BUNDLE_READ'
+        raw=read(bundle,2_000_000)
+        phase='BUNDLE_HASH'
+        if sha(raw)!=target.split('/')[1]:raise ValueError('publication_hash')
+        phase='BUNDLE_FORMAT'
+        parsed=json.loads(raw)
+        if type(parsed)is not dict or parsed.get('version')!=1:raise ValueError('publication_format')
+        phase='POINTER_RECHECK'
+        if os.readlink(pointer)!=target:raise ValueError('publication_pointer_drift')
+        return {'present':True,'chain_safe':True,'bundle_hash_match':True,'passive_permissions':True},True
+    except Exception as error:
+        if isinstance(error,FileNotFoundError):cause='MISSING_PATH'
+        elif isinstance(error,PermissionError):cause='PERMISSION_DENIED'
+        elif isinstance(error,OSError):cause='IO_ERROR'
+        elif isinstance(error,json.JSONDecodeError):cause='MALFORMED_BUNDLE'
+        elif isinstance(error,ValueError):
+            cause={'publication_escape':'POINTER_ESCAPE','publication_hash':'HASH_MISMATCH','publication_format':'MALFORMED_BUNDLE','publication_pointer_drift':'POINTER_DRIFT'}.get(str(error),'UNSAFE_METADATA')
+        else:cause='UNEXPECTED_ERROR'
+        raise PublicationInspectionError(phase,cause) from None
+
+
+def inspect_check(fn):
+    try:
+        facts,ok=fn();return {'status':'PASS' if ok else 'FAIL','facts':facts}
+    except PublicationInspectionError as error:
+        return {'status':'UNVERIFIED','facts':{},'diagnostic':{'phase':error.phase,'cause':error.cause}}
+    except Exception:
+        return {'status':'UNVERIFIED','facts':{}}
 
 def main():
     checks={name:{'status':'NOT_RUN','facts':{}} for name in FIELDS}
     def check(name,fn):
-        try:
-            facts,ok=fn(); checks[name]={'status':'PASS' if ok else 'FAIL','facts':facts}
-        except Exception:
-            # Deliberately no exception text, traceback, paths or command output.
-            checks[name]={'status':'UNVERIFIED','facts':{}}
+        checks[name]=inspect_check(fn)
         return checks[name]['status']=='PASS'
     if not check('identity',lambda:({'root':os.geteuid()==0,'linux':sys.platform=='linux'},os.geteuid()==0 and sys.platform=='linux')):
         return finish(checks)

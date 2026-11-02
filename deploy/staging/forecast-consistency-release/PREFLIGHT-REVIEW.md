@@ -162,3 +162,17 @@ permission change, service restart, database write, inference or publication occ
 Checkpoint1 tests use synthetic fixtures and harmless LOCAL subprocesses only.
 Comprehensive local verification may proceed under the owner's continuation.
 Stop at the separate remote-authorization boundary; do not execute SSH implicitly.
+
+## Publication failure diagnostic correction (local only)
+
+A failed publication-metadata check now adds an optional `diagnostic` object with
+fixed `phase` and `cause` enums, only for that check's UNVERIFIED state. It does
+not print exception messages, errno strings, paths or bundle data. Phases identify
+ancestry/root/releases/pointer/target/bundle metadata/read/hash/format/recheck;
+causes distinguish missing path, permission denial, IO failure, unsafe metadata,
+escaped pointer, hash mismatch, malformed bundle, pointer drift and unknown failure.
+Legacy saved reports without this optional object remain valid. PASS criteria,
+read scope, no-execution protections and runtime/access UNVERIFIED gates are
+unchanged. The past report's cause remains UNKNOWN: this correction cannot recover
+an exception that was never persisted. Any use of changed payload bytes requires
+new explicit hash-bound authorization; the earlier authorization sheet is historical.

@@ -467,3 +467,29 @@ def test_output_limit_blocks_even_successful_exit(tmp_path):
     result=W.execute(payload,b'legacy',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
     assert result['exit_status']==0 and result['failure_category']=='OUTPUT_LIMIT' and not result['report_produced']
     assert (tmp_path/'stdout.private').stat().st_size==131072
+
+
+@pytest.mark.parametrize('error,cause',[(FileNotFoundError,'MISSING_PATH'),(PermissionError,'PERMISSION_DENIED'),(OSError,'IO_ERROR')])
+def test_publication_failure_reports_fixed_phase_without_private_paths(monkeypatch,error,cause):
+    root=Path('/synthetic-publication-root')
+    monkeypatch.setattr(P,'PUBLICATION',root)
+    def probe(path,*a,**kw):
+        if path==root:raise error('PRIVATE_PATH_SECRET_SENTINEL')
+        return SimpleNamespace(st_mode=P.stat.S_IFDIR|0o755,st_uid=0)
+    monkeypatch.setattr(Path,'lstat',probe)
+    result=P.inspect_check(P.publication_metadata)
+    assert result=={'status':'UNVERIFIED','facts':{},'diagnostic':{'phase':'ROOT','cause':cause}}
+    assert 'PRIVATE_PATH_SECRET_SENTINEL' not in json.dumps(result)
+    r=report();r['checks']['publication_metadata']=result;P.validate_report(r)
+
+
+@pytest.mark.parametrize('change',[
+    lambda r:r['checks']['publication_metadata']['diagnostic'].update(cause='PRIVATE_PATH_SECRET_SENTINEL'),
+    lambda r:r['checks']['publication_metadata']['diagnostic'].update(path='PRIVATE_PATH_SECRET_SENTINEL'),
+    lambda r:r['checks']['identity'].update(diagnostic={'phase':'ROOT','cause':'MISSING_PATH'}),
+    lambda r:r['checks']['publication_metadata'].update(status='PASS'),
+])
+def test_publication_diagnostic_rejects_unknown_or_misplaced_fields(change):
+    r=report();r['checks']['publication_metadata']['diagnostic']={'phase':'ROOT','cause':'MISSING_PATH'}
+    change(r)
+    with pytest.raises(ValueError):P.validate_report(r)

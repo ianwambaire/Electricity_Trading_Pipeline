@@ -174,3 +174,41 @@ installed Python imports remain real acceptance gates. Prior preflight resource
 measurements are historical; never substitute them for fresh activation gates.
 Stop on memory pressure/failed gates; do not raise caps or install dependencies.
 This is preparation only, not a claim of activation or runtime acceptance success.
+
+## Focused final-review correction — not authorization
+
+The runner now requires action-specific complete evidence: apply exit0 must report
+DEPLOYED/COMPLETE, true production preservation and missing-publication acceptance,
+and a typed capacity observation above the required threshold. Rollback exit0 must
+report ROLLED_BACK/ROLLED_BACK with true preservation. Missing, contradictory,
+action-mismatched or unrecognized reports cannot be reported as success. Failure
+phase/reason values are fixed allowlists, with automatic_rollback=false required.
+No exception text can become an arbitrary uppercase diagnostic label.
+
+The exact env backup is now read/hash-verified after durable backup/state capture
+and before release installation or candidate configuration/pointer changes. Control
+creation and backup bookkeeping are necessarily the first new-file writes; original
+state remains untouched until the verified backups exist. A late runtime-isolation
+and production-preservation recheck occurs immediately before each backend/static
+activation boundary, after the resource/window gate. Any failure stops and retains
+verified originals and partial artifacts; no automatic repair/rollback is added.
+
+## Recommended optional rollback contingency (requires explicit approval)
+
+An apply-only approval leaves staging on a new backend/env if later acceptance fails.
+Production remains protected, but recovery may be delayed by a second approval.
+The owner may explicitly preapprove at most ONE separate rollback invocation in the
+same execution window, conditional on apply reporting PARTIAL after activation and
+all rollback guards passing: durable verified record/env backup, retained old release
+hashes, expected pointer/env states, unchanged production baseline, idle pipeline,
+>=768MiB available RAM, disk threshold and safe scheduling window. This grants no
+repair, deletion, retry, production restart or gate override. It permits a second
+bounded SSH operation only when explicitly named by the owner; apply never calls
+rollback itself, including on timeout or malformed output. An unknown apply state
+requires a separately authorized read-only state assessment before invoking rollback.
+
+Important limitation: rollback currently shares capacity/window/producer guards.
+If a failure coincides with memory pressure, a new scheduled run or production-artifact
+drift, those guards may block rollback. Do not relax them or stop services implicitly.
+Emergency candidate-stop/recovery would require a new precise authorization. No
+claim of unconditional automatic recovery or guaranteed staging availability is made.

@@ -161,3 +161,56 @@ def test_rollback_validator_uses_existing_strict_schema():
     record={'schema_version':1,'previous_backend':'/opt/powerflow/releases/old-api','previous_static':'/var/www/powerflow-staging/releases/old-static','installed_backend':str(D.API),'installed_static':str(D.STATIC),'original_env_sha256':'0'*64,'installed_env_sha256':'1'*64,'environment_backup':'/var/lib/powerflow-staging/forecast-consistency-20261101-v1/previous-api.env','environment_uid':0,'environment_gid':0,'environment_mode':'0600'}
     assert helper.validate(record)==record
     with pytest.raises(ValueError):helper.validate(dict(record,previous_backend='/home/unsafe'))
+
+
+def success_report(action):
+    value={'status':'DEPLOYED' if action=='apply' else 'ROLLED_BACK','phase':'COMPLETE' if action=='apply' else 'ROLLED_BACK','production_preserved':True}
+    if action=='apply':value.update(missing_publication_verified=True,resources_before={'available_bytes':800*1024**2,'swap_used_bytes':0})
+    return value
+
+
+@pytest.mark.parametrize('action',['apply','rollback'])
+def test_report_requires_action_specific_complete_success(action):
+    valid=success_report(action);assert R.validate_report(valid,action,0)==valid
+    for key in valid:
+        broken=dict(valid);del broken[key]
+        with pytest.raises(ValueError):R.validate_report(broken,action,0)
+    with pytest.raises(ValueError):R.validate_report(success_report('rollback' if action=='apply' else 'apply'),action,0)
+    with pytest.raises(ValueError):R.validate_report(valid,action,1)
+    with pytest.raises(ValueError):R.validate_report(dict(valid,production_preserved=False),action,0)
+    with pytest.raises(ValueError):R.validate_report(dict(valid,phase='PRIVATE_SENTINEL'),action,0)
+
+
+@pytest.mark.parametrize('change',[{'missing_publication_verified':False},{'resources_before':{'available_bytes':0,'swap_used_bytes':0}},{'resources_before':{'available_bytes':True,'swap_used_bytes':0}}])
+def test_false_apply_assurance_rejected(change):
+    with pytest.raises(ValueError):R.validate_report(dict(success_report('apply'),**change),'apply',0)
+
+
+def test_failed_apply_cannot_claim_success_or_automatic_rollback():
+    report={'status':'PARTIAL','phase':'BACKEND_ACTIVATION','reason':'STARTUP_READINESS','automatic_rollback':False}
+    assert R.validate_report(report,'apply',1)==report
+    for changed in [dict(report,automatic_rollback=True),dict(report,reason='PRIVATE_SENTINEL'),dict(report,status='DEPLOYED')]:
+        with pytest.raises(ValueError):R.validate_report(changed,'apply',1)
+    with pytest.raises(ValueError):R.validate_report(report,'rollback',1)
+
+
+def test_corrupt_backup_blocks_before_env_or_pointer_change(host,monkeypatch):
+    original=D.create
+    def corrupt(path,raw,mode=0o600):
+        original(path,raw,mode)
+        if path.name=='previous-api.env':path.write_bytes(b'corrupt')
+    monkeypatch.setattr(D,'create',corrupt)
+    with pytest.raises(D.Stop,match='BACKUP_ENV_VERIFY'):D.apply()
+    assert D.ENV.read_bytes()==host.env and D.BACKEND_LINK.resolve()==host.old_api and D.STATIC_LINK.resolve()==host.old_static
+    assert not D.API.exists() and not any(k=='service' for k,v in host.calls)
+
+
+def test_late_isolation_failure_stops_before_activation(host,monkeypatch):
+    calls=[]
+    def runtime(target):
+        calls.append(target)
+        if len(calls)==2:raise D.Stop('SANDBOX_PROPERTIES')
+    monkeypatch.setattr(D,'runtime',runtime)
+    with pytest.raises(D.Stop,match='SANDBOX_PROPERTIES'):D.apply()
+    assert len(calls)==2 and D.ENV.read_bytes()==host.env and D.BACKEND_LINK.resolve()==host.old_api
+    assert not any(k=='service' for k,v in host.calls)

@@ -81,6 +81,28 @@ def verify(expected,action):
     return payload,wrapper,namespace(blobs[BASE],'base')
 
 
+FAILURE_REASONS={'ASSET_COLLISION', 'INSTALLED_TARGET_DRIFT', 'CONTROL_PERMISSIONS', 'DISK_GATE', 'HTTP_ACCEPTANCE', 'PRODUCTION_SERVICE_STATE', 'DESTINATION_CONFLICT', 'HISTORICAL_SEPARATION', 'STARTUP_READINESS', 'ENTRY_ASSETS', 'ENV_PERMISSIONS', 'ADMIN_AUTH_BOUNDARY', 'HISTORICAL_API', 'IMDS_DENY', 'POINTER_LAYOUT', 'POINTER_REQUIRED', 'UNEXPECTED_PUBLICATION_ROOT', 'INPUT_PATH', 'RAM_GATE', 'VENV_TARGET', 'SANDBOX_PROPERTIES', 'ROLLBACK_TARGET_SCOPE', 'UNSAFE_PATH', 'PIPELINE_OR_WINDOW_GATE', 'INPUT_COUNTS', 'INPUT_SCOPE', 'SELECTOR_MISSING', 'RUNNING_CODE_TARGET', 'ROOT_REQUIRED', 'CGROUP_LAYOUT', 'ROLLBACK_ENV_HASH', 'ROLLBACK_BACKEND_HASH', 'HTTPS_INDEX_HASH', 'ROLLBACK_STATIC_HASH', 'INSPECTION_OR_INSTALLATION_FAILED', 'STATIC_SIZE_BOUND', 'ATOMIC_FILE_VERIFY', 'POINTER_DRIFT', 'DEPENDENCY_METADATA', 'ROLLBACK_HTTPS', 'ADDRESS_FAMILIES', 'OLD_ASSET_DRIFT', 'STATIC_INVENTORY_BOUND', 'INPUT_HASH', 'COMMAND_SCOPE', 'API_BODY_BOUND', 'ENV_BASELINE_DRIFT', 'PROCESS_SECURITY', 'ROLLBACK_RECORD', 'CANDIDATE_RESTART_FAILED', 'STATIC_INDEX_MISSING', 'CANDIDATE_SWAP_ACTIVITY', 'PRODUCTION_DRIFT', 'INSTALLED_HASH', 'CGROUP_LIMITS', 'CANDIDATE_NOT_RUNNING', 'ROLLBACK_POINTER_DRIFT', 'BPF_ATTACHMENTS', 'SINGLE_WORKER', 'BACKUP_ENV_VERIFY', 'MISSING_FORECAST_CONTRACT', 'ACTION_SCOPE', 'BACKEND_BASELINE_DRIFT', 'API_PROBE_SCOPE', 'ROLLBACK_POSTCHECK', 'ENV_KEY_ALREADY_PRESENT', 'ENV_DRIFT', 'ROLLBACK_ENV_DRIFT', 'HTTPS_ASSET_HASH', 'ROLLBACK_STATE', 'POINTER_VERIFY', 'LISTENER_OWNERSHIP', 'CANDIDATE_IDENTITY'}
+PHASES={'PREFLIGHT','INSTALL','BACKEND_ACTIVATION','STATIC_ACTIVATION','COMPLETE','ROLLBACK','ROLLED_BACK'}
+
+
+def validate_report(report,action,code):
+    if action not in ('apply','rollback') or type(code)is not int or type(report)is not dict:raise ValueError('report_schema')
+    success='DEPLOYED' if action=='apply' else 'ROLLED_BACK'
+    if code==0:
+        fields={'status','phase','production_preserved'}
+        if action=='apply':fields|={'missing_publication_verified','resources_before'}
+        if set(report)!=fields or report['status']!=success or report['phase']!=('COMPLETE' if action=='apply' else 'ROLLED_BACK') or report['production_preserved'] is not True:raise ValueError('success_evidence')
+        if action=='apply':
+            if report['missing_publication_verified'] is not True:raise ValueError('missing_publication_evidence')
+            values=report['resources_before']
+            if type(values)is not dict or set(values)!={'available_bytes','swap_used_bytes'} or any(type(x)is not int or not 0<=x<2**63 for x in values.values()) or values['available_bytes']<768*1024**2:raise ValueError('resource_evidence')
+    else:
+        if code!=1 or set(report)!={'status','phase','reason','automatic_rollback'} or report['status'] not in ('BLOCKED','PARTIAL') or report['phase'] not in PHASES or report['reason'] not in FAILURE_REASONS or report['automatic_rollback'] is not False:raise ValueError('failure_evidence')
+        allowed={'PREFLIGHT','ROLLBACK'} if action=='rollback' else PHASES-{'ROLLBACK','ROLLED_BACK'}
+        if report['phase'] not in allowed:raise ValueError('action_phase')
+    return report
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('apply','rollback'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
     capture=None;summary={'exit_status':None,'failure_category':'LOCAL_VERIFICATION_FAILURE','report':None}
@@ -97,16 +119,7 @@ def main():
             with os.fdopen(os.open(capture/(label+'.private'),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb') as stream:stream.write(result[label])
         if not result['failure']:
             try:
-                report=json.loads(result['stdout'])
-                # Fixed output: never echo unvalidated exception text or paths.
-                need_keys={'status','phase','production_preserved','missing_publication_verified','resources_before','reason','automatic_rollback'}
-                if not isinstance(report,dict) or not set(report)<=need_keys:raise ValueError('report')
-                if report.get('status') not in ('DEPLOYED','ROLLED_BACK','PARTIAL','BLOCKED'):raise ValueError('report_status')
-                for key in ('phase','reason'):
-                    if key in report and (type(report[key])is not str or not report[key].replace('_','').isupper() or len(report[key])>80):raise ValueError('report_label')
-                for key in ('production_preserved','missing_publication_verified','automatic_rollback'):
-                    if key in report and type(report[key])is not bool:raise ValueError('report_boolean')
-                if 'resources_before' in report and (set(report['resources_before'])!={'available_bytes','swap_used_bytes'} or any(type(x)is not int or x<0 for x in report['resources_before'].values())):raise ValueError('report_resources')
+                report=validate_report(json.loads(result['stdout']),a.action,result['returncode'])
                 summary['report']=report
             except Exception:summary['failure_category']=wrapper['failure_category'](result['returncode'],result['stderr']) if result['returncode'] else 'UNEXPECTED_OUTPUT'
     except Exception:

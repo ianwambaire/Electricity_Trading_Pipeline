@@ -192,3 +192,18 @@ test('production route gate loads no workspace data when signed out, expired or 
  const view=render(<AuthContext.Provider value={{...auth,isLoading:true}}><MemoryRouter><App/></MemoryRouter></AuthContext.Provider>)
  assert.match(view.getByRole('status').textContent??'',/Checking your secure session/)
 })
+
+test('Dashboard missing publication stays WITHHELD despite a historical GENERATED run',async()=>{
+ globalThis.fetch=async(input)=>{
+  const path=String(input)
+  if(path==='/api/pipeline/status')return Response.json({latest_run_status:'SUCCESS',latest_run_timestamp:'2026-01-01T08:00:00Z',forecast_status:'GENERATED'})
+  if(path==='/api/forecast/next24')return Response.json({detail:{code:'FORECAST_WITHHELD'}},{status:503,headers:{'Cache-Control':'no-store'}})
+  return new Response('',{status:404})
+ }
+ const view=render(<AuthContext.Provider value={auth}><ServerAccountContext.Provider value={roles('Analyst')}><MemoryRouter initialEntries={['/']}><Suspense><WorkspaceRoutes/></Suspense></MemoryRouter></ServerAccountContext.Provider></AuthContext.Provider>)
+ await waitFor(()=>assert.equal(view.container.querySelector('.availability strong')?.textContent,'WITHHELD'))
+ await waitFor(()=>assert.ok(view.getByText(/Historical pipeline snapshot \(not current publication availability\):/)))
+ assert.equal(view.queryByText(/Availability source: latest recorded pipeline run/),null)
+ assert.equal(view.container.querySelector('.availability strong')?.textContent,'WITHHELD')
+ assert.ok(!view.container.textContent?.includes('No usable 24-hour forecast report has been retrieved.'))
+})

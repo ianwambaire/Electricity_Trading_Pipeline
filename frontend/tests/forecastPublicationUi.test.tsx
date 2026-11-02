@@ -18,7 +18,7 @@ test('fresh publication renders actual synthetic values despite historical withh
  const view=render(<ForecastSummary report={report()} pipeline={pipeline}/>)
  assert.ok(view.getByText('Valid published forecast'))
  assert.ok(view.getByText('Average · EUR/MWh'))
- assert.ok(view.getByText(/Historical snapshot/))
+ assert.ok(view.getByText(/Historical pipeline snapshot \(not current publication availability\):/))
 })
 test('expired publication renders WITHHELD and removes statistics and download',()=>{
  const view=render(<ForecastSummary report={report(true)} pipeline={pipeline}/>)

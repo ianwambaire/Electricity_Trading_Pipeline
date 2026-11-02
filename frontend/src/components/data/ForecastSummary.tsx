@@ -15,9 +15,9 @@ export function ForecastSummary({ report, pipeline, errorCode }: { errorCode?: s
   const statistics = visibleReport ? forecastStatistics(visibleReport) : null
   const first = visibleReport?.forecasts[0]
   return <><div className="availability" role="status"><strong>{state.label}</strong><p>{state.description}</p></div>
-    {!report?.publication && pipeline.loading && <p className="data-note">Checking recorded pipeline availability…</p>}
-    {!report?.publication && pipeline.error && <p className="data-note">Pipeline availability could not be verified. Forecast report retrieval alone does not establish current availability.</p>}
-    {pipeline.data && <p className="data-note">{report?.publication ? 'Historical snapshot (not publication availability):' : 'Availability source: latest recorded pipeline run,'} {formatTime(pipeline.data.latest_run_timestamp)}. Reported forecast status: {pipeline.data.forecast_status ?? 'Not provided'}. This status may itself be old.</p>}
+    {!report?.publication && pipeline.loading && <p className="data-note">Loading historical pipeline evidence…</p>}
+    {!report?.publication && pipeline.error && <p className="data-note">Historical pipeline evidence is unavailable. It does not determine current publication availability.</p>}
+    {pipeline.data && <p className="data-note">Historical pipeline snapshot (not current publication availability): {formatTime(pipeline.data.latest_run_timestamp)}. Reported forecast status: {pipeline.data.forecast_status ?? 'Not provided'}. This status may itself be old.</p>}
     {first && <Facts items={[
       ['Model release', first.model_release], ['Issue time', formatTime(first.issue_time)],
       ['Target start', formatTime(first.target_time)], ['Target end', formatTime(visibleReport!.forecasts.at(-1)!.target_time)],

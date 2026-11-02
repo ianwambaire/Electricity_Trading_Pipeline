@@ -1,0 +1,15 @@
+{
+  "baseline_commit": "cb256bd",
+  "baseline_sha256": "ee1d225895fbf929127a577ca4f85a6855643186a7590cda5eaa27ac6aa21a2a",
+  "new_sha256": "8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f",
+  "unchanged_ast_sha256": "38cb18f52b1d61335dbe5088eb9ddf0c7591919b236654b815d4ee120077bc0e",
+  "changed_definitions": [
+    "parse_price_observations",
+    "query_price_observations"
+  ],
+  "added_imports": [
+    "math"
+  ],
+  "baseline_evidence": "Historical verified production hash from November1; November2 inspection confirms parser mismatch only. Apply MUST recheck exact baseline hash and metadata live.",
+  "production_modified": false
+}

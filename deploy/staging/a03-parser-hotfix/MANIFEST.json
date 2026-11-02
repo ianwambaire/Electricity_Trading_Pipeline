@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "deploy/staging/a03-parser-hotfix/BASELINE-COMPARISON.json": {
+      "bytes": 654,
+      "sha256": "1eea9806b24716567042973e24bbb8474c3effabcf1ce8e3b54012f3a0e8d4b4"
+    },
+    "deploy/staging/a03-parser-hotfix/REVIEW.md": {
+      "bytes": 10731,
+      "sha256": "d8fe83fcba396bd55bf032fc11bcf1569354ffb86617c3643d31bc268d200d65"
+    },
+    "deploy/staging/a03-parser-hotfix/deploy.py": {
+      "bytes": 8976,
+      "sha256": "df2bb16a71191cbace170d3e3fd9224765a1660cfbc1368379cafa23d01f2fea"
+    },
+    "deploy/staging/a03-parser-hotfix/run.py": {
+      "bytes": 6895,
+      "sha256": "fce0b2a64f579a90d3acfdd2e4a15f2b3f1e24dfc03985f431bb36b40e8be15d"
+    },
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "src/ingestion/fetch_entsoe_data.py": {
+      "bytes": 42598,
+      "sha256": "8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f"
+    },
+    "tests/test_a03_parser_hotfix.py": {
+      "bytes": 8240,
+      "sha256": "e100d69a23be9cb465475e51cf540d9e8a625c7f56b04e7b0150b888b4348228"
+    }
+  },
+  "assembled_sha256": {
+    "apply": "27fd1c227b73f271ba38ac9c1b25ae797427670dcea16c8380122c26ee882b9f",
+    "rollback": "91d43d8054bb08e7db5a2eabd12665f7b39c88302e58b4de92641d85d8182563"
+  },
+  "baseline_sha256": "ee1d225895fbf929127a577ca4f85a6855643186a7590cda5eaa27ac6aa21a2a",
+  "new_sha256": "8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f",
+  "transaction_id": "932c5f6e758b42ecb9ee6363c2611440",
+  "version": 1
+}

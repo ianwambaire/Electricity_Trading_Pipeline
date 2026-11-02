@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 import ast
+import errno
 import pytest
 
 ROOT=Path(__file__).resolve().parents[1];DIR=ROOT/'deploy/staging/forecast-consistency-deployment'
@@ -489,3 +490,94 @@ def test_diagnostic_supervisor_uses_one_fixed_bounded_command(tmp_path,monkeypat
     assert R.main()==0 and len(calls)==1
     output=json.loads(capsys.readouterr().out);assert output['report']==report
     assert len(list((tmp_path/'preflight').iterdir()))==1
+
+
+def test_operations_timeout_reproduces_recorded_latency_and_preserves_contract(monkeypatch):
+    """No sleep/network: simulate the measured4.66s header latency deterministically."""
+    import http.client
+    calls=[]
+    class LegacySocketTimeout(OSError):pass
+    assert not isinstance(LegacySocketTimeout(),TimeoutError)
+    monkeypatch.setattr(D.socket,'timeout',LegacySocketTimeout)
+    class Response:
+        def __init__(self,path):self.path=path;self.status=503 if path=='/forecast/next24' else 401 if path.startswith('/admin/') else 200
+        def getheaders(self):return [('cache-control','no-store')]
+        def read(self,limit):
+            assert limit==1000001
+            if self.path=='/forecast/next24':return b'{"detail":{"code":"FORECAST_WITHHELD"}}'
+            if self.path=='/operations/summary':return b'{"forecast_status":"MISSING_PUBLICATION","health":"Historical snapshot","completeness_note":"Historical evidence only"}'
+            return b'{}'
+    class Connection:
+        def __init__(self,host,port,timeout):assert (host,port)==('127.0.0.1',8010);self.timeout=timeout
+        def request(self,method,path):assert method=='GET';self.path=path;calls.append((path,self.timeout))
+        def getresponse(self):
+            if self.path=='/operations/summary' and self.timeout<4.66:raise LegacySocketTimeout('PRIVATE_SENTINEL')
+            return Response(self.path)
+        def close(self):pass
+    old=Connection('127.0.0.1',8010,3);old.request('GET','/operations/summary')
+    with pytest.raises(LegacySocketTimeout):old.getresponse()
+    assert D.exception_cause(LegacySocketTimeout())=='TIMEOUT'
+    monkeypatch.setattr(http.client,'HTTPConnection',Connection)
+    monkeypatch.setattr(D,'OVERLAY',Path('/synthetic-definitely-absent'))
+    calls.clear();D.missing_acceptance()
+    assert len(calls)==7 and ('/operations/summary',10) in calls
+    assert all(timeout==(10 if path=='/operations/summary' else 3) for path,timeout in calls)
+
+
+@pytest.mark.parametrize('error,cause',[
+    (ConnectionRefusedError(errno.ECONNREFUSED,'PRIVATE_SENTINEL'),'CONNECTION_REFUSED'),
+    (OSError(errno.ENETUNREACH,'PRIVATE_SENTINEL'),'UNREACHABLE'),
+    (PermissionError(13,'PRIVATE_SENTINEL'),'PERMISSION_DENIED'),
+    (ConnectionResetError(errno.ECONNRESET,'PRIVATE_SENTINEL'),'CONNECTION_RESET'),
+    (TimeoutError('PRIVATE_SENTINEL'),'TIMEOUT'),
+])
+@pytest.mark.parametrize('stage',['REQUEST','HEADERS','BODY'])
+def test_api_transport_failures_are_not_application_503(monkeypatch,error,cause,stage):
+    import http.client
+    closed=[]
+    class Response:
+        status=503
+        def read(self,limit):raise error
+    class Connection:
+        def __init__(self,*a,**k):pass
+        def request(self,*a):
+            if stage=='REQUEST':raise error
+        def getresponse(self):
+            if stage=='HEADERS':raise error
+            return Response()
+        def close(self):closed.append(True)
+    monkeypatch.setattr(http.client,'HTTPConnection',Connection)
+    with pytest.raises(D.Stop) as caught:D.request_api('/forecast/next24')
+    expected='API_FORECAST_'+stage+'_'+cause
+    assert str(caught.value)==expected and closed==[True]
+    assert 'PRIVATE_SENTINEL' not in str(caught.value)
+    assert R.validate_report({'status':'PARTIAL','phase':'BACKEND_ACTIVATION','reason':expected,'automatic_rollback':False},'reactivate',1)
+
+
+def test_legacy_python39_socket_timeout_reports_endpoint_and_phase(monkeypatch):
+    import http.client
+    class LegacySocketTimeout(OSError):pass
+    monkeypatch.setattr(D.socket,'timeout',LegacySocketTimeout)
+    class Connection:
+        def __init__(self,*a,**k):pass
+        def request(self,*a):pass
+        def getresponse(self):raise LegacySocketTimeout('PRIVATE_SENTINEL')
+        def close(self):pass
+    monkeypatch.setattr(http.client,'HTTPConnection',Connection)
+    with pytest.raises(D.Stop,match='API_OPERATIONS_HEADERS_TIMEOUT'):D.request_api('/operations/summary')
+
+
+def test_malformed_http_and_oversized_response_fail_closed(monkeypatch):
+    import http.client
+    class Connection:
+        def __init__(self,*a,**k):pass
+        def request(self,*a):pass
+        def getresponse(self):raise http.client.BadStatusLine('PRIVATE_SENTINEL')
+        def close(self):pass
+    monkeypatch.setattr(http.client,'HTTPConnection',Connection)
+    with pytest.raises(D.Stop,match='API_FORECAST_HEADERS_HTTP_PROTOCOL'):D.request_api('/forecast/next24')
+    class Response:
+        status=503
+        def read(self,limit):return b'x'*limit
+    monkeypatch.setattr(Connection,'getresponse',lambda self:Response())
+    with pytest.raises(D.Stop,match='API_BODY_BOUND'):D.request_api('/forecast/next24')

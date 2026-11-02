@@ -221,9 +221,9 @@ restored candidate; the original backend failure remains UNVERIFIED.
 
 ## Fresh reactivation transaction — local preparation
 
-The current manifest now binds fresh UUID4 transaction 08c3e397c7764dc1a69c6c9692ec5c09 to all
+The current manifest now binds fresh UUID4 transaction 3b6717574fe046c9a0d23ec046b03513 to all
 assembled actions. Its ONLY control directory is:
-/var/lib/powerflow-staging/forecast-consistency-transactions/08c3e397c7764dc1a69c6c9692ec5c09/
+/var/lib/powerflow-staging/forecast-consistency-transactions/3b6717574fe046c9a0d23ec046b03513/
 No existing record is reused. The runner deliberately has no transaction override or
 automatic transaction generator: a new manifest/payload binding requires review.
 This identity is new locally; remote absence remains a mandatory live collision
@@ -238,3 +238,45 @@ Under this NEW manifest diagnose-backend would refer to the NEW transaction; it 
 not a way to re-inspect the old record. Only the separately reviewed reactivate and
 conditional rollback commands should be proposed for the next activation window.
 No remote command or service operation was run during this local preparation.
+
+## Proven operations-summary timeout correction (November2)
+
+Consumed transaction08c3e397c7764dc1a69c6c9692ec5c09 reached BACKEND_ACTIVATION;
+BACKEND_FORECAST_CONTRACT_OS_ERROR then stopped acceptance. Its authorized rollback
+succeeded. Never reuse or modify that transaction. This revision binds a fresh
+transaction only because the specific checker defect is now reproduced and fixed.
+
+Sanitized candidate journal (11:01 UTC) proves /health200, /ready200,
+/forecast/next24=503, and /operations/summary=200 about4.66s later. No recorded
+OOM event was found in the inspected candidate window. The saved root exception
+had no errno/endpoint, so a direct readonly reproduction used the exact same
+root inspection identity, HTTP127.0.0.1:8010 and old3s timeout on the restored
+candidate. It failed at RESPONSE_HEADERS after3.005s, with no HTTP response received:
+Python3.9.25 socket.timeout (class name timeout), errnoNone, NOT built-in TimeoutError.
+Combined with the failed-attempt journal/order, the failure is the operations-summary
+client header timeout, not a failed503 forecast contract or a service restart error.
+The application logged eventual200; the original checker did not receive it in time.
+
+Correction: ONLY /operations/summary gets a10s socket timeout; other public probes
+and health/readiness keep3s. No retry. Remote300/local360 overall reactivation bounds,
+body1,000,000-byte bound, all status/body/cache/authorization/historical-separation,
+pipeline/resource/cgroup/BPF/preservation checks are unchanged. No API implementation,
+model, immutable release, service config, sandbox or memory-limit change is needed.
+This finite per-endpoint allowance is justified by the observed4.66s aggregation;
+it is not permission for an unbounded wait or a different successful HTTP contract.
+
+socket.timeout is explicitly recognized on Python3.9 as well as built-in TimeoutError.
+Network failures now emit fixed API_<ENDPOINT>_<REQUEST|HEADERS|BODY>_<CAUSE> labels.
+Causes: TIMEOUT, CONNECTION_REFUSED, UNREACHABLE, CONNECTION_RESET,
+PERMISSION_DENIED, HTTP_PROTOCOL, OS_ERROR. No exception text, URLs, bodies, tokens
+or raw logs are printed. Expected HTTP503 remains a successful transport followed
+by exact FORECAST_WITHHELD/no-store validation; it is never a network-failure fallback.
+
+The11:45 post-parser natural flow was still SCHEDULED at11:08UTC. This is not
+recovery evidence. No ingestion, inference, publication or deployment was executed
+for this correction. First natural-run completion must separately establish the
+Nov1 17:15 recovery, fresh source windows and an authentic valid HGB receipt.
+
+After manual commit and exact new-hash authorization, one fresh reactivation may be
+prepared/executed with its existing live collision/idle/window/backup gates and
+independent conditional rollback. Old records and preserved release bytes stay intact.

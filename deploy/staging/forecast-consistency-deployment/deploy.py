@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import socket
 import time
 import uuid
 
@@ -144,15 +145,38 @@ def candidate_ready():
         time.sleep(1)
     raise Stop('STARTUP_READINESS')
 
+API_LABELS={'/forecast/next24':'FORECAST','/operations/summary':'OPERATIONS',
+    '/forecast/one-hour':'ONE_HOUR','/market/coverage':'COVERAGE','/pipeline/status':'PIPELINE',
+    '/models/summary':'MODELS','/admin/forecast/provenance':'ADMIN'}
+API_PHASES={'REQUEST','HEADERS','BODY'}
+API_CAUSES={'TIMEOUT','CONNECTION_REFUSED','UNREACHABLE','CONNECTION_RESET','PERMISSION_DENIED','HTTP_PROTOCOL','OS_ERROR'}
+
+
 def request_api(path):
-    # Fixed extra public API paths only. Same no-proxy loopback transport.
+    # Same no-proxy loopback HTTP and root inspection identity as readiness.
+    # Recorded operations latency4.66s exceeds the old3s budget. Only that
+    # snapshot aggregation gets10s; all other probes keep3s, with no retries.
     import http.client
-    need(path in ('/forecast/next24','/operations/summary','/forecast/one-hour','/market/coverage','/pipeline/status','/models/summary','/admin/forecast/provenance'),'API_PROBE_SCOPE')
-    connection=http.client.HTTPConnection('127.0.0.1',8010,timeout=3)
+    need(path in API_LABELS,'API_PROBE_SCOPE')
+    connection=http.client.HTTPConnection('127.0.0.1',8010,timeout=10 if path=='/operations/summary' else 3)
+    phase='REQUEST'
     try:
-        connection.request('GET',path);r=connection.getresponse();raw=r.read(1_000_001)
+        connection.request('GET',path);phase='HEADERS';r=connection.getresponse()
+        phase='BODY';raw=r.read(1_000_001)
         need(len(raw)<=1_000_000,'API_BODY_BOUND');return r.status,dict(r.getheaders()),raw
+    except Stop:raise
+    except (OSError,http.client.HTTPException) as error:
+        # socket.timeout is NOT built-in TimeoutError on system Python3.9.
+        if isinstance(error,(socket.timeout,TimeoutError)):cause='TIMEOUT'
+        elif isinstance(error,PermissionError) or getattr(error,'errno',None) in (errno.EACCES,errno.EPERM):cause='PERMISSION_DENIED'
+        elif isinstance(error,http.client.HTTPException):cause='HTTP_PROTOCOL'
+        elif getattr(error,'errno',None)==errno.ECONNREFUSED:cause='CONNECTION_REFUSED'
+        elif getattr(error,'errno',None) in (errno.ENETUNREACH,errno.EHOSTUNREACH):cause='UNREACHABLE'
+        elif getattr(error,'errno',None) in (errno.ECONNRESET,errno.ECONNABORTED):cause='CONNECTION_RESET'
+        else:cause='OS_ERROR'
+        raise Stop('API_'+API_LABELS[path]+'_'+phase+'_'+cause) from None
     finally:connection.close()
+
 
 def validate_missing_forecast(code,headers,raw):
     need(code==503,'STATUS_MISMATCH')
@@ -265,7 +289,7 @@ ERROR_CAUSES={'PERMISSION_DENIED','MISSING_FILE','TIMEOUT','OS_ERROR','VALUE_ERR
 
 def exception_cause(error):
     # Fixed labels only: never str(error), traceback, filename, body or stderr.
-    if isinstance(error,TimeoutError):return 'TIMEOUT'
+    if isinstance(error,(socket.timeout,TimeoutError)):return 'TIMEOUT'
     if isinstance(error,OSError):
         if error.errno in (errno.EACCES,errno.EPERM):return 'PERMISSION_DENIED'
         if error.errno==errno.ENOENT:return 'MISSING_FILE'

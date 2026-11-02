@@ -226,3 +226,19 @@ test('valid forecast and chart precede supporting historical market context',asy
  assert.ok(view.getByText('Inference completed'))
  assert.ok(view.getByText('Freshness cutoff'))
 })
+
+test('Dashboard requests separate demand sampling and renders one withheld notice',async()=>{
+ const paths:string[]=[]
+ globalThis.fetch=async(input)=>{
+  const path=String(input);paths.push(path)
+  if(path==='/api/forecast/next24')return Response.json({detail:{code:'FORECAST_WITHHELD'}},{status:503})
+  return new Response('',{status:404})
+ }
+ const view=render(<AuthContext.Provider value={auth}><ServerAccountContext.Provider value={roles('Analyst')}><MemoryRouter initialEntries={['/']}><Suspense><WorkspaceRoutes/></Suspense></MemoryRouter></ServerAccountContext.Provider></AuthContext.Provider>)
+ await waitFor(()=>assert.ok(paths.includes('/api/market/chart?series=load_wind')))
+ assert.ok(paths.includes('/api/market/chart'))
+ await waitFor(()=>assert.equal(view.container.querySelectorAll('.availability strong').length,1))
+ assert.equal(view.container.querySelector('.availability strong')?.textContent,'WITHHELD')
+ assert.ok(view.getByRole('heading',{name:'Electricity Demand vs. Wind and Solar Generation'}))
+ assert.ok(!view.container.textContent?.includes('Streamlit'))
+})

@@ -150,3 +150,16 @@ test('account reconnection explicitly requests four scopes with a fresh PKCE int
  assert.notEqual(a.searchParams.get('code_challenge'),b.searchParams.get('code_challenge'))
  assert.equal(oidcSettings(config,new InMemoryWebStorage()).scope,'openid email profile')
 })
+
+test('hosted sign-in delegates MFA to provider without claiming a challenge or bypassing PKCE',()=>{
+ const settings=oidcSettings(config,new InMemoryWebStorage())
+ assert.equal(settings.response_type,'code')
+ assert.equal(settings.disablePKCE,false)
+ assert.equal(settings.scope,'openid email profile')
+ const reconnect=accountSigninRequest()
+ assert.equal(reconnect.prompt,'login')
+ assert.ok(reconnect.scope.includes('aws.cognito.signin.user.admin'))
+ assert.ok(!('identity_provider' in reconnect))
+ assert.equal(authGateState(false,true,true,true),'error')
+ assert.equal(authGateState(false,false,false,false),'signed-out')
+})

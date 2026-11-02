@@ -233,3 +233,11 @@ def test_mfa_errors_are_safe_and_distinguish_expiration(account_client, provider
     assert response.json()['detail']['code'] == code
     assert 'private-provider-detail' not in response.text
     assert not any(op == 'SetUserMFAPreference' for op, _ in calls)
+
+
+def test_enrollment_release_gate_cannot_be_bypassed_in_deployed_runtime(tmp_path,monkeypatch):
+    from api.app import APISettings,create_app
+    from api.runtime import RuntimeSettings
+    monkeypatch.setenv('POWERFLOW_ACCOUNT_TOTP_ENABLED','true')
+    with pytest.raises(ValueError,match='MFA enrollment is not released'):
+        create_app(APISettings.from_root(tmp_path),runtime_settings=RuntimeSettings('staging', ('localhost', 'testserver')))

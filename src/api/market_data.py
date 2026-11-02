@@ -274,7 +274,7 @@ def market_summary(store: MarketStore, start=None, end=None) -> MarketSummary:
                              sample_price_std=math.sqrt(squared/(n-1)) if n > 1 else None, recent=[_chart_point(row) for row in recent])
 
 
-def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> MarketChart:
+def market_chart(store: MarketStore, start=None, end=None, max_points=1600, series="price") -> MarketChart:
     from .anomalies import date_bounds
     date_bounds(start, end)
     with store._lock:
@@ -284,7 +284,16 @@ def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> M
         args = (a, a, b, b)
         connection = store._connection
         count = connection.execute("SELECT COUNT(*) FROM observations " + where, args).fetchone()[0]
-        bucket_size = max(1, math.ceil(count / max(1, max_points // 4)))
+        if series not in ('price', 'load_wind') or max_points < (6 if series == 'load_wind' else 4):
+            raise ValueError('Invalid chart sampling scope')
+        per_bucket = 6 if series == 'load_wind' else 4
+        bucket_size = max(1, math.ceil(count / max(1, max_points // per_bucket)))
+        # Fixed expressions only; never interpolate client-provided SQL.
+        fields = ('load_mw', '(wind_total_mw + solar_mw)') if series == 'load_wind' else ('price_eur_mwh',)
+        extrema = ', '.join(
+            f'ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY {field} IS NULL, {field} {direction}, timestamp) AS e{i}_{j}'
+            for i, field in enumerate(fields) for j, direction in enumerate(('ASC', 'DESC')))
+        selection = ' OR '.join(f'e{i}_{j}=1' for i in range(len(fields)) for j in range(2))
         rows = connection.execute("""
             WITH ranked AS (
               SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw,
@@ -292,12 +301,11 @@ def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> M
             """ + where + """), binned AS (
               SELECT *, (rn-1)/? AS bucket FROM ranked
             ), selected AS (
-              SELECT *, ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY price_eur_mwh IS NULL, price_eur_mwh, timestamp) AS lo,
-                        ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY price_eur_mwh IS NULL, price_eur_mwh DESC, timestamp) AS hi,
+              SELECT *, """ + extrema + """,
                         MIN(rn) OVER (PARTITION BY bucket) AS first,
                         MAX(rn) OVER (PARTITION BY bucket) AS last FROM binned
             ) SELECT timestamp, price_eur_mwh, load_mw, wind_total_mw, solar_mw, rn FROM selected
-              WHERE lo=1 OR hi=1 OR rn=first OR rn=last ORDER BY timestamp
+              WHERE """ + selection + """ OR rn=first OR rn=last ORDER BY timestamp
             """, (*args, bucket_size)).fetchall()
         points = []
         previous = None
@@ -307,4 +315,5 @@ def market_chart(store: MarketStore, start=None, end=None, max_points=1600) -> M
                 gap = (row[0] - previous[0]) // 3600 > row[-1] - previous[-1]
             points.append(_chart_point(row[:5], gap))
             previous = row
-        return MarketChart(coverage=store._coverage, matched_rows=count, row_count=len(points), points=points)
+        return MarketChart(coverage=store._coverage, matched_rows=count, row_count=len(points), points=points,
+            **({'sampling': 'Each time bucket retains its first and last observations and the minimum and maximum demand and wind-plus-solar observations. Exact values, not averages.'} if series == 'load_wind' else {}))

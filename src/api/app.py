@@ -511,8 +511,11 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
 
     @application.get("/market/chart", response_model=MarketChart)
     def public_market_chart(start: datetime | None = None, end: datetime | None = None,
-                            max_points: int = Query(default=1600, ge=4, le=2000)):
-        return market_chart(market_store, start, end, max_points)
+                            max_points: int = Query(default=1600, ge=4, le=2000),
+                            series: Literal['price', 'load_wind'] = 'price'):
+        if series == 'load_wind' and max_points < 6:
+            raise HTTPException(422, detail='Demand charts require at least six points.')
+        return market_chart(market_store, start, end, max_points, series)
 
     @application.get("/operations/summary", response_model=OperationsSummary)
     def public_operations_summary():

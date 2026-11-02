@@ -196,3 +196,40 @@ def test_no_paths_or_unknown_manifest_fields_are_published(tmp_path):
         r = c.get("/models/summary")
         assert r.json()["models"][0]["metadata_status"] == "available"
         assert "private-value" not in r.text and "/private/value" not in r.text
+
+
+def test_demand_sampling_preserves_both_series_extrema_and_source(tmp_path):
+    from datetime import datetime, timedelta, timezone
+    rows=[]
+    for i in range(20):
+        row=dict.fromkeys(VALUE_FIELDS,10.)
+        row.update(timestamp=(datetime(2026,9,1,tzinfo=timezone.utc)+timedelta(hours=i)).isoformat(),price_eur_mwh=i,load_mw=100.,wind_total_mw=20.,solar_mw=5.)
+        if i==4:row['load_mw']=999.
+        if i==7:row['load_mw']=1.
+        if i==11:row['wind_total_mw']=888.
+        if i==15:row['solar_mw']=row['wind_total_mw']=0.
+        rows.append(row)
+    path=write_market(tmp_path,rows);before=path.read_bytes()
+    with client(tmp_path) as c:
+        price=c.get('/market/chart?max_points=6').json()
+        r=c.get('/market/chart?series=load_wind&max_points=6');assert r.status_code==200
+        data=r.json();points=data['points']
+        assert data['row_count']<=6 and data['matched_rows']==20
+        assert {p['load_mw'] for p in points}>={1.,999.}
+        assert {p['wind_solar_mw'] for p in points}>={0.,893.}
+        assert not any(p['load_mw']==999 for p in price['points']) # original price sampler omits the demand peak
+        stamps=[p['timestamp'] for p in points];assert stamps==sorted(stamps)
+        assert all(p['timestamp'].endswith('Z') for p in points)
+        assert 'demand' in data['sampling'] and 'averages' in data['sampling']
+        assert c.get('/market/chart?series=load_wind&max_points=4').status_code==422
+        assert c.get('/market/chart?series=unapproved').status_code==422
+    assert path.read_bytes()==before
+
+
+def test_demand_sampling_does_not_fill_missing_generation(tmp_path):
+    row=dict.fromkeys(VALUE_FIELDS,10.)
+    row.update(timestamp='2026-10-25T01:00:00Z',wind_total_mw=None,solar_mw=5.)
+    write_market(tmp_path,[row])
+    with client(tmp_path) as c:
+        p=c.get('/market/chart?series=load_wind').json()['points'][0]
+        assert p['wind_solar_mw'] is None and p['load_mw']==10.

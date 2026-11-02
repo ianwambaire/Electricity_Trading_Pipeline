@@ -1,8 +1,8 @@
 {
   "artifacts": {
     "deploy/staging/forecast-consistency-deployment/REVIEW.md": {
-      "bytes": 13841,
-      "sha256": "ce1138ea68e49684508699e3804a486def941d625bbf25f1f527afc0a20cdef6"
+      "bytes": 15011,
+      "sha256": "f9edc1a4a25bfa010e02ad5687acb6446bf617443a813452ad2ce8fdfe535faf"
     },
     "deploy/staging/forecast-consistency-deployment/deploy.py": {
       "bytes": 33864,
@@ -34,11 +34,11 @@
     }
   },
   "assembled_sha256": {
-    "diagnose-backend": "bfb3d2463352a08810ab2d4eb3e1223cbbfd8857010f7e73f47ba72cc4e8e95b",
-    "reactivate": "f8ff196dbd6e8956e348b3ef73456d5cf9ce6e9b5a41314bec28dfb4d3a08d97",
-    "rollback": "26f9137a3a78c1380d367887c2ced8a912ee0cffa691272c5fc0d3d8ed92a522"
+    "diagnose-backend": "097d4546d84c3f0ae3381d262df424ca30f141aaa8f8e99c4c2799c7077667dd",
+    "reactivate": "d8ec166fc1230952a6be34c95bfd39e52add41b33e25896b0a4ad6999aef760b",
+    "rollback": "53e0337b22b92259dd2d07f02a2a8c26c16c727f6fe4542e320c94bdfc3171fd"
   },
   "release_manifest_sha256": "9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19",
   "schema_version": 1,
-  "transaction_id": "51788d41661b41ae89a564a17f5730db"
+  "transaction_id": "08c3e397c7764dc1a69c6c9692ec5c09"
 }

@@ -214,9 +214,27 @@ phase record. historical_failure_proven is always false. Current metadata may ex
 an ownership/state problem, but a healthy restored candidate does not prove the
 retained release can start. Any remaining ambiguity must be reported, not guessed.
 
-Transaction 51788d41661b41ae89a564a17f5730db has already been consumed and rolled back.
-Keep it bound here for diagnosis; do NOT authorize another reactivate with this
-transaction. Reuse of immutable API/static files remains possible only after fresh
-integrity/live gates. A later deployment package needs a newly reviewed transaction
-ID/hash binding and fresh backups. Do not overwrite or clean up this transaction.
-No remote command or service operation was run during this local correction.
+Historical transaction 51788d41661b41ae89a564a17f5730db has been consumed and rolled back.
+It must never be reused, overwritten or cleaned up. The saved read-only diagnostic
+confirmed its rollback record, backup, original pointers/environment and healthy
+restored candidate; the original backend failure remains UNVERIFIED.
+
+## Fresh reactivation transaction — local preparation
+
+The current manifest now binds fresh UUID4 transaction 08c3e397c7764dc1a69c6c9692ec5c09 to all
+assembled actions. Its ONLY control directory is:
+/var/lib/powerflow-staging/forecast-consistency-transactions/08c3e397c7764dc1a69c6c9692ec5c09/
+No existing record is reused. The runner deliberately has no transaction override or
+automatic transaction generator: a new manifest/payload binding requires review.
+This identity is new locally; remote absence remains a mandatory live collision
+guard, not a fact established by local preparation. The retained release, job,
+runner and all runtime/security/acceptance behavior are unchanged. Fresh durable
+independent backups precede candidate mutation. Backend acceptance still precedes
+the static pointer switch. Unexpected backend errors retain sanitized substep/cause
+codes; no claim is made that the original failure is resolved.
+
+The earlier diagnostic command/manifest referred to the historical transaction.
+Under this NEW manifest diagnose-backend would refer to the NEW transaction; it is
+not a way to re-inspect the old record. Only the separately reviewed reactivate and
+conditional rollback commands should be proposed for the next activation window.
+No remote command or service operation was run during this local preparation.

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "packet_sha256": "faeec014b4cde838fcffb3c285eef1995f38547d443162e529fa90ec7209a6b3",
+  "packet_bytes": 6470,
+  "artifacts": {
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/forecast-publication/FIRST-PUBLICATION-REVIEW.md": {
+      "bytes": 14837,
+      "sha256": "797d3b190e8832fa21b9e41fd7f5195b0622a88210a75bbb9867fceccb20bdcc"
+    },
+    "deploy/staging/forecast-publication/run_first_setup.py": {
+      "bytes": 6455,
+      "sha256": "ef6e7918b1685fc06f433f5e2aac0b2dfbfb84a8871c082811ccdf8ab8b5340b"
+    },
+    "deploy/staging/forecast-publication/setup_first.py": {
+      "bytes": 8393,
+      "sha256": "2463d905bf356de548a22d3e8348942b69ee33a948f20997f4620a38e7a25ce3"
+    },
+    "tests/test_first_publication_setup.py": {
+      "bytes": 12944,
+      "sha256": "fa74a3ef17cc38c832948a18a841d2d6130c12861b9fe94ce40abb9ce2fe7416"
+    }
+  },
+  "payload_sha256": "4229e8b004d2ff8c7ebb88980559e31adf141cbb71e48a0dd41df00db9d96ef3"
+}

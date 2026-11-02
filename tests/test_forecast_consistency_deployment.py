@@ -82,7 +82,7 @@ def test_preflight_failures_write_nothing(host,monkeypatch,failure):
 
 
 def test_failure_after_backend_switch_never_activates_static_or_rolls_back(host,monkeypatch):
-    monkeypatch.setattr(D,'missing_acceptance',lambda:(_ for _ in ()).throw(D.Stop('MISSING_FORECAST_CONTRACT')))
+    monkeypatch.setattr(D,'missing_acceptance',lambda:(_ for _ in ()).throw(D.Stop('CACHE_MISMATCH')))
     with pytest.raises(D.Stop):D.apply()
     assert D.CHANGED and D.BACKEND_LINK.resolve()==D.API and D.STATIC_LINK.resolve()==host.old_static
     assert D.ENV.read_bytes()!=host.env and (D.CONTROL/'previous-api.env').read_bytes()==host.env
@@ -214,3 +214,56 @@ def test_late_isolation_failure_stops_before_activation(host,monkeypatch):
     with pytest.raises(D.Stop,match='SANDBOX_PROPERTIES'):D.apply()
     assert len(calls)==2 and D.ENV.read_bytes()==host.env and D.BACKEND_LINK.resolve()==host.old_api
     assert not any(k=='service' for k,v in host.calls)
+
+
+@pytest.mark.parametrize('name',['cache-control','Cache-Control','CACHE-CONTROL','cAcHe-CoNtRoL'])
+@pytest.mark.parametrize('value',['no-store','No-Store','private, no-store'])
+def test_missing_forecast_accepts_case_insensitive_http_fields(name,value):
+    D.validate_missing_forecast(503,{name:value},b'{"detail":{"code":"FORECAST_WITHHELD"}}')
+
+
+@pytest.mark.parametrize('code,headers,body,reason',[
+    (500,{'cache-control':'no-store'},b'{"detail":{"code":"FORECAST_WITHHELD"}}','STATUS_MISMATCH'),
+    (200,{'cache-control':'no-store'},b'{"detail":{"code":"FORECAST_WITHHELD"}}','STATUS_MISMATCH'),
+    (503,{'cache-control':'no-store'},b'PRIVATE_SENTINEL','BODY_MISMATCH'),
+    (503,{'cache-control':'no-store'},b'{"detail":{"code":"WRONG"}}','BODY_MISMATCH'),
+    (503,{},b'{"detail":{"code":"FORECAST_WITHHELD"}}','CACHE_MISMATCH'),
+    (503,{'cache-control':'public'},b'{"detail":{"code":"FORECAST_WITHHELD"}}','CACHE_MISMATCH'),
+    (503,{'cache-control':'x-no-store'},b'{"detail":{"code":"FORECAST_WITHHELD"}}','CACHE_MISMATCH'),
+    (503,{'cache-control':'no-store-invalid'},b'{"detail":{"code":"FORECAST_WITHHELD"}}','CACHE_MISMATCH'),
+])
+def test_missing_forecast_rejects_individual_mismatches_safely(code,headers,body,reason):
+    with pytest.raises(D.Stop,match=reason) as caught:D.validate_missing_forecast(code,headers,body)
+    assert str(caught.value)==reason and 'PRIVATE_SENTINEL' not in str(caught.value)
+    report={'status':'PARTIAL','phase':'BACKEND_ACTIVATION','reason':reason,'automatic_rollback':False}
+    assert R.validate_report(report,'apply',1)==report
+
+
+@pytest.mark.parametrize('mode',['missing_root','missing_pointer','invalid','expired'])
+def test_asgi_response_through_http_client_preserves_fail_closed_contract(tmp_path,monkeypatch,mode):
+    import io
+    import http.client
+    from datetime import timedelta
+    from joserfc import jwk
+    from test_forecast_source_consistency import make_client,write_bundle
+    from test_forecast_publication import fixture,NOW
+    client,settings,root,clock,reads=make_client(tmp_path,monkeypatch,jwk.RSAKey.generate_key(2048,parameters={'kid':'key-one','alg':'RS256','use':'sig'}))
+    if mode=='missing_pointer':root.mkdir();(root/'releases').mkdir()
+    if mode=='invalid':write_bundle(root,{'version':1})
+    if mode=='expired':write_bundle(root,fixture());clock[0]=NOW+timedelta(hours=4)
+    with client:
+        response=client.get('/forecast/next24')
+        wire=b'HTTP/1.1 '+str(response.status_code).encode()+b' Response\r\n'+b''.join(k+b': '+v+b'\r\n' for k,v in response.headers.raw)+b'\r\n'+response.content
+        class Socket:
+            def makefile(self,*args):return io.BytesIO(wire)
+        parsed=http.client.HTTPResponse(Socket());parsed.begin();headers=dict(parsed.getheaders());body=parsed.read()
+        assert parsed.status==503 and json.loads(body)=={'detail':{'code':'FORECAST_WITHHELD'}}
+        assert headers.get('cache-control')=='no-store'
+        # This is the exact previous faulty predicate; HTTPResponse preserves the
+        # lowercase ASGI field name, while the dictionary does not fold casing.
+        assert 'no-store' not in headers.get('Cache-Control','')
+        D.validate_missing_forecast(parsed.status,headers,body)
+        summary=client.get('/operations/summary').json()
+        assert summary['forecast_status']==('MISSING_PUBLICATION' if mode.startswith('missing') else 'EXPIRED' if mode=='expired' else 'WITHHELD')
+        assert summary['health']=='Historical snapshot'
+        assert response.json().get('forecasts') is None

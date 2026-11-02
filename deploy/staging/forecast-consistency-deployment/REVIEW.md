@@ -212,3 +212,32 @@ If a failure coincides with memory pressure, a new scheduled run or production-a
 drift, those guards may block rollback. Do not relax them or stop services implicitly.
 Emergency candidate-stop/recovery would require a new precise authorization. No
 claim of unconditional automatic recovery or guaranteed staging availability is made.
+
+## Missing-publication acceptance correction — local reproduction
+
+Using the exact preserved backend bytes with an absent overlay and no network,
+FastAPI returned503, {detail:{code:FORECAST_WITHHELD}}, cache-control:no-store,
+and operations forecast_status MISSING_PUBLICATION. HTTPResponse.getheaders()
+preserves the lowercase field name emitted by ASGI. Converting it to a normal dict
+and looking up Cache-Control was the checker defect: status/body checks passed,
+only the case-sensitive cache lookup failed. Middleware already applies no-store
+to error responses. No API/source/release contract change is required.
+
+The checker now matches HTTP field names and the no-store directive token
+case-insensitively, preserving mandatory503/body/cache checks. Failures report
+STATUS_MISMATCH, BODY_MISMATCH or CACHE_MISMATCH separately, without printing
+bodies/headers/exception messages. Malformed JSON is BODY_MISMATCH. Substrings like
+x-no-store do not pass. The original immutable release/manifests are unchanged;
+only this deployment package and tests are rebound to new hashes.
+
+IMPORTANT NEXT-ACTION BLOCKER: the successful prior rollback retained the new API,
+static and private control directories. Existing apply intentionally rejects those
+paths with DESTINATION_CONFLICT. Therefore do NOT run the apply command again as
+an assumed retry; correcting acceptance does not authorize cleanup or implicit
+reuse. A separate minimal guarded reactivation/continuation must verify retained
+installed hashes, assets, venv link, rollback state/backups, restored pointers/env,
+fresh production/capacity/window/isolation evidence before reuse. Alternatively,
+new reviewed installation/control paths are needed. No such reuse/path change or
+cleanup is implemented by this narrowly scoped acceptance correction. Rollback
+record validity must be established under the newly chosen continuation, not guessed.
+Old package authorizations are consumed; no newly modified code is approved live.

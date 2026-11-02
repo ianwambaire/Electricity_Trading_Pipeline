@@ -1,16 +1,16 @@
 {
   "artifacts": {
     "deploy/staging/forecast-consistency-deployment/REVIEW.md": {
-      "bytes": 13300,
-      "sha256": "89467c0a81c946fff1fc15bff93e4c9146068d06c9b069e75d9bfdae8c00d3e4"
+      "bytes": 15285,
+      "sha256": "1eecc1d00b0e79e1eb5763b6143196a68a2114396864a56abb95e8e47b06a660"
     },
     "deploy/staging/forecast-consistency-deployment/deploy.py": {
-      "bytes": 17966,
-      "sha256": "765a25065856e17ffa4cb9aa4d72e7de6c63c20e7ded9ecd7ccee442569833dc"
+      "bytes": 18451,
+      "sha256": "b0f16d100053b8983d79c0d3636cbcd64bed5f5699c90452d1c7a7f8e23bf922"
     },
     "deploy/staging/forecast-consistency-deployment/run.py": {
-      "bytes": 9446,
-      "sha256": "6b748c3bf57a9d16aa8b05c498c89b4a1717c4338d713dce33e43cb73145d9a7"
+      "bytes": 9471,
+      "sha256": "f3bf977cf3a8a17c292cf12f5a5842006e3588d2967e5f6be1a5d925420d1d41"
     },
     "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
       "bytes": 34587,
@@ -29,13 +29,13 @@
       "sha256": "930f135efade4502d216d727c69aa71a3b1abc5a56b37847824dce8e18453612"
     },
     "tests/test_forecast_consistency_deployment.py": {
-      "bytes": 14606,
-      "sha256": "7b514283f8c5ebbf2a0d8fd056cf713075c04a08292dc96a9b86ae8d8f8df8a8"
+      "bytes": 18158,
+      "sha256": "e164025efd96b963a96379c5cf9cd0333ddfbc949cbee8c713c8e7bb8bcb4a1b"
     }
   },
   "assembled_sha256": {
-    "apply": "03adb85fffd7e921663d9323b8821bd3121aca38b5888d1531c0c0900e6c835c",
-    "rollback": "d47ac843c83a8af5fb259ee5769d639d38757abedc281933677a2e1d18f5f9af"
+    "apply": "90edcdc5b84218a8fe1d85f830a3e9030ae12d0b5c97d14e405be54fa53f55fc",
+    "rollback": "1a3e10625677a6145051c1eba375c9e08d385346f18fafb1d0c4bd66dae573d5"
   },
   "release_manifest_sha256": "9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19",
   "schema_version": 1

@@ -151,10 +151,20 @@ def request_api(path):
         need(len(raw)<=1_000_000,'API_BODY_BOUND');return r.status,dict(r.getheaders()),raw
     finally:connection.close()
 
+def validate_missing_forecast(code,headers,raw):
+    need(code==503,'STATUS_MISMATCH')
+    try:payload=json.loads(raw)
+    except Exception:raise Stop('BODY_MISMATCH') from None
+    need(payload=={'detail':{'code':'FORECAST_WITHHELD'}},'BODY_MISMATCH')
+    # HTTP field names and cache directives are case-insensitive. Match the
+    # directive token, not a substring such as x-no-store or no-store-invalid.
+    cache=','.join(value for key,value in headers.items() if key.lower()=='cache-control')
+    need(any(token.strip().lower()=='no-store' for token in cache.split(',')),'CACHE_MISMATCH')
+
 def missing_acceptance():
     need(not os.path.lexists(OVERLAY),'UNEXPECTED_PUBLICATION_ROOT')
     code,headers,raw=request_api('/forecast/next24')
-    need(code==503 and json.loads(raw)=={'detail':{'code':'FORECAST_WITHHELD'}} and 'no-store' in headers.get('Cache-Control',''),'MISSING_FORECAST_CONTRACT')
+    validate_missing_forecast(code,headers,raw)
     code,_,raw=request_api('/operations/summary');summary=json.loads(raw)
     need(code==200 and summary.get('forecast_status')=='MISSING_PUBLICATION' and summary.get('health') in ('Historical snapshot','Unavailable') and 'Historical' in summary.get('completeness_note',''),'HISTORICAL_SEPARATION')
     need(request_api('/admin/forecast/provenance')[0]==401,'ADMIN_AUTH_BOUNDARY')

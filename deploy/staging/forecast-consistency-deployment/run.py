@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import tempfile
@@ -53,12 +54,12 @@ def release_files():
     return result
 
 
-def assemble(blobs,files,action):
-    if action not in ('apply','rollback'):raise ValueError('action')
+def assemble(blobs,files,action,transaction_id):
+    if action not in ('reactivate','rollback') or type(transaction_id)is not str or re.fullmatch('[0-9a-f]{32}',transaction_id) is None:raise ValueError('action_or_transaction')
     text=''
     for label,key in [('BASE',BASE),('ROLLBACK',RB)]:
         text+=label+"={'__name__':'verified_dependency'}\nexec(compile("+repr(blobs[key])+",'<verified-dependency>','exec'),"+label+")\n"
-    text+='CONFIG='+repr({'files':files})+'\nACTION='+repr(action)+'\n'
+    text+='CONFIG='+repr({'files':files,'transaction_id':transaction_id})+'\nACTION='+repr(action)+'\n'
     text+='exec(compile('+repr(blobs[JOB])+",'<verified-staging-job>','exec'),{'__name__':'__main__','BASE':BASE,'ROLLBACK':ROLLBACK,'CONFIG':CONFIG,'ACTION':ACTION})\n"
     raw=text.encode()
     if len(raw)>2_000_000:raise ValueError('assembled_bound')
@@ -75,17 +76,18 @@ def verify(expected,action):
         data=read(ROOT/name)
         if len(data)!=item['bytes'] or hashlib.sha256(data).hexdigest()!=item['sha256']:raise ValueError('artifact_hash')
         blobs[name]=data
-    files=release_files();payload=assemble(blobs,files,action)
+    files=release_files();payload=assemble(blobs,files,action,manifest['transaction_id'])
     if hashlib.sha256(payload).hexdigest()!=manifest['assembled_sha256'][action]:raise ValueError('assembled_hash')
     wrapper=namespace(blobs[WRAPPER],'wrapper',ROOT/WRAPPER);wrapper['profile']()
     return payload,wrapper,namespace(blobs[BASE],'base')
 
 
-FAILURE_REASONS={'ASSET_COLLISION', 'INSTALLED_TARGET_DRIFT', 'CONTROL_PERMISSIONS', 'DISK_GATE', 'HTTP_ACCEPTANCE', 'PRODUCTION_SERVICE_STATE', 'DESTINATION_CONFLICT', 'HISTORICAL_SEPARATION', 'STARTUP_READINESS', 'ENTRY_ASSETS', 'ENV_PERMISSIONS', 'ADMIN_AUTH_BOUNDARY', 'HISTORICAL_API', 'IMDS_DENY', 'POINTER_LAYOUT', 'POINTER_REQUIRED', 'UNEXPECTED_PUBLICATION_ROOT', 'INPUT_PATH', 'RAM_GATE', 'VENV_TARGET', 'SANDBOX_PROPERTIES', 'ROLLBACK_TARGET_SCOPE', 'UNSAFE_PATH', 'PIPELINE_OR_WINDOW_GATE', 'INPUT_COUNTS', 'INPUT_SCOPE', 'SELECTOR_MISSING', 'RUNNING_CODE_TARGET', 'ROOT_REQUIRED', 'CGROUP_LAYOUT', 'ROLLBACK_ENV_HASH', 'ROLLBACK_BACKEND_HASH', 'HTTPS_INDEX_HASH', 'ROLLBACK_STATIC_HASH', 'INSPECTION_OR_INSTALLATION_FAILED', 'STATIC_SIZE_BOUND', 'ATOMIC_FILE_VERIFY', 'POINTER_DRIFT', 'DEPENDENCY_METADATA', 'ROLLBACK_HTTPS', 'ADDRESS_FAMILIES', 'OLD_ASSET_DRIFT', 'STATIC_INVENTORY_BOUND', 'INPUT_HASH', 'COMMAND_SCOPE', 'API_BODY_BOUND', 'ENV_BASELINE_DRIFT', 'PROCESS_SECURITY', 'ROLLBACK_RECORD', 'CANDIDATE_RESTART_FAILED', 'STATIC_INDEX_MISSING', 'CANDIDATE_SWAP_ACTIVITY', 'PRODUCTION_DRIFT', 'INSTALLED_HASH', 'CGROUP_LIMITS', 'CANDIDATE_NOT_RUNNING', 'ROLLBACK_POINTER_DRIFT', 'BPF_ATTACHMENTS', 'SINGLE_WORKER', 'BACKUP_ENV_VERIFY', 'STATUS_MISMATCH', 'BODY_MISMATCH', 'CACHE_MISMATCH', 'ACTION_SCOPE', 'BACKEND_BASELINE_DRIFT', 'API_PROBE_SCOPE', 'ROLLBACK_POSTCHECK', 'ENV_KEY_ALREADY_PRESENT', 'ENV_DRIFT', 'ROLLBACK_ENV_DRIFT', 'HTTPS_ASSET_HASH', 'ROLLBACK_STATE', 'POINTER_VERIFY', 'LISTENER_OWNERSHIP', 'CANDIDATE_IDENTITY'}
+FAILURE_REASONS=set(['ACTION_SCOPE', 'ADDRESS_FAMILIES', 'ADMIN_AUTH_BOUNDARY', 'API_BODY_BOUND', 'API_PROBE_SCOPE', 'ASSET_COLLISION', 'ATOMIC_FILE_VERIFY', 'BACKEND_BASELINE_DRIFT', 'BACKUP_ENV_VERIFY', 'BODY_MISMATCH', 'BPF_ATTACHMENTS', 'CACHE_MISMATCH', 'CANDIDATE_IDENTITY', 'CANDIDATE_NOT_RUNNING', 'CANDIDATE_RESTART_FAILED', 'CANDIDATE_SWAP_ACTIVITY', 'CGROUP_LAYOUT', 'CGROUP_LIMITS', 'COMMAND_SCOPE', 'CONTROL_PERMISSIONS', 'DEPENDENCY_METADATA', 'DESTINATION_CONFLICT', 'DISK_GATE', 'ENTRY_ASSETS', 'ENV_BASELINE_DRIFT', 'ENV_DRIFT', 'ENV_KEY_ALREADY_PRESENT', 'ENV_PERMISSIONS', 'HISTORICAL_API', 'HISTORICAL_SEPARATION', 'HTTPS_ASSET_HASH', 'HTTPS_INDEX_HASH', 'HTTP_ACCEPTANCE', 'IMDS_DENY', 'INPUT_COUNTS', 'INPUT_HASH', 'INPUT_PATH', 'INPUT_SCOPE', 'INSPECTION_OR_INSTALLATION_FAILED', 'INSTALLED_HASH', 'INSTALLED_TARGET_DRIFT', 'LEGACY_ASSET_MISMATCH', 'LEGACY_BACKUP_MISMATCH', 'LEGACY_CONTROL_PERMISSIONS', 'LEGACY_FILE_PERMISSIONS', 'LEGACY_RECORD_DRIFT', 'LEGACY_RECORD_MISMATCH', 'LEGACY_STATIC_MISMATCH', 'LISTENER_OWNERSHIP', 'OLD_ASSET_DRIFT', 'PIPELINE_OR_WINDOW_GATE', 'POINTER_DRIFT', 'POINTER_LAYOUT', 'POINTER_REQUIRED', 'POINTER_VERIFY', 'PROCESS_SECURITY', 'PRODUCTION_DRIFT', 'PRODUCTION_SERVICE_STATE', 'RAM_GATE', 'RESTORED_POINTER_MISMATCH', 'RETAINED_DIRECTORY_PERMISSIONS', 'RETAINED_FILE_HASH', 'RETAINED_FILE_PERMISSIONS', 'RETAINED_MISSING_FILE_OR_DIRECTORY', 'RETAINED_PATH_SCOPE', 'RETAINED_SCAN_BOUND', 'RETAINED_SYMLINK', 'RETAINED_UNEXPECTED_DIRECTORY', 'RETAINED_UNEXPECTED_FILE', 'RETAINED_VENV', 'ROLLBACK_ALREADY_COMPLETE', 'ROLLBACK_BACKEND_HASH', 'ROLLBACK_ENV_DRIFT', 'ROLLBACK_ENV_HASH', 'ROLLBACK_HTTPS', 'ROLLBACK_POINTER_DRIFT', 'ROLLBACK_POSTCHECK', 'ROLLBACK_RECORD', 'ROLLBACK_STATE', 'ROLLBACK_STATIC_HASH', 'ROLLBACK_TARGET_SCOPE', 'ROOT_REQUIRED', 'RUNNING_CODE_TARGET', 'SANDBOX_PROPERTIES', 'SELECTOR_MISSING', 'SINGLE_WORKER', 'STARTUP_READINESS', 'STATIC_INDEX_MISSING', 'STATIC_INVENTORY_BOUND', 'STATIC_SIZE_BOUND', 'STATUS_MISMATCH', 'TRANSACTION_BASELINE', 'TRANSACTION_COLLISION', 'TRANSACTION_HASH', 'TRANSACTION_ID', 'TRANSACTION_INVENTORY', 'TRANSACTION_ORIGINAL_STATE', 'TRANSACTION_PARENT_PERMISSIONS', 'TRANSACTION_RECORD_MISMATCH', 'TRANSACTION_RECORD_SCHEMA', 'TRANSACTION_TARGET_MISMATCH', 'UNEXPECTED_PUBLICATION_ROOT', 'UNSAFE_PATH', 'VENV_TARGET'])
 PHASES={'PREFLIGHT','INSTALL','BACKEND_ACTIVATION','STATIC_ACTIVATION','COMPLETE','ROLLBACK','ROLLED_BACK'}
 
 
 def validate_report(report,action,code):
+    action='apply' if action=='reactivate' else action
     if action not in ('apply','rollback') or type(code)is not int or type(report)is not dict:raise ValueError('report_schema')
     success='DEPLOYED' if action=='apply' else 'ROLLED_BACK'
     if code==0:
@@ -104,13 +106,13 @@ def validate_report(report,action,code):
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('apply','rollback'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('action',choices=('reactivate','rollback'));parser.add_argument('--manifest-sha256',required=True);parser.add_argument('--local-check',action='store_true');a=parser.parse_args()
     capture=None;summary={'exit_status':None,'failure_category':'LOCAL_VERIFICATION_FAILURE','report':None}
     try:
         payload,wrapper,base=verify(a.manifest_sha256,a.action)
         if a.local_check:print('{"local_integrity":"PASS","remote_attempts":0}');return 0
         command=wrapper['ssh_argv'](wrapper['profile']())
-        seconds=300 if a.action=='apply' else 180
+        seconds=300 if a.action=='reactivate' else 180
         command[-1]='sudo -n /usr/bin/timeout --signal=TERM --kill-after=5s '+str(seconds)+'s /usr/bin/python3 -I -S -B -'
         capture=Path(tempfile.mkdtemp(prefix='staging-'+a.action+'-',dir=wrapper['PRIVATE']/'preflight'));capture.chmod(0o700)
         result=base['bounded_run'](command,input=payload,timeout=seconds+60,limit=131072,grace=5)

@@ -14,7 +14,9 @@ import uuid
 ID='phase-forecast-consistency-20261101-v1'
 API=Path('/opt/powerflow/releases')/ID
 STATIC=Path('/var/www/powerflow-staging/releases')/ID
-CONTROL=Path('/var/lib/powerflow-staging/forecast-consistency-20261101-v1')
+LEGACY_CONTROL=Path('/var/lib/powerflow-staging/forecast-consistency-20261101-v1')
+CONTROL=LEGACY_CONTROL
+TRANSACTION_PARENT=Path('/var/lib/powerflow-staging/forecast-consistency-transactions')
 BACKEND_LINK=Path('/opt/powerflow/react-current')
 STATIC_LINK=Path('/var/www/powerflow-staging/current')
 ENV=Path('/etc/powerflow/react-api.env')
@@ -171,7 +173,7 @@ def missing_acceptance():
     for path in ('/forecast/one-hour','/market/coverage','/pipeline/status','/models/summary'):need(request_api(path)[0]==200,'HISTORICAL_API')
 
 def validate_inputs():
-    need(set(CONFIG)=={'files'} and len(CONFIG['files'])==63,'INPUT_SCOPE')
+    need(set(CONFIG) in ({'files'},{'files','transaction_id'}) and len(CONFIG['files'])==63,'INPUT_SCOPE')
     for name,item in CONFIG['files'].items():
         path=Path(name)
         need(not path.is_absolute() and '..' not in path.parts and path.parts[0] in ('api','static'),'INPUT_PATH')
@@ -199,6 +201,8 @@ def install_tree(root,prefix):
         if name.startswith(prefix):need(digest(root/name[len(prefix):])==item['sha256'],'INSTALLED_HASH')
 
 def validate_rollback(record):
+    if 'transaction_id' in CONFIG:
+        validate_transaction_record(record);return
     ROLLBACK['validate']({'schema_version':1,'previous_backend':record['previous_backend'],'previous_static':record['previous_static'],
         'installed_backend':record['new_backend'],'installed_static':record['new_static'],
         'original_env_sha256':record['original_env_sha256'],'installed_env_sha256':record['installed_env_sha256'],
@@ -249,12 +253,18 @@ def apply():
     idle_capacity(0);need(digest(ENV)==sha(env),'ENV_DRIFT')
     need(target(BACKEND_LINK,API.parent)==old_backend and target(STATIC_LINK,STATIC.parent)==old_static,'POINTER_DRIFT')
     runtime(old_backend);need(production()==before,'PRODUCTION_DRIFT')
+    return activate(record,old_backend,old_static,env,installed_env,resources,before)
+
+def activate(record,old_backend,old_static,env,installed_env,resources,before,recheck=None):
+    global PHASE
+    if recheck is not None:recheck()
     PHASE='BACKEND_ACTIVATION';record['phase']=PHASE;state_save(record)
     atomic_file(ENV,installed_env,0o600);pointer(BACKEND_LINK,API)
     run(['/usr/bin/systemctl','restart',UNIT]);candidate_ready();runtime(API);missing_acceptance()
     need(production()==before,'PRODUCTION_DRIFT')
     idle_capacity(0)
     runtime(API);need(production()==before,'PRODUCTION_DRIFT')
+    if recheck is not None:recheck()
     PHASE='STATIC_ACTIVATION';record['phase']=PHASE;state_save(record);pointer(STATIC_LINK,STATIC)
     html=probe(443,'/',200);need(sha(html)==CONFIG['files']['static/index.html']['sha256'],'HTTPS_INDEX_HASH')
     assets=re.findall(rb'(?:src|href)="(/assets/[A-Za-z0-9_-]+\.(?:js|css))"',html);need(0<len(assets)<=16,'ENTRY_ASSETS')
@@ -265,11 +275,114 @@ def apply():
     record['phase']='COMPLETE';state_save(record);PHASE='COMPLETE'
     return {'status':'DEPLOYED','phase':PHASE,'production_preserved':True,'missing_publication_verified':True,'resources_before':resources}
 
+def select_transaction():
+    global CONTROL
+    tx=CONFIG.get('transaction_id')
+    need(type(tx)is str and re.fullmatch('[0-9a-f]{32}',tx) is not None,'TRANSACTION_ID')
+    CONTROL=TRANSACTION_PARENT/tx
+
+
+def validate_transaction_record(record):
+    fields={'version','transaction_id','legacy_record_sha256','previous_backend','previous_static','new_backend','new_static','original_env_sha256','installed_env_sha256','previous_service_state','production_fingerprint','old_static_files','retained_assets','phase'}
+    need(type(record)is dict and set(record)==fields and record['phase'] in {'BACKUPS','BACKEND_ACTIVATION','STATIC_ACTIVATION','COMPLETE','ROLLED_BACK'},'TRANSACTION_RECORD_SCHEMA')
+    for key in ('old_static_files','retained_assets'):
+        values=record[key];need(type(values)is dict and len(values)<=160,'TRANSACTION_INVENTORY')
+        for name,value in values.items():need(type(name)is str and not Path(name).is_absolute() and '..' not in Path(name).parts and type(value)is str and re.fullmatch('[0-9a-f]{64}',value) is not None,'TRANSACTION_INVENTORY')
+    need(record.get('transaction_id')==CONFIG['transaction_id'] and CONTROL==TRANSACTION_PARENT/CONFIG['transaction_id'],'TRANSACTION_RECORD_MISMATCH')
+    for key,prefix in [('previous_backend','/opt/powerflow/releases'),('new_backend','/opt/powerflow/releases'),('previous_static','/var/www/powerflow-staging/releases'),('new_static','/var/www/powerflow-staging/releases')]:
+        ROLLBACK['valid_target'](record[key],prefix)
+    need(record['new_backend']==str(API) and record['new_static']==str(STATIC),'TRANSACTION_TARGET_MISMATCH')
+    need(record['previous_backend']!=str(API) and record['previous_static']!=str(STATIC) and record['previous_service_state']=='active','TRANSACTION_ORIGINAL_STATE')
+    for key in ('original_env_sha256','installed_env_sha256','production_fingerprint','legacy_record_sha256'):
+        need(type(record[key])is str and re.fullmatch('[0-9a-f]{64}',record[key]) is not None,'TRANSACTION_HASH')
+    need(record['original_env_sha256']==ENV_BASELINE and record['version']==1,'TRANSACTION_BASELINE')
+
+
+def retained_tree(root,expected,venv=None):
+    safe(root);expected_dirs={'.'}
+    for name in expected:
+        p=Path(name);need(not p.is_absolute() and '..' not in p.parts,'RETAINED_PATH_SCOPE')
+        expected_dirs.update(str(q) for q in p.parents)
+    seen=set();directories=set();count=0
+    for parent,dirs,files in os.walk(root,followlinks=False):
+        folder=Path(parent);safe(folder);directories.add(str(folder.relative_to(root)))
+        st=folder.lstat();need(st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o755,'RETAINED_DIRECTORY_PERMISSIONS')
+        need(len(dirs)+len(files)<=200,'RETAINED_SCAN_BOUND')
+        for name in list(dirs)+list(files):
+            path=folder/name;relative=str(path.relative_to(root));st=path.lstat()
+            if relative=='.venv-api' and venv is not None:
+                need(stat.S_ISLNK(st.st_mode) and st.st_uid==0 and path.resolve(strict=True)==venv,'RETAINED_VENV')
+                if name in dirs:dirs.remove(name)
+                continue
+            need(not stat.S_ISLNK(st.st_mode),'RETAINED_SYMLINK')
+            if name in dirs:
+                need(relative in expected_dirs,'RETAINED_UNEXPECTED_DIRECTORY');continue
+            need(relative in expected and stat.S_ISREG(st.st_mode),'RETAINED_UNEXPECTED_FILE')
+            need(st.st_uid==0 and st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o644,'RETAINED_FILE_PERMISSIONS')
+            need(digest(path)==expected[relative],'RETAINED_FILE_HASH');seen.add(relative);count+=1
+            need(count<=256,'RETAINED_SCAN_BOUND')
+    need(seen==set(expected) and directories==expected_dirs,'RETAINED_MISSING_FILE_OR_DIRECTORY')
+    if venv is not None:need((root/'.venv-api').is_symlink(),'RETAINED_VENV')
+
+
+def reactivate():
+    global PHASE,CHANGED
+    need(os.geteuid()==0,'ROOT_REQUIRED');validate_inputs();select_transaction()
+    need(not os.path.lexists(CONTROL),'TRANSACTION_COLLISION')
+    if os.path.lexists(TRANSACTION_PARENT):
+        safe(TRANSACTION_PARENT);need(stat.S_ISDIR(TRANSACTION_PARENT.lstat().st_mode),'TRANSACTION_PARENT_PERMISSIONS');need(stat.S_IMODE(TRANSACTION_PARENT.stat().st_mode)==0o700,'TRANSACTION_PARENT_PERMISSIONS')
+    else:safe(TRANSACTION_PARENT.parent)
+    safe(LEGACY_CONTROL);need(stat.S_IMODE(LEGACY_CONTROL.stat().st_mode)==0o700,'LEGACY_CONTROL_PERMISSIONS')
+    for file in ('state.json','previous-api.env'):
+        st=(LEGACY_CONTROL/file).lstat();need(stat.S_ISREG(st.st_mode) and st.st_uid==st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o600,'LEGACY_FILE_PERMISSIONS')
+    legacy_raw=read(LEGACY_CONTROL/'state.json',131072);legacy=json.loads(legacy_raw)
+    need(legacy.get('phase')=='ROLLED_BACK' and legacy.get('version')==1 and legacy.get('new_backend')==str(API) and legacy.get('new_static')==str(STATIC) and legacy.get('previous_service_state')=='active','LEGACY_RECORD_MISMATCH')
+    need(legacy.get('original_env_sha256')==ENV_BASELINE and digest(LEGACY_CONTROL/'previous-api.env')==ENV_BASELINE,'LEGACY_BACKUP_MISMATCH')
+    old_backend=target(BACKEND_LINK,API.parent);old_static=target(STATIC_LINK,STATIC.parent)
+    need(str(old_backend)==legacy['previous_backend'] and str(old_static)==legacy['previous_static'],'RESTORED_POINTER_MISMATCH')
+    need(sha(str(old_backend).encode())==BACKEND_TARGET_SHA and sha(str(old_static).encode())==STATIC_TARGET_SHA,'INSTALLED_TARGET_DRIFT')
+    safe(ENV);st=ENV.lstat();need(st.st_gid==0 and stat.S_IMODE(st.st_mode)==0o600,'ENV_PERMISSIONS')
+    env=read(ENV,65536);need(sha(env)==ENV_BASELINE,'ENV_BASELINE_DRIFT')
+    need(not os.path.lexists(OVERLAY),'UNEXPECTED_PUBLICATION_ROOT')
+    for rel,value in BASE['INSTALLED_HASHES'].items():need(digest(old_backend/rel)==value,'BACKEND_BASELINE_DRIFT')
+    _,ok=BASE['passive_installation']();need(ok,'DEPENDENCY_METADATA');runtime(old_backend)
+    previous_static=inventory(old_static);need(previous_static==legacy['old_static_files'],'LEGACY_STATIC_MISMATCH')
+    retained={name:value for name,value in previous_static.items() if name.startswith('assets/') and re.fullmatch(r'assets/[A-Za-z0-9._-]+\.(js|css|woff2)',name)}
+    need(retained==legacy['retained_assets'],'LEGACY_ASSET_MISMATCH')
+    venv=BASE['canonical'](old_backend/'.venv-api',API.parent)
+    expected_api={name[4:]:item['sha256'] for name,item in CONFIG['files'].items() if name.startswith('api/')}
+    expected_static=dict(retained)
+    for name,item in CONFIG['files'].items():
+        if not name.startswith('static/'):continue
+        relative=name[7:]
+        need(relative not in expected_static or expected_static[relative]==item['sha256'],'ASSET_COLLISION')
+        expected_static[relative]=item['sha256']
+    def verify_retained():
+        retained_tree(API,expected_api,venv);retained_tree(STATIC,expected_static)
+        need(digest(LEGACY_CONTROL/'state.json')==sha(legacy_raw) and digest(LEGACY_CONTROL/'previous-api.env')==ENV_BASELINE,'LEGACY_RECORD_DRIFT')
+    verify_retained()
+    installed_env=env+(b'' if env.endswith(b'\n') else b'\n')+KEY+b'=/srv/powerflow/forecast-publications\n'
+    resources=idle_capacity(1024**2);before=production()
+    record={'version':1,'transaction_id':CONFIG['transaction_id'],'legacy_record_sha256':sha(legacy_raw),'previous_backend':str(old_backend),'previous_static':str(old_static),'new_backend':str(API),'new_static':str(STATIC),'original_env_sha256':sha(env),'installed_env_sha256':sha(installed_env),'previous_service_state':'active','production_fingerprint':before,'old_static_files':previous_static,'retained_assets':retained,'phase':'BACKUPS'}
+    validate_rollback(record)
+    CHANGED=True
+    if not TRANSACTION_PARENT.exists():TRANSACTION_PARENT.mkdir(mode=0o700);os.chmod(TRANSACTION_PARENT,0o700);os.chown(TRANSACTION_PARENT,0,0)
+    CONTROL.mkdir(mode=0o700);os.chmod(CONTROL,0o700);os.chown(CONTROL,0,0);sync_dir(CONTROL.parent);sync_dir(CONTROL.parent.parent)
+    create(CONTROL/'previous-api.env',env);state_save(record)
+    need(digest(CONTROL/'previous-api.env')==sha(env),'BACKUP_ENV_VERIFY')
+    verify_retained();idle_capacity(0)
+    need(digest(ENV)==sha(env),'ENV_DRIFT')
+    need(target(BACKEND_LINK,API.parent)==old_backend and target(STATIC_LINK,STATIC.parent)==old_static,'POINTER_DRIFT')
+    runtime(old_backend);need(production()==before,'PRODUCTION_DRIFT')
+    return activate(record,old_backend,old_static,env,installed_env,resources,before,verify_retained)
+
 def rollback():
     global CHANGED,PHASE
-    need(os.geteuid()==0,'ROOT_REQUIRED');safe(CONTROL)
+    need(os.geteuid()==0,'ROOT_REQUIRED')
+    if 'transaction_id' in CONFIG:select_transaction()
+    safe(CONTROL)
     need(stat.S_IMODE(CONTROL.stat().st_mode)==0o700,'CONTROL_PERMISSIONS')
-    record=json.loads(read(CONTROL/'state.json',131072));validate_rollback(record);need(record['version']==1 and record['new_backend']==str(API) and record['new_static']==str(STATIC),'ROLLBACK_RECORD')
+    record=json.loads(read(CONTROL/'state.json',131072));validate_rollback(record);need(record.get('phase')!='ROLLED_BACK','ROLLBACK_ALREADY_COMPLETE');need(record['version']==1 and record['new_backend']==str(API) and record['new_static']==str(STATIC),'ROLLBACK_RECORD')
     old_backend=Path(record['previous_backend']);old_static=Path(record['previous_static'])
     need(old_backend.parent==API.parent and old_static.parent==STATIC.parent and old_backend!=API and old_static!=STATIC,'ROLLBACK_TARGET_SCOPE')
     safe(old_backend);safe(old_static)
@@ -291,7 +404,7 @@ def rollback():
 
 if __name__=='__main__':
     try:
-        result=apply() if ACTION=='apply' else rollback() if ACTION=='rollback' else (_ for _ in ()).throw(Stop('ACTION_SCOPE'))
+        result=reactivate() if ACTION=='reactivate' else apply() if ACTION=='apply' else rollback() if ACTION=='rollback' else (_ for _ in ()).throw(Stop('ACTION_SCOPE'))
         print(json.dumps(result,sort_keys=True))
     except Exception as error:
         reason=str(error) if type(error)is Stop and re.fullmatch('[A-Z_]+',str(error)) else 'INSPECTION_OR_INSTALLATION_FAILED'

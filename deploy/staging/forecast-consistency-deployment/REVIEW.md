@@ -1,243 +1,164 @@
-# Controlled forecast-consistency staging deployment — NOT executed
+# Guarded reactivation after successful rollback — local preparation only
 
-LOCAL preparation only. Separate apply and rollback authorizations are required.
-No previous read-only approval covers either operation. Stop for manual commit.
+Fresh manual commit and exact hash-bound authorization required. No remote action
+has occurred for this revision. Original immutable release and manifests unchanged.
 
-## Immutable inputs and retained conventions
+## Why reactivation, not apply or cleanup
 
-Release ID phase-forecast-consistency-20261101-v1, original release-manifest SHA256:
+Previous apply created these root-owned runtime directories and legacy control:
+/opt/powerflow/releases/phase-forecast-consistency-20261101-v1/
+/var/www/powerflow-staging/releases/phase-forecast-consistency-20261101-v1/
+/var/lib/powerflow-staging/forecast-consistency-20261101-v1/
+Rollback restored original active pointers/env/service and retained them. Original
+apply correctly rejects these existing destinations. It remains strict; this runner
+now exposes ONLY explicit reactivate and transaction-bound rollback, not apply.
+
+Runtime API/static files can be reused ONLY after exact manifest/hash/owner/mode/
+shape verification. They are immutable inputs to this operation: no reinstall,
+chmod, deletion, refresh, asset merge or dependency install. The legacy control
+contains mutable historical state/backup evidence, not runtime files; this new
+operation reads it but NEVER writes/replaces any of its files. New-destination
+installation would duplicate byte-identical files and still require fresh control
+records; guarded reuse is smaller with exact rejection of drift.
+
+## Inputs and executable closure
+
+Preserved ID phase-forecast-consistency-20261101-v1, release-manifest SHA256:
 9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19.
-The runner verifies all71 original payload files but embeds ONLY26 api/ and37 static/
-files into a deterministic SSH-stdin payload. All8 proposals are excluded. It does
-not rebuild/rewrite the private release, transfer datasets, install packages, copy
-models or publish a forecast. The existing root-owned isolated venv is reused by
-link inside the new backend release. Current API/lock hashes must match the known
-pre-hotfix/post-market-context baseline in the reviewed preflight helper.
+All71 original file hashes are verified locally; only26 API and37 static entries
+are embedded. No8 proposal files, datasets, models or private diagnostics are installed.
+Runner/job, retained preflight/SSH helpers, pure rollback target validator, smoke
+tool, review and tests are bound by the NEW manifest. Code/data remain retained
+verified bytes; no executable path reopen. Candidate Python/packages are never
+executed by a root probe: startup occurs only through the existing candidate unit.
 
-The manifest binds all executable project dependencies: job, runner, existing
-preflight/SSH helper definitions, pure rollback-record validator, smoke tool,
-this review and new tests. All code is retained as verified bytes; no executable
-path is reopened for execution. Existing deployment unit/Nginx proposals are NOT
-installed. No additional full backend or instance is launched.
+The new manifest binds one fresh32hex transaction_id. It is part of BOTH assembled
+payload hashes and cannot be overridden in CLI/env/remote parameters. Each later
+attempt needs a new transaction binding; existing transaction paths are a hard
+collision. No latest/current transaction discovery or automatic reuse exists.
 
-## Future commands — do not run without new explicit approval
+## Proposed commands — not authorized execution
 
-Local validation only, zero connections:
-
-```sh
-venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py apply \
-  --manifest-sha256 APPROVED_DEPLOYMENT_MANIFEST_SHA256 --local-check
-```
-
-ONE deployment attempt, after explicit apply authorization:
+Local-only integrity checks (zero connections):
 
 ```sh
-venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py apply \
-  --manifest-sha256 APPROVED_DEPLOYMENT_MANIFEST_SHA256
+venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py reactivate \
+  --manifest-sha256 APPROVED_NEW_MANIFEST_SHA256 --local-check
+venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py rollback \
+  --manifest-sha256 APPROVED_NEW_MANIFEST_SHA256 --local-check
 ```
 
-ONE separately approved rollback attempt:
+ONE separately approved activation:
+
+```sh
+venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py reactivate \
+  --manifest-sha256 APPROVED_NEW_MANIFEST_SHA256
+```
+
+ONE separately/conditionally approved rollback, ONLY using that transaction:
 
 ```sh
 venv/bin/python -I -B deploy/staging/forecast-consistency-deployment/run.py rollback \
-  --manifest-sha256 APPROVED_DEPLOYMENT_MANIFEST_SHA256
+  --manifest-sha256 APPROVED_NEW_MANIFEST_SHA256
 ```
 
-The exact manifest and assembled apply/rollback hashes are printed in the review
-response. The manifest cannot self-hash. Runner reuses approved private identity,
-strict pinned host-key settings, -F/dev/null and noninteractive sudo. One SSH stdin
-connection, no retries. Apply remote timeout300s/local360s; rollback remote180s/
-local240s. TERM then KILL after5s; stdout/stderr each capped131072 bytes. Exact root
-command is sudo -n /usr/bin/timeout --signal=TERM --kill-after=5s <bound>s
-/usr/bin/python3 -I -S -B -. A3/IAM/Cognito/DNS/TLS are outside scope.
+Strict pinned host key/private profile/identity, -F/dev/null, BatchMode,
+ConnectionAttempts1, ConnectTimeout10. Noninteractive sudo invokes fixed timeout
+and system Python -I -S -B through SSH stdin. Reactivate remote300/local360 seconds;
+rollback180/240 seconds. TERM/KILL5s escalation, each stream capped131072 bytes.
+No retries, automatic rollback, cleanup, repair or secret-bearing output.
 
-## Exact writes requiring authorization
+## Read-only reuse gates before any new record or candidate mutation
 
-- New root-owned API directory:
-  /opt/powerflow/releases/phase-forecast-consistency-20261101-v1/
-  (directories0755/files0644), .venv-api symlink to the verified retained venv.
-- New root-owned static directory:
-  /var/www/powerflow-staging/releases/phase-forecast-consistency-20261101-v1/
-  (directories0755/files0644).
-- New root0700 control directory:
-  /var/lib/powerflow-staging/forecast-consistency-20261101-v1/;
-  conditional parent /var/lib/powerflow-staging/ root0700 if absent. Exact env
-  backup previous-api.env and atomic state.json are root:root0600. State records
-  independent old/new targets, env hashes, service state, baseline and asset hashes.
-- Replace ONLY /etc/powerflow/react-api.env with exact original bytes plus one
-  newline-delimited POWERFLOW_FORECAST_PUBLICATION_ROOT=/srv/powerflow/forecast-publications.
-  Owner root:root0600; original SHA must equal the inspected baseline
-  ee1ea96ebd2aa9b1c15891fd4cb9adf1c6ee7d06d6177b99bb1f375419b36704.
-- Switch ONLY /opt/powerflow/react-current and /var/www/powerflow-staging/current,
-  independently. Atomic temporary .forecast-consistency-<UUID> siblings are used
-  below those pointer parents, the candidate-env parent and private control dir.
-- Restart ONLY powerflow-candidate-api.service (already active is required).
-  Rollback likewise restarts only this unit to restore its original active state.
+- Manifest, per-file source hashes, pointer target digests, env baseline ee1ea96ebd2aa9b1c15891fd4cb9adf1c6ee7d06d6177b99bb1f375419b36704.
+- Legacy control root0700; state/env backup root:root0600; phase ROLLED_BACK,
+  matching release targets, original active service state, original env digest,
+  current restored original pointers and exact old static inventory/retained assets.
+  Never accept a COMPLETE/PARTIAL or unrelated legacy record as successful recovery.
+- Current old backend hashes, root-owned existing venv, dependency metadata, actual
+  UID/GID992/one-worker loopback8010, sandbox,384/512MiB cgroup caps, zero-swap
+  limit/current and effective BPF attachments. No weakening/no second backend.
+- New API tree EXACT26 expected files plus the sole allowed .venv-api symlink to
+  the verified original venv. Static tree EXACT37 release files plus separately
+  recorded old public hashed JS/CSS/WOFF2 assets; conflicts must match bytes.
+  Reject missing/modified/unexpected files, extra dirs, other symlinks, path escapes
+  and wrong ownership/modes. Directory shape exact, bounded scan<=256 files.
+- Recheck retained trees and immutable legacy record/backup digests again immediately
+  before backend activation and before static switch. No writing to retained trees.
+- Fresh >=768MiB MemAvailable, >=2GiB disk after transaction overhead; no active
+  Prefect flow, ingestion/engine process or occupied slot; approved :45 UTC schedule,
+  concurrency1 and strictly >600s window. Fresh production/config/cert/published
+  historical data/model-metadata/forecast fingerprints, candidate PID excluded.
 
-The publication root is NOT created. A missing root is supported by the API and
-is the initial acceptance state. No bundle, cache, DB or model path is written.
-No Nginx edits/reloads or production-service actions are included. The failed
-attempt's partial/new/temp artifacts are retained; there is no automatic deletion,
-repair, full redeployment retry or rollback.
+## Exact newly authorized write scope (future authorization must include it)
 
-## Apply gates and ordered activation
+Create conditional parent root:root0700:
+/var/lib/powerflow-staging/forecast-consistency-transactions/
+Create ONE new root:root0700 child named by manifest.transaction_id. Existing
+parent must already be safe0700; no permissions are altered to make it acceptable.
+Inside that child save new exact previous-api.env (root:root0600) and state.json
+(root:root0600) with independent backend/static targets, env hashes, original active
+service state, fresh production baseline, old asset inventory, transaction ID and
+legacy-record provenance hash. Files/directories are fsynced; backup bytes are
+read/hash-verified before candidate changes. Legacy control is never overwritten.
 
-1. Verify all incoming file hashes/sizes/paths and exact release scope before any
-   remote writes. Reject pre-existing new release/control paths, unsafe ancestors,
-   unexpected publication root, env drift or old code/lock drift. Independent pointer
-   target digests must match the saved successful preflight; no guessed target names.
-2. Check current candidate runtime restrictions and passive dependency metadata;
-   do not run a root/UID probe importing application code. Require actual active
-   candidate/current paths, verified root-owned venv and no installation need.
-3. Require >=768MiB MemAvailable and >=2GiB free AFTER predicted copies on relevant
-   filesystems. Verify known Prefect schedule/concurrency, no active ingestion/run
-   and >10min window. Recheck immediately before pointer/env activation.
-4. Capture production service PID/state and exact configuration/public certificate,
-   historical publication/model-metadata/forecast fingerprints. They must remain
-   identical throughout. The candidate PID is intentionally excluded, but its unit
-   and all protections must remain unchanged.
-5. Save exact env bytes and rollback state BEFORE pointer/env changes. Backup files
-   and containing directories are fsynced before activation. Reuse the
-   pure existing rollback-state schema validator; never infer prior target IDs.
-6. Install only immutable API/static content and venv link. Retain existing root-owned
-   public hashed assets (assets/*.js, *.css, *.woff2 only) in the installed static
-   directory, with a separately recorded baseline inventory. Existing asset names
-   must match bytes or abort. This installed union does not modify the preserved
-   release. Old index/build config never replace new content. Inventory is bounded
-   to160 files/8MiB; retained files are hash checked before copying.
-7. Recheck capacity/window/preservation; atomically add the single env key, switch
-   backend pointer and restart only candidate. Startup observation is explicitly
-   bounded: at most10 health/readiness observations,1s apart, each request<=3s.
-   These observations are not retries of deployment or ingestion.
-8. Verify actual candidate PID/cwd, UID/GID992, one worker, sole owning loopback8010
-   socket, full existing sandbox properties, capabilities/seccomp, IMDS deny,
-   effective384/512MiB and zero swap limit/current, ingress/egress BPF attachments.
-   Successful app startup occurs INSIDE the actual existing unit, with no separate
-   unsandboxed import/lifecycle process or second backend.
-9. Require /health200 and /ready200; forecast endpoint503 exact FORECAST_WITHHELD
-   with no-store; operations200 MISSING_PUBLICATION and historical/unavailable health.
-   Require one-hour/coverage/pipeline/models historical APIs200 and unauth Admin401.
-   This proves missing-root behavior in the service, not future bundle readability.
-10. Only after backend acceptance switch static pointer. Verify HTTPS index bytes,
-    all root-referenced entry assets, /api/health200, private /api/ready404 and
-    unchanged ACME200. Verify production preservation again; record COMPLETE.
+Atomically replace ONLY /etc/powerflow/react-api.env, adding one newline-delimited
+POWERFLOW_FORECAST_PUBLICATION_ROOT=/srv/powerflow/forecast-publications, preserving
+all original bytes and root:root0600. Switch ONLY /opt/powerflow/react-current and
+/var/www/powerflow-staging/current. Temporary .forecast-consistency-<UUID> siblings
+are restricted to those pointer parents, env parent and NEW transaction directory.
+Restart ONLY powerflow-candidate-api.service. No new publication root/bundle, unit,
+venv, code/static file, Nginx/TLS/DNS/Cognito/AWS or production change.
 
-## Frontend, roles and full acceptance
+## Ordered acceptance and failure handling
 
-After activation, separately approved interactive acceptance uses existing tooling:
+1. Read-only gates above; abort before writes on any mismatch or transaction collision.
+2. Fresh unique transaction + durable verified backup/record. No candidate change
+   before that point. If record creation fails, originals remain active and untouched.
+3. Retained bytes + env/pointers + capacity/window + isolation + preservation recheck.
+4. Switch candidate env/backend pointer and restart ONLY candidate once. Observe
+   startup at most10 times1s apart (requests<=3s), not a deployment retry.
+5. Require actual running cwd/new release, UID/GID992, worker/socket ownership,
+   health200/ready200 and unchanged effective sandbox/cgroup/BPF protections.
+6. Missing root must remain absent; forecast GET on direct loopback8010 must be503,
+   exact FORECAST_WITHHELD and case-insensitive no-store directive token. Distinct
+   STATUS_MISMATCH/BODY_MISMATCH/CACHE_MISMATCH; never echo raw bodies/headers.
+   Operations200 MISSING_PUBLICATION with historical/unavailable health, no stale
+   fallback; existing one-hour/coverage/pipeline/model endpoints200 and Admin401.
+7. Only after backend acceptance, repeat fresh resource/security/preservation and
+   retained-tree checks. Switch static pointer. Verify trusted staging HTTPS root
+   hash, referenced JS/CSS assets, /api/health200, private /api/ready404, ACME200 and
+   unchanged production fingerprint. Record COMPLETE in NEW transaction only.
+
+On any failure, stop and retain all records/files. Partial state is reported with
+phase/reason and automatic_rollback=false. Unknown timeout state needs separately
+approved inspection; no guessing recovery. Same-window contingency may authorize
+ONE separate rollback invocation only when this transaction mutated candidate state
+and failed acceptance, with all rollback guards passing. It is never implicit.
+
+Rollback selects ONLY the manifest-bound transaction directory, verifies matching
+transaction identity, old/new target scope, exact new env backup hash, old release
+inventories, current expected env/pointers, production baseline, capacity/window and
+original active service state. Reject substituted records or an already rolled-back
+transaction. Restore static/backend pointers and exact env independently, restart
+only candidate, then verify health/readiness, original runtime restrictions, original
+HTTPS index and production fingerprint. Preserve legacy AND new transaction evidence.
+Memory/window/producer drift may block rollback; emergency stop/repair or gate
+relaxation requires new authorization, not an override. No zero-downtime promise.
+
+## Remaining actual acceptance
 
 ```sh
-venv/bin/python -B scripts/smoke_staging.py \
-  --origin https://staging.powerflowenergy.dev \
+venv/bin/python -B scripts/smoke_staging.py --origin https://staging.powerflowenergy.dev \
   --expected-publication MISSING_PUBLICATION
 ```
 
-The owner enters access tokens only into the tool's private TTY prompt, never chat,
-argv, files or logs. It verifies all7 routes /, /analytics, /forecasting, /anomalies,
-/models, /pipeline, /profile plus callback HTML, API integration, server roles,
-all7 Admin-route401/Analyst403 denials, Admin provenance503 with no-store and the
-missing-publication operations contract. Do not run this without authorization for
-real authenticated requests. Google/native sign-in/sign-out require manual owner
-participation; no credentials are automated. HTTP shell delivery is not equivalent
-to a fully rendered browser test; inspect all pages and browser console manually.
-
-409 changed-publication behavior and expired/valid/malformed contracts are tested
-locally using synthetic fixtures. A genuine live409 needs an independently approved
-valid publication and stale issue/completion query; do not manufacture a bundle to
-obtain it during this deployment. Existing stale-tab tests cover controlled recovery;
-retained old public assets additionally avoid chunk404 from the installed old release.
-Historical operations are NOT live pipeline/forecast health. /ready200 alone never
-establishes forecast availability or inference receipt authenticity.
-
-## Rollback verification and limits
-
-Rollback is NOT automatic or part of an apply authorization. Reverify current
-production baseline, retained old API/static inventories, exact backup env digest,
-root0700 control permissions, approved target scope and current pointers/env matching
-either recorded old/new state. Abort on unrelated drift. Restore static pointer,
-backend pointer and exact original env independently, restart only candidate,
-verify health/ready, original runtime security and original HTTPS index hash,
-then verify production preservation. A zero systemctl exit alone is insufficient.
-Retain new releases and all control/partial/temp artifacts for review. Do not delete
-anything. Restoring files cannot undo external requests or a changed producer;
-this package performs no producer action. Capacity/window gates may themselves
-block rollback; emergency candidate-stop or permission repair is NOT authorized
-and requires a separately bounded owner decision. No guaranteed zero downtime:
-staging API restart briefly interrupts staging; production routing is unaffected.
-
-## Local versus live evidence
-
-Synthetic tests validate filesystem install/switch/rollback, no-write preflight
-failures, post-switch failure stops, drift rejection and missing-publication contract.
-Linux kernel enforcement, resource peaks, old-tab/live OAuth behavior and actual
-installed Python imports remain real acceptance gates. Prior preflight resource
-measurements are historical; never substitute them for fresh activation gates.
-Stop on memory pressure/failed gates; do not raise caps or install dependencies.
-This is preparation only, not a claim of activation or runtime acceptance success.
-
-## Focused final-review correction — not authorization
-
-The runner now requires action-specific complete evidence: apply exit0 must report
-DEPLOYED/COMPLETE, true production preservation and missing-publication acceptance,
-and a typed capacity observation above the required threshold. Rollback exit0 must
-report ROLLED_BACK/ROLLED_BACK with true preservation. Missing, contradictory,
-action-mismatched or unrecognized reports cannot be reported as success. Failure
-phase/reason values are fixed allowlists, with automatic_rollback=false required.
-No exception text can become an arbitrary uppercase diagnostic label.
-
-The exact env backup is now read/hash-verified after durable backup/state capture
-and before release installation or candidate configuration/pointer changes. Control
-creation and backup bookkeeping are necessarily the first new-file writes; original
-state remains untouched until the verified backups exist. A late runtime-isolation
-and production-preservation recheck occurs immediately before each backend/static
-activation boundary, after the resource/window gate. Any failure stops and retains
-verified originals and partial artifacts; no automatic repair/rollback is added.
-
-## Recommended optional rollback contingency (requires explicit approval)
-
-An apply-only approval leaves staging on a new backend/env if later acceptance fails.
-Production remains protected, but recovery may be delayed by a second approval.
-The owner may explicitly preapprove at most ONE separate rollback invocation in the
-same execution window, conditional on apply reporting PARTIAL after activation and
-all rollback guards passing: durable verified record/env backup, retained old release
-hashes, expected pointer/env states, unchanged production baseline, idle pipeline,
->=768MiB available RAM, disk threshold and safe scheduling window. This grants no
-repair, deletion, retry, production restart or gate override. It permits a second
-bounded SSH operation only when explicitly named by the owner; apply never calls
-rollback itself, including on timeout or malformed output. An unknown apply state
-requires a separately authorized read-only state assessment before invoking rollback.
-
-Important limitation: rollback currently shares capacity/window/producer guards.
-If a failure coincides with memory pressure, a new scheduled run or production-artifact
-drift, those guards may block rollback. Do not relax them or stop services implicitly.
-Emergency candidate-stop/recovery would require a new precise authorization. No
-claim of unconditional automatic recovery or guaranteed staging availability is made.
-
-## Missing-publication acceptance correction — local reproduction
-
-Using the exact preserved backend bytes with an absent overlay and no network,
-FastAPI returned503, {detail:{code:FORECAST_WITHHELD}}, cache-control:no-store,
-and operations forecast_status MISSING_PUBLICATION. HTTPResponse.getheaders()
-preserves the lowercase field name emitted by ASGI. Converting it to a normal dict
-and looking up Cache-Control was the checker defect: status/body checks passed,
-only the case-sensitive cache lookup failed. Middleware already applies no-store
-to error responses. No API/source/release contract change is required.
-
-The checker now matches HTTP field names and the no-store directive token
-case-insensitively, preserving mandatory503/body/cache checks. Failures report
-STATUS_MISMATCH, BODY_MISMATCH or CACHE_MISMATCH separately, without printing
-bodies/headers/exception messages. Malformed JSON is BODY_MISMATCH. Substrings like
-x-no-store do not pass. The original immutable release/manifests are unchanged;
-only this deployment package and tests are rebound to new hashes.
-
-IMPORTANT NEXT-ACTION BLOCKER: the successful prior rollback retained the new API,
-static and private control directories. Existing apply intentionally rejects those
-paths with DESTINATION_CONFLICT. Therefore do NOT run the apply command again as
-an assumed retry; correcting acceptance does not authorize cleanup or implicit
-reuse. A separate minimal guarded reactivation/continuation must verify retained
-installed hashes, assets, venv link, rollback state/backups, restored pointers/env,
-fresh production/capacity/window/isolation evidence before reuse. Alternatively,
-new reviewed installation/control paths are needed. No such reuse/path change or
-cleanup is implemented by this narrowly scoped acceptance correction. Rollback
-record validity must be established under the newly chosen continuation, not guessed.
-Old package authorizations are consumed; no newly modified code is approved live.
+Requires separate approval for real authenticated requests. Owner enters tokens only
+in private TTY, never chat/files/argv. Verify seven routes/callback, UI rendering,
+Google/native sign-in/out, server roles, seven Admin401/Analyst403 boundaries, missing
+forecast503/provenance503/no-store, historical operations and static/stale-tab recovery.
+Synthetic tests cover invalid/expired/409 contracts; live409 requires a separately
+approved real valid publication, never a manufactured forecast. Missing-root behavior
+in the actual unit proves no fallback, not future bundle readability or freshness.
+Prior resource/evidence measurements are historical; fresh gates are mandatory.
+Stop for manual commit and new exact-hash authorization. No server was accessed.

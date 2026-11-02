@@ -13,6 +13,7 @@ ROOT=Path(__file__).resolve().parents[1];DIR=ROOT/'deploy/staging/forecast-consi
 def load(name,file):
     spec=importlib.util.spec_from_file_location(name,file);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 D=load('deploy_job',DIR/'deploy.py');R=load('deploy_runner',DIR/'run.py')
+VALIDATE_ROLLBACK=D.validate_rollback
 
 
 def inputs():
@@ -267,3 +268,102 @@ def test_asgi_response_through_http_client_preserves_fail_closed_contract(tmp_pa
         assert summary['forecast_status']==('MISSING_PUBLICATION' if mode.startswith('missing') else 'EXPIRED' if mode=='expired' else 'WITHHELD')
         assert summary['health']=='Historical snapshot'
         assert response.json().get('forecasts') is None
+
+
+@pytest.fixture
+def retained(host,monkeypatch):
+    D.apply();D.rollback()
+    legacy=D.CONTROL
+    previous={str(p.relative_to(legacy)):p.read_bytes() for p in legacy.iterdir() if p.is_file()}
+    monkeypatch.setattr(D,'LEGACY_CONTROL',legacy)
+    monkeypatch.setattr(D,'TRANSACTION_PARENT',legacy.parent/'transactions',raising=False)
+    D.CONFIG['transaction_id']='1'*32
+    # Exercise real transaction validation; only production-prefix path validation
+    # is separately covered because this filesystem fixture lives under tmp_path.
+    monkeypatch.setattr(D,'validate_rollback',VALIDATE_ROLLBACK)
+    monkeypatch.setattr(D,'ROLLBACK',{'valid_target':lambda value,prefix:value},raising=False)
+    D.CHANGED=False;D.PHASE='PREFLIGHT'
+    return SimpleNamespace(host=host,legacy=legacy,previous=previous)
+
+
+def assert_legacy_unchanged(retained):
+    assert {str(p.relative_to(retained.legacy)):p.read_bytes() for p in retained.legacy.iterdir() if p.is_file()}==retained.previous
+
+
+def test_reactivation_reuses_exact_files_and_new_private_transaction(retained):
+    before_api={str(p.relative_to(D.API)):p.read_bytes() for p in D.API.rglob('*') if p.is_file()}
+    before_static={str(p.relative_to(D.STATIC)):p.read_bytes() for p in D.STATIC.rglob('*') if p.is_file()}
+    result=D.reactivate();assert result['status']=='DEPLOYED'
+    assert D.CONTROL!=retained.legacy and D.CONTROL.name=='1'*32
+    record=json.loads((D.CONTROL/'state.json').read_bytes());assert record['transaction_id']=='1'*32
+    assert (D.CONTROL/'previous-api.env').read_bytes()==retained.host.env
+    assert_legacy_unchanged(retained)
+    assert before_api=={str(p.relative_to(D.API)):p.read_bytes() for p in D.API.rglob('*') if p.is_file()}
+    assert before_static=={str(p.relative_to(D.STATIC)):p.read_bytes() for p in D.STATIC.rglob('*') if p.is_file()}
+    D.rollback();assert D.ENV.read_bytes()==retained.host.env
+    assert D.BACKEND_LINK.resolve()==retained.host.old_api and D.STATIC_LINK.resolve()==retained.host.old_static
+    assert_legacy_unchanged(retained)
+
+
+@pytest.mark.parametrize('problem',['modified','missing','extra_file','extra_dir','symlink','stale_record','wrong_target','collision','parent_symlink','parent_mode'])
+def test_retained_drift_rejected_without_candidate_mutation(retained,problem):
+    if problem=='modified':(D.API/'asset1').write_bytes(b'drift')
+    if problem=='missing':(D.STATIC/'asset2').unlink()
+    if problem=='extra_file':(D.API/'unexpected.py').write_bytes(b'extra')
+    if problem=='extra_dir':(D.STATIC/'unexpected').mkdir()
+    if problem=='symlink':(D.API/'asset1').unlink();(D.API/'asset1').symlink_to('/synthetic-outside')
+    if problem in ('stale_record','wrong_target'):
+        record=json.loads((retained.legacy/'state.json').read_bytes())
+        record['phase' if problem=='stale_record' else 'new_backend']='COMPLETE' if problem=='stale_record' else '/synthetic-wrong'
+        (retained.legacy/'state.json').write_text(json.dumps(record));(retained.legacy/'state.json').chmod(0o600)
+    if problem=='parent_symlink':D.TRANSACTION_PARENT.symlink_to(retained.legacy,target_is_directory=True)
+    if problem=='parent_mode':D.TRANSACTION_PARENT.mkdir(mode=0o755)
+    if problem=='collision':
+        D.TRANSACTION_PARENT.mkdir(mode=0o700);(D.TRANSACTION_PARENT/('1'*32)).mkdir(mode=0o700)
+    calls=len(retained.host.calls)
+    with pytest.raises((D.Stop,OSError)):D.reactivate()
+    assert not D.CHANGED and D.ENV.read_bytes()==retained.host.env
+    assert D.BACKEND_LINK.resolve()==retained.host.old_api and D.STATIC_LINK.resolve()==retained.host.old_static
+    assert not any(k=='service' for k,v in retained.host.calls[calls:])
+
+
+def test_partial_reactivation_can_roll_back_only_new_transaction(retained,monkeypatch):
+    monkeypatch.setattr(D,'missing_acceptance',lambda:(_ for _ in ()).throw(D.Stop('CACHE_MISMATCH')))
+    with pytest.raises(D.Stop):D.reactivate()
+    new=D.CONTROL;assert new!=retained.legacy and D.BACKEND_LINK.resolve()==D.API
+    D.rollback();assert D.CONTROL==new and D.ENV.read_bytes()==retained.host.env
+    assert json.loads((new/'state.json').read_bytes())['phase']=='ROLLED_BACK'
+    assert_legacy_unchanged(retained)
+
+
+def test_transaction_record_cannot_be_substituted(monkeypatch):
+    rb=load('pure_rollback_targets',ROOT/'deploy/staging/forecast-consistency-release/rollback_state.py')
+    monkeypatch.setattr(D,'ROLLBACK',vars(rb),raising=False)
+    monkeypatch.setattr(D,'CONFIG',{'files':{},'transaction_id':'a'*32},raising=False)
+    monkeypatch.setattr(D,'CONTROL',D.TRANSACTION_PARENT/('a'*32))
+    record={'version':1,'transaction_id':'a'*32,'previous_backend':'/opt/powerflow/releases/old','previous_static':'/var/www/powerflow-staging/releases/old','new_backend':str(D.API),'new_static':str(D.STATIC),'previous_service_state':'active','original_env_sha256':D.ENV_BASELINE,'installed_env_sha256':'1'*64,'production_fingerprint':'2'*64,'legacy_record_sha256':'3'*64,'old_static_files':{},'retained_assets':{},'phase':'BACKUPS'}
+    D.validate_transaction_record(record)
+    with pytest.raises(D.Stop):D.validate_transaction_record(dict(record,transaction_id='b'*32))
+
+
+def test_reactivation_rechecks_retained_hashes_at_activation_boundary(retained,monkeypatch):
+    count=[0]
+    def capacity(extra):
+        count[0]+=1
+        if count[0]==2:(D.API/'asset1').write_bytes(b'late drift')
+        return {'available_bytes':900*1024**2,'swap_used_bytes':0}
+    monkeypatch.setattr(D,'idle_capacity',capacity)
+    with pytest.raises(D.Stop,match='RETAINED_FILE_HASH'):D.reactivate()
+    assert D.ENV.read_bytes()==retained.host.env and D.BACKEND_LINK.resolve()==retained.host.old_api
+    assert_legacy_unchanged(retained)
+
+
+def test_reactivation_corrupt_fresh_backup_blocks_candidate_changes(retained,monkeypatch):
+    original=D.create
+    def corrupt(path,raw,mode=0o600):
+        original(path,raw,mode)
+        if path.name=='previous-api.env':path.write_bytes(b'bad backup')
+    monkeypatch.setattr(D,'create',corrupt)
+    with pytest.raises(D.Stop,match='BACKUP_ENV_VERIFY'):D.reactivate()
+    assert D.ENV.read_bytes()==retained.host.env and D.BACKEND_LINK.resolve()==retained.host.old_api
+    assert_legacy_unchanged(retained)

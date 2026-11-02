@@ -75,13 +75,15 @@ sudo rights. Existing audited host trust is retained, not newly accepted.
   data-root, public issuer/client and disabled TOTP pilot baseline. Duplicate keys
   fail. Report only SHA and match/presence booleans, never values. Publication root
   may be absent/unconfigured; that does not become a working publication claim.
-- Verify installed code baseline before runtime probe. `nsenter` joins only the
-  existing candidate mount namespace; clears supplementary groups, switches to
-  UID/GID992, runs its existing isolated Python with -I -B and a minimal nonsecret
-  environment. Check Python3.14.7, all26 exact locked distribution versions,
-  compiled imports (NumPy/pandas/pydantic-core/cryptography/cffi), read/nonwrite
-  access to the frozen data and optional publication root. Block sockets in the
-  child; do not import application/model/ingestion code. No new interpreter/venv.
+- Passive installation inspection only: verify reviewed API/lock hashes, resolve
+  the existing venv under the approved release root, stat/hash the expected
+  interpreter file, parse bounded pyvenv.cfg and dist-info/METADATA files, compare
+  all26 lock versions and record metadata hashes. Detect .pth/customization file
+  presence without loading them. Never execute the candidate interpreter, join
+  its namespace or import application/third-party/native package code.
+- Runtime importability and effective candidate-user publication access always
+  remain UNVERIFIED. Installation metadata is a separate check; its PASS does not
+  prove executable integrity, Python ABI compatibility or safe startup behavior.
 - MemAvailable>=768MiB, swap-use measurement; /opt filesystem available bytes
   >=2GiB + twice the reviewed release size. This does not reserve capacity or
   include unmeasured future control/backup overhead.
@@ -121,9 +123,9 @@ honestly reported and requires later path/config approval; never publish fixture
 No automatic repair, fallback, retries, cleanup, rollback, service action or writes.
 
 Prerequisites: original preserved package, trusted private profile, Python3.9+
-stdlib on host, existing noninteractive sudo/timeout/systemctl/nsenter, Linux
+stdlib on host, existing noninteractive sudo/timeout/systemctl, Linux
 x86_64 cgroup-v2/BPF query permission, existing isolated runtime, readable reviewed
-files and functioning services. Imports remain bounded at20s; systemctl8s;
+files and functioning services. No runtime imports are attempted; systemctl8s;
 individual HTTP requests3s, all inside the120s remote deadline.
 
 ## Limits and later acceptance
@@ -134,12 +136,11 @@ Existing historical bytes are not live operational evidence. Baselines collected
 here establish preservation during this inspection, not equivalence to an absent
 older signed baseline. Model manifest fingerprinting is not model deserialization
 or a comprehensive model-binary audit. No database records/SQL are inspected.
-Only candidate systemd metadata, process state, namespace access and cgroup/BPF
-attachment evidence are checked; this is not formal verification of kernel BPF
-bytecode, packet-level IMDS denial or every syscall restriction. nsenter child is
-not in the service's BPF cgroup, so its socket block proves no such network claim.
-Third-party compiled imports use the existing reviewed runtime; versions do not
-prove every installed wheel byte. Unknown interpreter layouts fail closed.
+Only candidate systemd metadata, process state, passive installation metadata and
+cgroup/BPF attachment evidence are checked; this is not formal verification of
+kernel BPF bytecode, packet-level IMDS denial or every syscall restriction. No
+namespace child or compiled import runs. Versions do not prove installed wheel
+bytes. Unknown interpreter layouts fail closed.
 Live token-authenticated Admin/Analyst checks, all seven UI pages, browser OAuth,
 forecast freshness/receipt validity and future publication require separate
 acceptance. No claim about A03 deployment or production forecast eligibility.
@@ -185,3 +186,24 @@ with substituted payload bytes, a changed declared size and an unexpected helper
 dependency. Each is rejected before transport, without relying on a mocked
 verification failure. Post-verification substitution tests separately confirm
 execution/transmission remains bound to the original retained snapshots.
+
+## Security Fix 2 — passive runtime inspection
+
+The unsafe candidate-Python/nsenter probe is removed entirely. Only the trusted
+root payload's isolated system Python (-I -S -B) and standard-library modules run.
+No candidate startup hooks, site initialization, native extensions or package
+modules execute. Distribution metadata reads are bounded to262144 bytes per file,
+venv configuration to16384 bytes and site directory enumeration to512 entries.
+Metadata parsing rejects missing/duplicate required headers/distributions and
+unexpected writable/non-root-owned distribution directories. Interpreter hashes
+are observed fingerprints, not comparison against an approved binary baseline.
+Startup hook presence is descriptive only, not a claim about its safety.
+
+The new installation check may PASS for consistent metadata, but runtime and
+publication namespace/access checks always remain UNVERIFIED, blocking overall
+readiness. Effective candidate cgroup limits, process identity, sandbox and BPF
+checks are unchanged. Importability, native ABI/linker compatibility, actual Python
+patch version, startup behavior and effective publication reads cannot be proven
+by this passive inspection. Future runtime verification requires separate safe
+isolation design and authorization. TOCTOU retained-byte execution is unchanged.
+Other audit findings are intentionally not corrected in this stage.

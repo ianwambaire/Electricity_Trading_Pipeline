@@ -37,6 +37,7 @@ FIELDS = {
  'sandbox': {'configured','uid_match','gid_match','single_worker','loopback_only'},
  'cgroup': {'memory_high','memory_max','swap_max'},
  'bpf': {'ingress_attached','egress_attached'},
+ 'installation': {'code_hashes_match','lock_match','versions_match','version_metadata_match','interpreter_sha256','metadata_sha256','startup_hooks_present'},
  'runtime': {'python_match','lock_match','dependencies_match','imports','namespace_access'},
  'publication': {'present','candidate_readable','candidate_nonwritable'},
  'pipeline': {'schedule_match','concurrency_match','active_runs','scheduled_runs','ingestion_processes','safe_window'},
@@ -211,38 +212,63 @@ def bpf(c):
     facts={'ingress_attached':bool(programs['ingress']),'egress_attached':bool(programs['egress'])}
     return facts,all(facts.values())
 
-RUNTIME_CHILD = r"""
-import importlib.metadata as m,json,os,sys,socket
-from pathlib import Path
-def blocked(*a,**kw): raise RuntimeError('network_forbidden')
-socket.socket=blocked; socket.create_connection=blocked
-assert os.getuid()==992 and os.getgid()==992 and not os.getgroups()
-import numpy,pandas,pydantic_core,cryptography.hazmat.bindings._rust,_cffi_backend
-versions={name:m.version(name) for name in json.loads(sys.argv[1])}
-p=Path('/srv/powerflow/forecast-publications')
-# Metadata/access checks only. Missing publication is not a functioning overlay.
-publication={'present':p.is_dir(),'candidate_readable':p.is_dir() and os.access(p,os.R_OK|os.X_OK),'candidate_nonwritable':p.is_dir() and not os.access(p,os.W_OK)}
-assert os.access('/srv/powerflow/published',os.R_OK|os.X_OK) and not os.access('/srv/powerflow/published',os.W_OK)
-print(json.dumps({'python':sys.version.split()[0],'versions':versions,'publication':publication}))
-"""
-
-def namespace_runtime(c):
+def passive_installation():
+    """Read files only. Never start the candidate interpreter or load its code."""
     b=canonical(BACKEND,Path('/opt/powerflow/releases'))
-    if any(digest(b/rel)!=value for rel,value in INSTALLED_HASHES.items()): raise ValueError('installed_code_drift')
-    # The original hotfix reuses the old isolated venv; resolve only under releases.
-    executable=(b/'.venv-api/bin/python').resolve(strict=True)
-    if executable != Path('/usr/bin/python3.14'): raise ValueError('interpreter_drift')
-    venv=b/'.venv-api/bin/python'
-    pid=int(c['MainPID'])
-    def groups(): os.setgroups([])
-    argv=['/usr/bin/nsenter','--target',str(pid),'--mount','--setgid','992','--setuid','992','--',str(venv),'-I','-B','-c',RUNTIME_CHILD,json.dumps(sorted(LOCKED_VERSIONS))]
-    result=subprocess.run(argv,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=20,check=True,
-        cwd='/',env={'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1','AWS_EC2_METADATA_DISABLED':'true'},preexec_fn=groups)
-    if len(result.stdout)>16384: raise ValueError('runtime_bound')
-    data=json.loads(result.stdout)
-    if set(data)!={'python','versions','publication'} or set(data['publication'])!={'present','candidate_readable','candidate_nonwritable'} or any(type(v)is not bool for v in data['publication'].values()): raise ValueError('runtime_output')
-    facts={'python_match':data['python']=='3.14.7','lock_match':True,'dependencies_match':data['versions']==LOCKED_VERSIONS,'imports':True,'namespace_access':True}
-    return facts,data['publication']
+    if any(digest(b/rel)!=value for rel,value in INSTALLED_HASHES.items()):
+        raise ValueError('installed_code_drift')
+    venv=canonical(b/'.venv-api',Path('/opt/powerflow/releases'))
+    interpreter=(venv/'bin/python').resolve(strict=True)
+    if interpreter!=Path('/usr/bin/python3.14'):raise ValueError('interpreter_layout')
+    st=interpreter.lstat()
+    if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:
+        raise ValueError('interpreter_permissions')
+    cfg_path=venv/'pyvenv.cfg';st=cfg_path.lstat()
+    if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:
+        raise ValueError('venv_metadata_permissions')
+    cfg=read(cfg_path,16384).decode('utf-8')
+    config={}
+    for line in cfg.splitlines():
+        if not line.strip():continue
+        key,value=line.split('=',1);key=key.strip()
+        if key in config:raise ValueError('duplicate_venv_metadata')
+        config[key]=value.strip()
+    site=canonical(venv/'lib/python3.14/site-packages',Path('/opt/powerflow/releases'))
+    entries=[]
+    for entry in site.iterdir():
+        if len(entries)>=512:raise ValueError('distribution_count_bound')
+        entries.append(entry)
+    versions={};hashes={};hooks=False
+    for entry in entries:
+        if entry.name.endswith('.pth') or entry.name in ('sitecustomize.py','usercustomize.py'):
+            hooks=True # Detect only; never import/execute or follow these files.
+        if not entry.name.endswith('.dist-info'):continue
+        st=entry.lstat()
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:
+            raise ValueError('distribution_permissions')
+        metadata=entry/'METADATA';st=metadata.lstat()
+        if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:
+            raise ValueError('distribution_metadata_permissions')
+        raw=read(metadata,262144);headers={}
+        for line in raw.decode('utf-8').splitlines():
+            if not line:break
+            if line.startswith(('Name:','Version:')):
+                key,value=line.split(':',1)
+                if key in headers:raise ValueError('duplicate_distribution_header')
+                headers[key]=value.strip()
+        name=re.sub(r'[-_.]+','-',headers['Name']).lower()
+        if name in versions:raise ValueError('duplicate_distribution')
+        versions[name]=headers['Version'];hashes[entry.name]=sha(raw)
+    expected={re.sub(r'[-_.]+','-',k).lower():v for k,v in LOCKED_VERSIONS.items()}
+    if not set(expected)<=set(versions):raise ValueError('missing_distribution_metadata')
+    facts={'code_hashes_match':True,'lock_match':True,
+           'versions_match':all(versions[k]==v for k,v in expected.items()),
+           'version_metadata_match':config.get('version')=='3.14.7',
+           'interpreter_sha256':digest(interpreter),
+           'metadata_sha256':sha(json.dumps(hashes,sort_keys=True).encode()),
+           'startup_hooks_present':hooks}
+    # These are installation metadata claims, NOT executable integrity/import proof.
+    return facts,facts['versions_match'] and facts['version_metadata_match']
 
 def main():
     checks={name:{'status':'NOT_RUN','facts':{}} for name in FIELDS}
@@ -316,17 +342,11 @@ def main():
         return dict(zip(('memory_high','memory_max','swap_max'),values)),values==[384*1024**2,512*1024**2,0]
     check('cgroup',cgroup)
     check('bpf',lambda: bpf(c))
-    if checks['sandbox']['status']=='PASS' and checks['pointers']['status']=='PASS' and checks['environment']['status']=='PASS':
-        try:
-            runtime,publication=namespace_runtime(c)
-            check('runtime',lambda: (runtime,all(runtime.values())))
-            check('publication',lambda: (publication,all(publication.values())))
-        except Exception:
-            checks['runtime']={'status':'UNVERIFIED','facts':{}}
-            checks['publication']={'status':'UNVERIFIED','facts':{}}
-    else:
-        checks['runtime']={'status':'UNVERIFIED','facts':{}}
-        checks['publication']={'status':'UNVERIFIED','facts':{}}
+    check('installation',passive_installation)
+    # Passive metadata cannot prove imports or candidate-namespace access. Do not
+    # substitute root access checks or infer PASS from distribution versions.
+    checks['runtime']={'status':'UNVERIFIED','facts':{}}
+    checks['publication']={'status':'UNVERIFIED','facts':{}}
     check('pipeline',pipeline)
     def health():
         facts={}

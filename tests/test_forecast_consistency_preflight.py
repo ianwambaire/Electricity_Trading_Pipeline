@@ -147,10 +147,16 @@ def test_bpf_only_queries_existing_programs():
     assert 'query_flags=1' in source and 'prog_cnt=64' in source
 
 
-def test_runtime_child_no_app_or_provider_imports():
-    ast.parse(P.RUNTIME_CHILD,feature_version=(3,9))
-    assert 'socket.socket=blocked' in P.RUNTIME_CHILD and 'socket.create_connection=blocked' in P.RUNTIME_CHILD
-    assert 'api.app' not in P.RUNTIME_CHILD and 'model.predict' not in P.RUNTIME_CHILD
+def test_no_candidate_runtime_execution_or_package_imports():
+    source=(DIR/'preflight_readonly.py').read_text()
+    assert 'RUNTIME_CHILD' not in source and 'nsenter' not in source
+    tree=ast.parse(source)
+    forbidden={'numpy','pandas','pydantic_core','cryptography','_cffi_backend','site'}
+    for node in ast.walk(tree):
+        if isinstance(node,ast.Import):assert not any(x.name.split('.')[0] in forbidden for x in node.names)
+        if isinstance(node,ast.ImportFrom):assert node.module.split('.')[0] not in forbidden
+    assert "checks['runtime']={'status':'UNVERIFIED','facts':{}}" in source
+    assert "checks['publication']={'status':'UNVERIFIED','facts':{}}" in source
 
 
 def test_current_review_hash_integrity():
@@ -204,10 +210,10 @@ def test_report_cannot_claim_pass_with_empty_evidence():
 def test_payload_has_only_fixed_subprocess_sites():
     tree=ast.parse((DIR/'preflight_readonly.py').read_text())
     sites=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and isinstance(n.func.value,ast.Name) and n.func.value.id=='subprocess']
-    assert len(sites)==2 and all(n.func.attr=='run' for n in sites)
+    assert len(sites)==1 and all(n.func.attr=='run' for n in sites)
     source=(DIR/'preflight_readonly.py').read_text()
     assert 'shell=True' not in source and 'setns' not in source
-    assert "'/usr/bin/nsenter','--target'" in source and "'--mount','--setgid','992','--setuid','992'" in source
+    assert 'nsenter' not in source and 'preexec_fn' not in source
 
 
 def test_environment_text_and_process_argv_cannot_be_emitted():
@@ -316,3 +322,38 @@ def test_real_package_verifier_rejects_changed_artifacts_before_transport(mutati
     monkeypatch.setattr(W,'file_bytes',substituted)
     monkeypatch.setattr(W.subprocess,'run',lambda *a,**kw:pytest.fail('No transport allowed'))
     with pytest.raises(ValueError,match=expected_error):W.verify_package(W.sha(raw))
+
+
+@pytest.mark.parametrize('problem',[None,'missing_metadata','malformed_metadata','version_mismatch'])
+def test_passive_installation_never_executes_startup_hooks(tmp_path,monkeypatch,problem):
+    venv=tmp_path/'release/.venv-api';site=venv/'lib/python3.14/site-packages';site.mkdir(parents=True)
+    interpreter=tmp_path/'interpreter';interpreter.write_bytes(b'NON_EXECUTABLE_BINARY_FIXTURE')
+    (venv/'bin').mkdir();(venv/'bin/python').symlink_to(interpreter)
+    (venv/'pyvenv.cfg').write_text('version = 3.14.7\n')
+    marker=tmp_path/'MUST_NOT_EXIST'
+    hook="import pathlib; pathlib.Path("+repr(str(marker))+").write_text('UNSAFE')"
+    (site/'unsafe.pth').write_text(hook);(site/'sitecustomize.py').write_text(hook)
+    for i,(name,version) in enumerate(P.LOCKED_VERSIONS.items()):
+        folder=site/(name+'.dist-info');folder.mkdir()
+        if problem=='missing_metadata' and i==0:continue
+        (folder/'METADATA').write_text('Name: '+name+'\nVersion: '+('0.0' if problem=='version_mismatch' and i==0 else version)+'\n\n'+hook)
+        if problem=='malformed_metadata' and i==0:(folder/'METADATA').write_text('NOT_METADATA\n')
+    path_class=Path;original_lstat=Path.lstat
+    def root_stat(self,*a,**kw):
+        value=original_lstat(self,*a,**kw);parts=list(value);parts[4]=0
+        return P.os.stat_result(parts)
+    monkeypatch.setattr(Path,'lstat',root_stat)
+    monkeypatch.setattr(P,'Path',lambda x:path_class(interpreter) if x=='/usr/bin/python3.14' else path_class(x))
+    monkeypatch.setattr(P,'canonical',lambda path,root:venv.parent if path==P.BACKEND else path.resolve(strict=True))
+    monkeypatch.setattr(P,'digest',lambda path:'0'*64)
+    monkeypatch.setattr(P,'INSTALLED_HASHES',{})
+    monkeypatch.setattr(P.os,'O_NOATIME',getattr(P.os,'O_NOATIME',0),raising=False)
+    monkeypatch.setattr(P.subprocess,'run',lambda *a,**kw:pytest.fail('Unsafe execution'))
+    if problem in ('missing_metadata','malformed_metadata'):
+        with pytest.raises((FileNotFoundError,KeyError,ValueError)):P.passive_installation()
+    else:
+        facts,ok=P.passive_installation()
+        assert facts['startup_hooks_present'] is True
+        assert ok==(problem is None)
+        assert not {'imports','namespace_access','python_match'}&set(facts)
+    assert not marker.exists()

@@ -2,9 +2,9 @@
 
 LOCAL PREPARATION ONLY. This document does not authorize SSH or deployment.
 The preserved staging release and its original tools/release manifests are unchanged.
-Checkpoint 2 comprehensive verification must follow the owner's manual commit and
-explicit instruction. A new remote authorization package is Checkpoint 3; no old
-remote authorization applies to these changed bytes.
+The owner permits continuous LOCAL checkpoints without interim Git commits.
+All Git staging/commits/pushes remain manual. The remote authorization package is
+Checkpoint 3; no old remote authorization applies to these changed bytes.
 
 ## Invocation and bindings (future, not executed)
 
@@ -160,4 +160,5 @@ of reads. Explicit remote reads use NOATIME. No nginx -t/-T, Certbot, installati
 permission change, service restart, database write, inference or publication occurs.
 
 Checkpoint1 tests use synthetic fixtures and harmless LOCAL subprocesses only.
-Stop for the owner's selective manual commit. Do not begin Checkpoint2 until told.
+Comprehensive local verification may proceed under the owner's continuation.
+Stop at the separate remote-authorization boundary; do not execute SSH implicitly.

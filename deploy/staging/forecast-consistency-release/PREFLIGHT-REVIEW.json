@@ -5,8 +5,8 @@
       "sha256": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
     },
     "deploy/staging/forecast-consistency-release/PREFLIGHT-REVIEW.md": {
-      "bytes": 10079,
-      "sha256": "95fcc38a841c0e0a3f3fe09bee153ea5a36fd8e869a01e91d25fedf77833dc3d"
+      "bytes": 10172,
+      "sha256": "521034a17527b2efe620710a7fc9f7fd15877270d756770d3d26abdd6617c81e"
     },
     "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
       "bytes": 32421,

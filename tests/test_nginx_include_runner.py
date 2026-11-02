@@ -1,6 +1,7 @@
 """Local subprocesses and synthetic errors only. Never SSH or production reads."""
 import importlib.util
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -44,13 +45,21 @@ def test_json_rejection_does_not_change_observed_status():
     assert report['failure_category'] == 'stdout_not_valid_json'
 
 
-def test_mocked_failure_called_once_and_captures_privately(tmp_path):
+def test_mocked_failure_called_once_and_captures_privately(tmp_path,monkeypatch):
+    # Historical runner bindings must not be refreshed to current production code.
+    # Exercise its transport path with a self-contained synthetic reviewed tree.
+    repo=tmp_path/'repo';bindings={}
+    for name in m.BINDINGS:
+        path=repo/name;path.parent.mkdir(parents=True,exist_ok=True)
+        raw=b'# synthetic historical diagnostic fixture\n';path.write_bytes(raw)
+        bindings[name]=hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(m,'BINDINGS',bindings)
     calls = []
     def fake(command, **kw):
         calls.append((command, kw))
-        assert kw['input'] == (ROOT / 'deploy/staging/diagnose-nginx-include.py').read_bytes()
+        assert kw['input'] == (repo / 'deploy/staging/diagnose-nginx-include.py').read_bytes()
         return SimpleNamespace(returncode=255, stdout=b'', stderr=b'Connection reset by peer\n')
-    code, report = m.run_once(ROOT, execute=fake, capture_parent=tmp_path)
+    code, report = m.run_once(repo, execute=fake, capture_parent=tmp_path)
     assert code == 255 and len(calls) == 1
     directory = Path(report['private_capture_directory'])
     assert directory.stat().st_mode & 0o777 == 0o700
@@ -92,3 +101,15 @@ def test_payload_can_raise_before_json_without_exception_boundary(monkeypatch,ca
     monkeypatch.setattr(payload, 'inspect', fail)
     with pytest.raises(RuntimeError): payload.main()
     assert capsys.readouterr().out == ''
+
+
+def test_historical_binding_mismatch_stops_before_transport(tmp_path,monkeypatch):
+    repo=tmp_path/'repo';bindings={}
+    for name in m.BINDINGS:
+        path=repo/name;path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(b'substituted source')
+        bindings[name]=hashlib.sha256(b'approved synthetic source').hexdigest()
+    monkeypatch.setattr(m,'BINDINGS',bindings)
+    def forbidden(*a,**kw):pytest.fail('Mismatched source must not launch SSH')
+    code,report=m.run_once(repo,execute=forbidden,capture_parent=tmp_path)
+    assert code==1 and report['failure_category']=='local_hash_mismatch' and not report['ssh_invoked']

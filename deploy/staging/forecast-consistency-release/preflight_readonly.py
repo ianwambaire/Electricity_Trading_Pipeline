@@ -12,6 +12,9 @@ import ssl
 import stat
 import subprocess
 import sys
+import selectors
+import signal
+import time
 
 UNITS = ('powerflow-api.service', 'powerflow-streamlit.service',
          'powerflow-prefect-worker.service', 'powerflow-prefect-server.service',
@@ -40,6 +43,7 @@ FIELDS = {
  'installation': {'code_hashes_match','lock_match','versions_match','version_metadata_match','interpreter_sha256','metadata_sha256','startup_hooks_present'},
  'runtime': {'python_match','lock_match','dependencies_match','imports','namespace_access'},
  'publication': {'present','candidate_readable','candidate_nonwritable'},
+ 'publication_metadata': {'present','chain_safe','bundle_hash_match','passive_permissions'},
  'pipeline': {'schedule_match','concurrency_match','active_runs','scheduled_runs','ingestion_processes','safe_window'},
  'health': {'api','ready','production_api','streamlit','https','asset','api_https','private_ready','admin_unauthorized','acme'},
  'preservation': {'before_sha256','after_sha256','unchanged'},
@@ -47,22 +51,78 @@ FIELDS = {
 STATES = {'PASS','FAIL','UNVERIFIED','NOT_RUN'}
 
 def validate_report(report):
-    if set(report) != {'schema_version','status','checks'} or report['schema_version'] != 1:
+    if set(report)!={'schema_version','status','checks'} or type(report['schema_version'])is not int or report['schema_version']!=1:
         raise ValueError('report_schema')
-    if report['status'] not in {'PASS','BLOCKED'} or set(report['checks']) != set(FIELDS):
-        raise ValueError('report_schema')
-    for name, item in report['checks'].items():
-        if set(item) != {'status','facts'} or item['status'] not in STATES or not isinstance(item['facts'],dict):
-            raise ValueError('report_schema')
-        if not set(item['facts']) <= FIELDS[name] or (item['status']=='PASS' and set(item['facts'])!=FIELDS[name]): raise ValueError('report_fields')
-        for key,value in item['facts'].items():
+    if report['status'] not in {'PASS','BLOCKED'} or set(report['checks'])!=set(FIELDS):raise ValueError('report_schema')
+    for name,item in report['checks'].items():
+        if set(item)!={'status','facts'} or item['status'] not in STATES or not isinstance(item['facts'],dict):raise ValueError('report_schema')
+        facts=item['facts']
+        if not set(facts)<=FIELDS[name] or (item['status']=='PASS' and set(facts)!=FIELDS[name]):raise ValueError('report_fields')
+        for key,value in facts.items():
             if key.endswith('sha256'):
-                if not isinstance(value,str) or re.fullmatch('[0-9a-f]{64}',value) is None: raise ValueError('report_hash')
-            elif type(value) not in (bool,int) or (type(value) is int and not 0 <= value < 2**63):
-                raise ValueError('report_value')
-    expected = 'PASS' if all(x['status']=='PASS' for x in report['checks'].values()) else 'BLOCKED'
-    if report['status'] != expected: raise ValueError('report_status')
+                if type(value)is not str or re.fullmatch('[0-9a-f]{64}',value) is None:raise ValueError('report_hash')
+            elif type(value) not in (bool,int) or (type(value)is int and not 0<=value<2**63):raise ValueError('report_value')
+        if any(type(v)is not bool for k,v in facts.items() if k in {'startup_hooks_present','publication_configured'}):raise ValueError('boolean_fact')
+        if item['status']!='PASS':continue
+        if name in ('runtime','publication'):raise ValueError('unproven_effective_access')
+        numeric={'available_bytes','swap_used_bytes','disk_free_bytes','memory_high','memory_max','swap_max','active_runs','scheduled_runs','ingestion_processes'}|FIELDS['health']
+        descriptive={'startup_hooks_present','publication_configured'}
+        if any(type(v)is not bool or not v for k,v in facts.items() if k not in numeric|descriptive and not k.endswith('sha256')):raise ValueError('contradictory_pass')
+        if any(type(v)is not int for k,v in facts.items() if k in numeric):raise ValueError('numeric_fact')
+        if name=='capacity' and (facts['available_bytes']<768*1024**2 or facts['disk_free_bytes']<2*1024**3+2*1310633):raise ValueError('capacity_gate')
+        if name=='cgroup' and [facts[k] for k in ('memory_high','memory_max','swap_max')]!=[384*1024**2,512*1024**2,0]:raise ValueError('cgroup_gate')
+        if name=='pipeline' and (facts['active_runs'] or facts['ingestion_processes']):raise ValueError('active_pipeline')
+        if name=='health' and any(v!=(404 if k=='private_ready' else 401 if k=='admin_unauthorized' else 200) for k,v in facts.items()):raise ValueError('health_gate')
+        if name=='preservation' and facts['before_sha256']!=facts['after_sha256']:raise ValueError('preservation_gate')
+    expected='PASS' if all(x['status']=='PASS' for x in report['checks'].values()) else 'BLOCKED'
+    if report['status']!=expected:raise ValueError('report_status')
     return report
+
+
+def bounded_run(argv,input=b'',timeout=180,limit=131072,grace=5):
+    """Bound both streams during production; supervise one own process group."""
+    process=subprocess.Popen(argv,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+        start_new_session=True,cwd='/',env={'PATH':'/usr/bin:/bin','LANG':'C'})
+    selector=selectors.DefaultSelector();buffers={'stdout':bytearray(),'stderr':bytearray()}
+    failure=None;deadline=time.monotonic()+timeout;kill_at=None;offset=0
+    def terminate():
+        try:os.killpg(process.pid,signal.SIGTERM)
+        except ProcessLookupError:pass
+    try:
+        for stream,name in ((process.stdout,'stdout'),(process.stderr,'stderr')):
+            os.set_blocking(stream.fileno(),False);selector.register(stream,selectors.EVENT_READ,name)
+        if input:
+            os.set_blocking(process.stdin.fileno(),False);selector.register(process.stdin,selectors.EVENT_WRITE,'stdin')
+        else:process.stdin.close()
+        while selector.get_map() or process.poll() is None or kill_at is not None:
+            now=time.monotonic()
+            if failure is None and now>=deadline:failure='TIMEOUT';terminate();kill_at=now+grace
+            if kill_at is not None and now>=kill_at:
+                try:os.killpg(process.pid,signal.SIGKILL)
+                except ProcessLookupError:pass
+                break
+            for key,_ in selector.select(0.05):
+                if key.data=='stdin':
+                    try:offset+=os.write(key.fd,input[offset:offset+8192])
+                    except BrokenPipeError:offset=len(input)
+                    if offset==len(input):selector.unregister(key.fileobj);key.fileobj.close()
+                    continue
+                chunk=os.read(key.fd,8192)
+                if not chunk:selector.unregister(key.fileobj);key.fileobj.close();continue
+                target=buffers[key.data];remaining=limit-len(target);target.extend(chunk[:remaining])
+                if len(chunk)>remaining and failure is None:
+                    failure='OUTPUT_LIMIT';terminate();kill_at=time.monotonic()+grace
+            # A leader may exit leaving descendants holding the pipes open.
+        code=process.wait(timeout=grace)
+        return {'returncode':code,'stdout':bytes(buffers['stdout']),'stderr':bytes(buffers['stderr']),'failure':failure}
+    finally:
+        if process.poll() is None:
+            try:os.killpg(process.pid,signal.SIGKILL)
+            except ProcessLookupError:pass
+            process.wait()
+        selector.close()
+        for stream in (process.stdin,process.stdout,process.stderr):
+            if not stream.closed:stream.close()
 
 def read(path, maximum=2_000_000):
     # NOATIME avoids metadata writes; absent permissions are not silently retried.
@@ -87,10 +147,9 @@ def command(argv):
     # Only this exact systemctl metadata query is accepted. No shell.
     if argv != ['/usr/bin/systemctl','show',*UNITS,'--property='+PROPERTIES]:
         raise ValueError('unapproved_command')
-    result=subprocess.run(argv,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=8,
-                          check=True,env={'PATH':'/usr/bin:/bin','LANG':'C'},cwd='/')
-    if len(result.stdout)>131072: raise ValueError('command_output_bound')
-    return result.stdout.decode('utf-8')
+    result=bounded_run(argv,timeout=8,limit=131072)
+    if result['failure'] or result['returncode']!=0:raise ValueError('metadata_command_failed')
+    return result['stdout'].decode('utf-8')
 
 def services():
     raw=command(['/usr/bin/systemctl','show',*UNITS,'--property='+PROPERTIES])
@@ -166,7 +225,7 @@ def fingerprints(units):
     cert=Path('/etc/letsencrypt/live/powerflowenergy.dev/fullchain.pem').resolve(strict=True)
     if not str(cert).startswith('/etc/letsencrypt/archive/powerflowenergy.dev/'): raise ValueError('certificate_target')
     values['public_certificate']=digest(cert)
-    for relative in ['data/processed/silver_electricity_market_data.csv', 'data/features/gold_model_features.csv', 'data/raw/entsoe/prices.csv', 'data/raw/entsoe/load.csv', 'data/raw/entsoe/generation.csv', 'data/raw/weather/open_meteo_weather.csv', 'data/reports/actual_vs_predicted.csv', 'data/reports/detected_anomalies.csv', 'data/reports/final_holdout_metrics.csv', 'data/reports/feature_importance.csv', 'artifacts/models/final_model_release_manifest.json', 'artifacts/models/releases/next24h/next24h_release_manifest.json']:
+    for relative in ['data/processed/silver_electricity_market_data.csv', 'data/features/gold_model_features.csv', 'data/raw/entsoe/prices.csv', 'data/raw/entsoe/load.csv', 'data/raw/entsoe/generation.csv', 'data/raw/weather/open_meteo_weather.csv', 'data/reports/actual_vs_predicted.csv', 'data/reports/detected_anomalies.csv', 'data/reports/final_holdout_metrics.csv', 'data/reports/feature_importance.csv', 'artifacts/models/final_model_release_manifest.json', 'artifacts/models/releases/next24h/next24h_release_manifest.json', 'database/electricity_trading.db']:
         values['published/'+relative]=digest(DATA/relative)
     for relative in ('artifacts/models/releases/next24h/next24h_release_manifest.json','data/reports/next24h_forecast.csv','data/reports/next24h_forecast_provenance.json'):
         values['production/'+relative]=digest(Path('/home/ec2-user/Electricity_Trading_Pipeline')/relative)
@@ -270,6 +329,29 @@ def passive_installation():
     # These are installation metadata claims, NOT executable integrity/import proof.
     return facts,facts['versions_match'] and facts['version_metadata_match']
 
+def publication_metadata():
+    def directory(path):
+        st=path.lstat()
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_gid!=992 or stat.S_IMODE(st.st_mode)!=0o750:raise ValueError('publication_directory')
+    # Reject symlink ancestry, including ancestors outside the publication root.
+    for ancestor in reversed(PUBLICATION.parents):
+        st=ancestor.lstat()
+        if not stat.S_ISDIR(st.st_mode) or st.st_uid!=0 or st.st_mode&0o022:raise ValueError('publication_ancestry')
+    directory(PUBLICATION);directory(PUBLICATION/'releases')
+    pointer=PUBLICATION/'current'
+    if not stat.S_ISLNK(pointer.lstat().st_mode) or pointer.lstat().st_uid!=0:raise ValueError('publication_pointer')
+    target=os.readlink(pointer)
+    if re.fullmatch(r'releases/[0-9a-f]{64}',target) is None:raise ValueError('publication_escape')
+    release=PUBLICATION/target;directory(release)
+    bundle=release/'bundle.json';st=bundle.lstat()
+    if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_gid!=992 or stat.S_IMODE(st.st_mode)!=0o640:raise ValueError('publication_artifact')
+    raw=read(bundle,2_000_000)
+    if sha(raw)!=target.split('/')[1]:raise ValueError('publication_hash')
+    parsed=json.loads(raw)
+    if type(parsed)is not dict or parsed.get('version')!=1:raise ValueError('publication_format')
+    if os.readlink(pointer)!=target:raise ValueError('publication_pointer_drift')
+    return {'present':True,'chain_safe':True,'bundle_hash_match':True,'passive_permissions':True},True
+
 def main():
     checks={name:{'status':'NOT_RUN','facts':{}} for name in FIELDS}
     def check(name,fn):
@@ -343,6 +425,7 @@ def main():
     check('cgroup',cgroup)
     check('bpf',lambda: bpf(c))
     check('installation',passive_installation)
+    check('publication_metadata',publication_metadata)
     # Passive metadata cannot prove imports or candidate-namespace access. Do not
     # substitute root access checks or infer PASS from distribution versions.
     checks['runtime']={'status':'UNVERIFIED','facts':{}}

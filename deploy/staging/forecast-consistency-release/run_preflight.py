@@ -31,8 +31,12 @@ ARTIFACTS={'deploy/staging/forecast-consistency-release/preflight_readonly.py',
 
 def sha(raw):return hashlib.sha256(raw).hexdigest()
 def file_bytes(path,limit=2_000_000):
-    if path.is_symlink() or not path.is_file() or path.stat().st_size>limit: raise ValueError('unsafe_local_file')
-    return path.read_bytes()
+    with os.fdopen(os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK),'rb') as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):raise ValueError('unsafe_local_file')
+        raw=stream.read(limit+1)
+    if len(raw)>limit:raise ValueError('local_read_bound')
+    return raw
+
 def verify_hash(path,expected):
     raw=file_bytes(path)
     if sha(raw)!=expected:raise ValueError('hash_mismatch')
@@ -104,28 +108,29 @@ def failure_category(code,stderr):
     if code==255:return 'SSH_FAILURE'
     return 'REMOTE_FAILURE'
 
-def execute(payload,supervisor,p,destination,run=subprocess.run):
-    # Single supervisor invocation, no loops/retries. Payload travels exclusively on stdin.
-    stdout=destination/'stdout.private';stderr=destination/'stderr.private'
+def execute(payload,supervisor,p,destination,run=None):
+    # Compile only the retained verified payload. Its bounded IO helper is also
+    # the local 180-second supervisor; no executable source pathname is reopened.
     if type(payload)is not bytes or type(supervisor)is not bytes:raise ValueError('verified_bytes_required')
-    # Python -c receives the retained bytes, never a source pathname. stdin remains
-    # available for the unchanged supervisor's SSH child and remote payload.
-    bootstrap="exec(compile("+repr(supervisor)+", '<verified-supervisor>', 'exec'))"
-    command=[sys.executable,'-I','-B','-c',bootstrap,'--',*ssh_argv(p)]
-    with os.fdopen(os.open(stdout,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb') as out,os.fdopen(os.open(stderr,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb') as err:
-        result=run(command,input=payload,stdout=out,stderr=err,timeout=190,check=False,
-                   env={'PATH':'/usr/bin:/bin','LANG':'C'},cwd='/')
-    code=result.returncode
-    summary={'exit_status':code,'report_produced':False,'failure_category':None,'report':None}
-    raw=file_bytes(stdout,131072);error=file_bytes(stderr,131072)
+    contract={'__name__':'verified_readonly_contract'}
+    exec(compile(payload,'<verified-readonly-contract>','exec'),contract)
+    runner=contract['bounded_run'] if run is None else run
+    result=runner(ssh_argv(p),input=payload,timeout=180,limit=131072,grace=5)
+    code=result['returncode']
+    summary={'exit_status':code,'report_produced':False,'failure_category':result['failure'],'report':None}
     try:
-        contract={'__name__':'verified_readonly_contract'}
-        exec(compile(payload,'<verified-readonly-contract>','exec'),contract)
-        report=contract['validate_report'](json.loads(raw))
+        for name,raw in (('stdout.private',result['stdout']),('stderr.private',result['stderr'])):
+            if len(raw)>131072:raise ValueError('capture_limit')
+            with os.fdopen(os.open(destination/name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb') as stream:stream.write(raw)
+    except Exception:
+        summary['failure_category']='CAPTURE_FAILURE';return summary
+    if result['failure']:return summary
+    try:
+        report=contract['validate_report'](json.loads(result['stdout']))
         if (code==0)!=(report['status']=='PASS'):raise ValueError('exit_status_mismatch')
         summary.update(report_produced=True,report=report,failure_category=None if code==0 else 'CHECKS_BLOCKED')
     except Exception:
-        summary['failure_category']=failure_category(code,error) if code else 'UNEXPECTED_OUTPUT'
+        summary['failure_category']=failure_category(code,result['stderr']) if code else 'UNEXPECTED_OUTPUT'
     return summary
 
 def main():
@@ -146,7 +151,11 @@ def main():
         summary={'exit_status':1,'report_produced':False,'failure_category':'LOCAL_VERIFICATION_FAILURE','report':None}
     if destination is not None:
         path=destination/'sanitized.json'
-        with os.fdopen(os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'w') as stream:json.dump(summary,stream,indent=2)
-    print(json.dumps(summary,sort_keys=True));return 0 if summary.get('exit_status')==0 and summary.get('report_produced') else 1
+        try:
+            with os.fdopen(os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'w') as stream:json.dump(summary,stream,indent=2)
+        except Exception:summary['failure_category']='REPORT_WRITE_FAILURE'
+    try:print(json.dumps(summary,sort_keys=True))
+    except OSError:return 1
+    return 0 if summary.get('exit_status')==0 and summary.get('report_produced') and summary.get('failure_category') is None else 1
 
 if __name__=='__main__':raise SystemExit(main())

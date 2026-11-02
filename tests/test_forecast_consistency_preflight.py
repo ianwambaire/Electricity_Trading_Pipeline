@@ -2,6 +2,7 @@
 import ast
 import importlib.util
 import json
+import io
 from pathlib import Path
 import signal
 import subprocess
@@ -15,6 +16,13 @@ def load(path,name):
 P=load(DIR/'preflight_readonly.py','pf_readonly')
 W=load(DIR/'run_preflight.py','pf_wrapper')
 S=load(ROOT/'deploy/remediation/a3-bounded-local.py','pf_supervisor')
+
+def adapter(fake):
+    def run(command,**kw):
+        out=io.BytesIO();err=io.BytesIO()
+        result=fake(command,input=kw['input'],stdout=out,stderr=err,timeout=kw['timeout'],check=False)
+        return {'returncode':result.returncode,'stdout':out.getvalue(),'stderr':err.getvalue(),'failure':None}
+    return run
 
 def report(state='UNVERIFIED'):
     return {'schema_version':1,'status':'BLOCKED','checks':{k:{'status':state,'facts':{}} for k in P.FIELDS}}
@@ -45,10 +53,10 @@ def test_dispatch_rejects_mutation_and_expansion(argv,monkeypatch):
 
 def test_exact_service_query(monkeypatch):
     calls=[]
-    def fake(argv,**kw):calls.append((argv,kw));return SimpleNamespace(stdout=b'')
-    monkeypatch.setattr(P.subprocess,'run',fake)
+    def fake(argv,**kw):calls.append((argv,kw));return {'stdout':b'','returncode':0,'failure':None}
+    monkeypatch.setattr(P,'bounded_run',fake)
     assert P.command(['/usr/bin/systemctl','show',*P.UNITS,'--property='+P.PROPERTIES])==''
-    assert len(calls)==1 and calls[0][1]['timeout']==8 and calls[0][1]['check'] is True
+    assert len(calls)==1 and calls[0][1]['timeout']==8
 
 @pytest.mark.parametrize('port,path,body',[(443,'https://evil',None),(8010,'/admin/operations',None),(4200,'/api/flow_runs/x/set_state',{}),(8010,'/health',{})])
 def test_http_allowlist(port,path,body):
@@ -97,23 +105,23 @@ def test_transport_failures_no_retry_or_leak(tmp_path,code,error,category):
     calls=[]
     def run(argv,**kw):
         calls.append((argv,kw));kw['stderr'].write(error);return SimpleNamespace(returncode=code)
-    result=W.execute(b'PAYLOAD',b'# verified supervisor fixture',{'identity_file':'PRIVATE','known_hosts':'PINNED','target':'APPROVED'},tmp_path,run)
+    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'PRIVATE','known_hosts':'PINNED','target':'APPROVED'},tmp_path,adapter(run))
     assert result['failure_category']==category and result['exit_status']==code and not result['report_produced']
-    assert len(calls)==1 and calls[0][1]['input']==b'PAYLOAD' and calls[0][1]['timeout']==190
+    assert len(calls)==1 and calls[0][1]['input']==(DIR/'preflight_readonly.py').read_bytes() and calls[0][1]['timeout']==180
     assert 'secret-sentinel' not in json.dumps(result)
     assert (tmp_path/'stderr.private').stat().st_mode&0o777==0o600
 
 @pytest.mark.parametrize('raw',[b'{bad json',b'{"secret":"secret-sentinel"}',b'[]',b'{}\nsecret-sentinel'])
 def test_unexpected_stdout_not_exposed(tmp_path,raw):
     def run(argv,**kw):kw['stdout'].write(raw);return SimpleNamespace(returncode=0)
-    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
+    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,adapter(run))
     assert result['failure_category']=='UNEXPECTED_OUTPUT' and not result['report_produced']
     assert 'secret-sentinel' not in json.dumps(result)
 
 def test_mocked_end_to_end_blocked_report(tmp_path):
     r=report()
     def run(argv,**kw):kw['stdout'].write(json.dumps(r).encode());return SimpleNamespace(returncode=1)
-    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
+    result=W.execute((DIR/'preflight_readonly.py').read_bytes(),b'# verified supervisor fixture',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,adapter(run))
     assert result['report_produced'] and result['failure_category']=='CHECKS_BLOCKED' and result['report']==r
 
 def test_missing_dependency_is_unverified(monkeypatch,capsys):
@@ -210,7 +218,7 @@ def test_report_cannot_claim_pass_with_empty_evidence():
 def test_payload_has_only_fixed_subprocess_sites():
     tree=ast.parse((DIR/'preflight_readonly.py').read_text())
     sites=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and isinstance(n.func.value,ast.Name) and n.func.value.id=='subprocess']
-    assert len(sites)==1 and all(n.func.attr=='run' for n in sites)
+    assert len(sites)==1 and all(n.func.attr=='Popen' for n in sites)
     source=(DIR/'preflight_readonly.py').read_text()
     assert 'shell=True' not in source and 'setns' not in source
     assert 'nsenter' not in source and 'preexec_fn' not in source
@@ -263,15 +271,13 @@ def test_execution_and_validator_use_retained_bytes_after_substitution(tmp_path,
     calls=[]
     def fake(command,**kwargs):
         calls.append(command)
-        assert command[1:4]==['-I','-B','-c']
+        assert command[0]=='/usr/bin/ssh'
         assert str(old_supervisor) not in command
         assert kwargs['input']==payload
-        # Execute only the harmless local supervisor fixture; NEVER SSH.
-        local=subprocess.run(command[:5],capture_output=True,check=True,timeout=5)
-        assert local.stdout==b'ORIGINAL_SUPERVISOR\n'
+        assert 'SUBSTITUTED' not in repr(command)
         kwargs['stdout'].write(json.dumps(report()).encode())
         return SimpleNamespace(returncode=1)
-    result=W.execute(payload,supervisor,{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,fake)
+    result=W.execute(payload,supervisor,{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,adapter(fake))
     assert len(calls)==1 and result['report_produced'] and result['failure_category']=='CHECKS_BLOCKED'
 
 
@@ -286,19 +292,10 @@ def test_package_rejection_prevents_transport(reason,monkeypatch,capsys):
     assert json.loads(capsys.readouterr().out)['failure_category']=='LOCAL_VERIFICATION_FAILURE'
 
 
-def test_real_verified_supervisor_bootstrap_preserves_stdin_and_arguments(tmp_path):
-    payload=(DIR/'preflight_readonly.py').read_bytes()
-    supervisor=(ROOT/'deploy/remediation/a3-bounded-local.py').read_bytes()
-    def fake(command,**kwargs):
-        # Real retained supervisor; substitute ONLY its child with harmless local
-        # Python. Never launch the SSH argv constructed for future authorization.
-        child="import sys; raw=sys.stdin.buffer.read(); print(len(raw))"
-        local=subprocess.run(command[:5]+['--',W.sys.executable,'-I','-B','-c',child],
-            input=kwargs['input'],capture_output=True,timeout=5,check=True)
-        assert local.stdout==str(len(payload)).encode()+b'\n'
-        kwargs['stdout'].write(json.dumps(report()).encode())
-        return SimpleNamespace(returncode=1)
-    assert W.execute(payload,supervisor,{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,fake)['report_produced']
+def test_retained_bounded_supervisor_preserves_stdin():
+    child="import sys; print(len(sys.stdin.buffer.read()))"
+    result=P.bounded_run([W.sys.executable,'-I','-B','-c',child],input=b'fixture',timeout=5)
+    assert result['returncode']==0 and result['stdout']==b'7\n' and result['failure'] is None
 
 
 @pytest.mark.parametrize('mutation,expected_error',[
@@ -357,3 +354,116 @@ def test_passive_installation_never_executes_startup_hooks(tmp_path,monkeypatch,
         assert ok==(problem is None)
         assert not {'imports','namespace_access','python_match'}&set(facts)
     assert not marker.exists()
+
+
+@pytest.mark.parametrize('stream',['stdout','stderr'])
+def test_streaming_limit_noisy_local_process(stream):
+    code="import os; os.write("+('1' if stream=='stdout' else '2')+",b'x'*65536)"
+    result=P.bounded_run([W.sys.executable,'-I','-B','-c',code],timeout=3,limit=512,grace=0.05)
+    assert result['failure']=='OUTPUT_LIMIT' and len(result[stream])==512
+    assert len(result['stdout'])<=512 and len(result['stderr'])<=512
+    assert type(result['returncode'])is int
+
+
+def test_streaming_timeout_kills_signal_ignoring_child():
+    code="import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(20)"
+    result=P.bounded_run([W.sys.executable,'-I','-B','-c',code],timeout=0.2,grace=0.1)
+    assert result['failure']=='TIMEOUT' and result['returncode']<0
+
+
+def test_wrapper_capture_disk_failure_preserves_actual_status(tmp_path,monkeypatch):
+    payload=(DIR/'preflight_readonly.py').read_bytes()
+    def result(*a,**kw):return {'returncode':255,'stdout':b'','stderr':b'PRIVATE_SENTINEL','failure':None}
+    original=W.os.open
+    def fail(path,*a,**kw):
+        if str(path).endswith('.private'):raise OSError(28,'PRIVATE_SENTINEL')
+        return original(path,*a,**kw)
+    monkeypatch.setattr(W.os,'open',fail)
+    summary=W.execute(payload,b'legacy',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,result)
+    assert summary['exit_status']==255 and summary['failure_category']=='CAPTURE_FAILURE'
+    assert 'PRIVATE_SENTINEL' not in json.dumps(summary)
+
+
+@pytest.mark.parametrize('number',[13,28])
+def test_report_write_failure_sanitized(tmp_path,monkeypatch,capsys,number):
+    monkeypatch.setattr(W.sys,'argv',['run_preflight.py','--review-sha256','0'*64])
+    monkeypatch.setattr(W,'verify_package',lambda h:(b'payload',b'supervisor'))
+    monkeypatch.setattr(W,'profile',lambda:{})
+    monkeypatch.setattr(W.tempfile,'mkdtemp',lambda **kw:str(tmp_path))
+    monkeypatch.setattr(W,'execute',lambda *a:{'exit_status':255,'failure_category':'SSH_FAILURE','report_produced':False,'report':None})
+    original=W.os.open
+    def fail(path,*a,**kw):
+        if str(path).endswith('sanitized.json'):raise OSError(number,'PRIVATE_SENTINEL')
+        return original(path,*a,**kw)
+    monkeypatch.setattr(W.os,'open',fail)
+    assert W.main()==1
+    raw=capsys.readouterr().out;result=json.loads(raw)
+    assert result['exit_status']==255 and result['failure_category']=='REPORT_WRITE_FAILURE'
+    assert 'PRIVATE_SENTINEL' not in raw
+
+
+@pytest.mark.parametrize('name,facts',[
+ ('identity',{'root':False,'linux':True}),
+ ('cgroup',{'memory_high':384*1024**2,'memory_max':1024,'swap_max':0}),
+ ('health',{key:200 for key in P.FIELDS['health']}),
+ ('preservation',{'unchanged':True,'before_sha256':'0'*64,'after_sha256':'1'*64}),
+ ('runtime',{key:True for key in P.FIELDS['runtime']}),
+ ('pipeline',{'schedule_match':True,'concurrency_match':True,'active_runs':1,'scheduled_runs':0,'ingestion_processes':0,'safe_window':True}),
+])
+def test_contradictory_pass_rejected(name,facts):
+    r=report();r['checks'][name]={'status':'PASS','facts':facts}
+    with pytest.raises(ValueError):P.validate_report(r)
+
+
+@pytest.mark.parametrize('problem',[None,'missing','unreadable','malformed','escape','symlink','wrong_hash'])
+def test_publication_chain_passive_only(tmp_path,monkeypatch,problem):
+    root=tmp_path/'publication';(root/'releases').mkdir(parents=True)
+    raw=b'{"version":1}';digest=P.sha(raw)
+    release=root/'releases'/digest;release.mkdir()
+    bundle=release/'bundle.json';bundle.write_bytes(raw);bundle.chmod(0o640)
+    for d in (root,root/'releases',release):d.chmod(0o750)
+    (root/'current').symlink_to('releases/'+digest)
+    if problem=='missing':bundle.unlink()
+    if problem=='unreadable':bundle.chmod(0)
+    if problem in ('malformed','wrong_hash'):bundle.write_bytes(b'not-json' if problem=='malformed' else b'{}')
+    if problem=='escape':(root/'current').unlink();(root/'current').symlink_to('../escape')
+    if problem=='symlink':bundle.unlink();bundle.symlink_to(tmp_path/'outside')
+    original=Path.lstat
+    def root_stat(path,*a,**kw):
+        st=original(path,*a,**kw);parts=list(st);parts[4]=0;parts[5]=992
+        if path not in {root,root/'releases',release,bundle,root/'current'}:parts[0]&=~0o022
+        return P.os.stat_result(parts)
+    monkeypatch.setattr(Path,'lstat',root_stat)
+    monkeypatch.setattr(P,'PUBLICATION',root)
+    monkeypatch.setattr(P.os,'O_NOATIME',getattr(P.os,'O_NOATIME',0),raising=False)
+    if problem is None:
+        facts,ok=P.publication_metadata();assert ok and all(facts.values())
+        assert 'candidate_readable' not in facts
+    else:
+        with pytest.raises((OSError,ValueError)):P.publication_metadata()
+
+
+def test_thirteen_preservation_files_include_historical_snapshot():
+    tree=ast.parse((DIR/'preflight_readonly.py').read_text())
+    function=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='fingerprints')
+    paths=next(ast.literal_eval(n.iter) for n in function.body if isinstance(n,ast.For) and isinstance(n.iter,ast.List))
+    assert len(paths)==13 and 'database/electricity_trading.db' in paths
+
+
+def test_wrapper_uses_exact_bounded_supervisor_parameters(tmp_path):
+    payload=(DIR/'preflight_readonly.py').read_bytes();calls=[]
+    def run(command,**kwargs):
+        calls.append(command)
+        assert kwargs=={'input':payload,'timeout':180,'limit':131072,'grace':5}
+        return {'returncode':-9,'stdout':b'','stderr':b'','failure':'TIMEOUT'}
+    result=W.execute(payload,b'legacy',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
+    assert len(calls)==1 and calls[0][0]=='/usr/bin/ssh'
+    assert result['exit_status']==-9 and result['failure_category']=='TIMEOUT' and not result['report_produced']
+
+
+def test_output_limit_blocks_even_successful_exit(tmp_path):
+    payload=(DIR/'preflight_readonly.py').read_bytes()
+    def run(*args,**kwargs):return {'returncode':0,'stdout':b'x'*131072,'stderr':b'','failure':'OUTPUT_LIMIT'}
+    result=W.execute(payload,b'legacy',{'identity_file':'P','known_hosts':'K','target':'T'},tmp_path,run)
+    assert result['exit_status']==0 and result['failure_category']=='OUTPUT_LIMIT' and not result['report_produced']
+    assert (tmp_path/'stdout.private').stat().st_size==131072

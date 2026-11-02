@@ -2,6 +2,17 @@
 
 No production access, deployment, publication, expired-production-forecast copy, service operation or Git operation occurred in this task. All new publication tests use synthetic fixtures. Existing inspection scripts/results in this directory are historical evidence, not publishable inputs.
 
+
+## Current completion work (2026-11-02)
+
+The staging selector/environment is now deployed. The remaining live boundary is
+publication setup and a fresh authentic receipt; do not repeat the historical
+application-installation instructions below. See [FIRST-PUBLICATION-REVIEW.md](FIRST-PUBLICATION-REVIEW.md)
+for the unchanged separately reviewed setup, and [AUTOMATION-REVIEW.md](AUTOMATION-REVIEW.md)
+for the new default-disabled Prefect delivery integration, narrow privilege design,
+MFA release conditions and independently reversible release sequence. The original
+code-only archive is retained unchanged; it does not contain the new automation.
+
 ## Architecture and boundaries
 
 An optional staging-only `POWERFLOW_FORECAST_PUBLICATION_ROOT=/srv/powerflow/forecast-publications` selects an independent overlay for GET `/forecast/next24`. `/srv/powerflow/published` and every historical dataset/database remain untouched. Without this setting, existing API behavior is preserved. With it, missing/invalid/expired publications return503 with only `detail.code=FORECAST_WITHHELD`; there is NO fallback to historical forecast files. Responses use Cache-Control:no-store.

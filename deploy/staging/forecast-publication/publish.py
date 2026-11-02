@@ -11,7 +11,7 @@ import re
 import sys
 import uuid
 
-from shared.forecast_publication import MAX_BYTES, Withheld, require, validate, safe_file, read_active
+from shared.forecast_publication import MAX_BYTES, Withheld, ExpiredPublication, require, validate, safe_file, read_active, decode, time as publication_time
 
 DEFAULT_ROOT = Path('/srv/powerflow/forecast-publications')
 
@@ -58,27 +58,54 @@ def publish(root, source, digest, expected_current, clock=lambda:dt.datetime.now
     with locked(root):
         require(pointer(root)==expected_current)
         raw=safe_file(source);validate(raw,digest,clock())
-        destination=root/'releases'/digest
-        require(not os.path.lexists(destination))
-        temporary=root/'releases'/('.partial-'+uuid.uuid4().hex)
-        temporary.mkdir(mode=0o750);os.chmod(temporary,0o750)
-        file=temporary/'bundle.json'
-        with file.open('xb') as stream:
-            stream.write(raw);stream.flush();os.fsync(stream.fileno())
-        os.chmod(file,0o640)
-        if os.geteuid()==0:
-            # Dedicated staging reader group; no world-readable operational data.
-            os.chown(temporary,0,992);os.chown(file,0,992)
-        validate(safe_file(file),digest,clock())
-        directory_fd=os.open(temporary,os.O_RDONLY|os.O_DIRECTORY)
-        try:os.fsync(directory_fd)
-        finally:os.close(directory_fd)
-        os.rename(temporary,destination)
-        directory_fd=os.open(root/'releases',os.O_RDONLY|os.O_DIRECTORY)
-        try:os.fsync(directory_fd)
-        finally:os.close(directory_fd)
-        switch(root,digest,expected_current,clock)
+        return _install_locked(root,raw,digest,expected_current,clock)
+
+def _install_locked(root,raw,digest,expected_current,clock,reuse=False):
+    destination=root/'releases'/digest
+    if reuse and os.path.lexists(destination):
+        safe_directory(destination)
+        require(safe_file(destination/'bundle.json')==raw)
+        validate(raw,digest,clock());switch(root,digest,expected_current,clock)
         return {'published_sha256':digest,'previous_sha256':expected_current,'bytes':len(raw)}
+    require(not os.path.lexists(destination))
+    temporary=root/'releases'/('.partial-'+uuid.uuid4().hex)
+    temporary.mkdir(mode=0o750);os.chmod(temporary,0o750)
+    file=temporary/'bundle.json'
+    with file.open('xb') as stream:
+        stream.write(raw);stream.flush();os.fsync(stream.fileno())
+    os.chmod(file,0o640)
+    if os.geteuid()==0:
+        # Dedicated staging reader group; no world-readable operational data.
+        os.chown(temporary,0,992);os.chown(file,0,992)
+    validate(safe_file(file),digest,clock())
+    directory_fd=os.open(temporary,os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(directory_fd)
+    finally:os.close(directory_fd)
+    os.rename(temporary,destination)
+    directory_fd=os.open(root/'releases',os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(directory_fd)
+    finally:os.close(directory_fd)
+    switch(root,digest,expected_current,clock)
+    return {'published_sha256':digest,'previous_sha256':expected_current,'bytes':len(raw)}
+
+def publish_automatic(root, raw, digest, clock=lambda:dt.datetime.now(dt.timezone.utc)):
+    """Validated receipt delivery only; all issue/CAS decisions share one lock."""
+    root=Path(root)
+    with locked(root):
+        try:new=validate(raw,digest,clock())
+        except ExpiredPublication:return {'status':'SKIPPED_EXPIRED'}
+        current=pointer(root)
+        if current is not None:
+            prior=safe_file(root/'releases'/current/'bundle.json')
+            try:validate(prior,current,clock())
+            except ExpiredPublication:pass # structural/hash checks passed; never reactivate it
+            old=decode(prior)
+            new_issue=publication_time(new['forecasts'][0]['issue_time'])
+            old_issue=publication_time(old['forecasts'][0]['issue_time'])
+            if digest==current or new_issue==old_issue:return {'status':'SKIPPED_DUPLICATE'}
+            if new_issue<old_issue:return {'status':'REJECTED_OLDER_ISSUE'}
+        result=_install_locked(root,raw,digest,current,clock,reuse=True)
+        return dict(result,status='PUBLISHED')
 
 def rollback(root, current, previous, clock=lambda:dt.datetime.now(dt.timezone.utc)):
     root=Path(root)

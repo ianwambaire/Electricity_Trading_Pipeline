@@ -1,0 +1,65 @@
+{
+  "execution_authorized": false,
+  "installed_tools": {
+    "automatic.py": "72620f241df03a7fdf33d0ada716b781c0ae2d911bd3f57e5492e9bd4cd870d7",
+    "prepare.py": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14",
+    "publish.py": "7a989a0845599430713541a454378829bed96e160d2f2a13704eece9737d052c",
+    "shared/__init__.py": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
+    "shared/forecast_publication.py": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
+  },
+  "sources": {
+    "deploy/staging/forecast-publication/AUTOMATION-REVIEW.md": {
+      "bytes": 14186,
+      "sha256": "35c4d1896c59cb724987bcaaaad45608f40078f5319a62a5ac6fadb1e65bb31b"
+    },
+    "deploy/staging/forecast-publication/README.md": {
+      "bytes": 25999,
+      "sha256": "fc0e6af9d8d818fce76a9696f198c386b97adfdae9f699f32869e4bb6aa48b35"
+    },
+    "deploy/staging/forecast-publication/automatic.py": {
+      "bytes": 8219,
+      "sha256": "72620f241df03a7fdf33d0ada716b781c0ae2d911bd3f57e5492e9bd4cd870d7"
+    },
+    "deploy/staging/forecast-publication/powerflow-publish-next24": {
+      "bytes": 274,
+      "sha256": "b27f0f7603df15ef0d6babec1aca7779c6db49447f68027589db3c9c6bee83b9"
+    },
+    "deploy/staging/forecast-publication/prepare.py": {
+      "bytes": 2808,
+      "sha256": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14"
+    },
+    "deploy/staging/forecast-publication/publish.py": {
+      "bytes": 6629,
+      "sha256": "7a989a0845599430713541a454378829bed96e160d2f2a13704eece9737d052c"
+    },
+    "src/scheduled_pipeline.py": {
+      "bytes": 50391,
+      "sha256": "1eb95c4fad2d5f861ddee1ca5bee1507d7b02653ce3567bfb53b2f387a5ffb58"
+    },
+    "src/shared/__init__.py": {
+      "bytes": 70,
+      "sha256": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110"
+    },
+    "src/shared/forecast_delivery.py": {
+      "bytes": 3195,
+      "sha256": "cdc402f992b9e9754fdbb07d0fe35eeb9a198b88c8d8a59acdb54137f0e52a32"
+    },
+    "src/shared/forecast_publication.py": {
+      "bytes": 12783,
+      "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
+    },
+    "tests/test_automatic_publication.py": {
+      "bytes": 18185,
+      "sha256": "6956b486b68b2e8619278527fd8acd4ed01ddfd4c6af907fe0771f7960145483"
+    }
+  },
+  "trusted_platform_dependencies": [
+    "root-owned /usr/bin/python3 standard library (-I -S -B)",
+    "root-owned /usr/bin/timeout",
+    "root-owned /usr/bin/env and /bin/sh",
+    "existing reviewed Prefect worker and production dependencies (separate live baseline required)"
+  ],
+  "unchanged_first_setup_manifest_sha256": "274bf50c731bc5ff074d8dae28b87126055e70db663081b4ee3d68165d9217b7",
+  "unchanged_first_tools_archive_sha256": "faeec014b4cde838fcffb3c285eef1995f38547d443162e529fa90ec7209a6b3",
+  "version": 1
+}

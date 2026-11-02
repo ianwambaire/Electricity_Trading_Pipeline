@@ -487,10 +487,19 @@ def next24h_forecast_task() -> dict:
     return {
         "status": "GENERATED" if changed else "UNCHANGED",
         "generated": True,
+        "inference_receipt_id": forecast.attrs.get("inference_receipt_id"),
         "issue_time": forecast["forecast_issue_time"].iloc[0],
         "changed": changed,
         "provenance": forecast.attrs["provenance"],
     }
+
+
+@task(name="Publish validated staging next24h forecast", retries=0)
+def next24h_publication_task(forecast_result: dict) -> dict:
+    from shared.forecast_delivery import deliver
+    from prefect.runtime import flow_run
+    return deliver(forecast_result, str(flow_run.id) if flow_run.id else None,
+        enabled=os.environ.get('POWERFLOW_AUTO_PUBLICATION_ENABLED') == 'true')
 
 
 @task(name="Monitor next24h realized forecast errors")
@@ -930,6 +939,26 @@ def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
         _sync_storage_group(
             storage_sync, storage_state, "next24h_forecasts", "Next24h forecast S3 synchronization"
         )
+    # Publication is independent of inference success; disabled until separately deployed.
+    if os.environ.get('POWERFLOW_AUTO_PUBLICATION_ENABLED') == 'true':
+        try:
+            publication = next24h_publication_task(forecast_result)
+            storage_state['next24h_publication_status'] = publication['status']
+        except Exception:
+            storage_state['next24h_publication_status'] = 'FAILED'
+        if storage_state['next24h_publication_status'] in {'FAILED','REJECTED_INFERENCE','REJECTED_OLDER_ISSUE'}:
+            _record_incident('WARNING','staging forecast publication','publication_failed','ACTIVE',
+                'Staging publication did not complete; inference outcome is unchanged.',
+                {'publication_status':storage_state['next24h_publication_status']})
+        elif storage_state['next24h_publication_status'] in {'PUBLISHED','SKIPPED_DUPLICATE'}:
+            try:
+                if incident_is_active('staging forecast publication','publication_failed'):
+                    _record_incident('INFO','staging forecast publication','publication_failed','RESOLVED',
+                        'Validated staging forecast delivery is available.')
+            except Exception:
+                logger.warning('Unable to inspect prior staging publication incident.')
+    else:
+        storage_state['next24h_publication_status'] = 'DISABLED'
     realized_count, metric_count = _timed_stage(
         run_id, "Next24h monitoring", next24h_monitoring_task
     )

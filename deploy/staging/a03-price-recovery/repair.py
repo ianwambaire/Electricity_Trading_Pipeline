@@ -4,6 +4,7 @@ The XML must be acquired separately from the authenticated ENTSO-E endpoint.
 All artifacts are private and created exclusively; there is no overwrite flag.
 """
 import argparse
+import csv
 import hashlib
 import io
 import json
@@ -32,7 +33,7 @@ def prepare(source, xml, source_sha, xml_sha):
     if set(old.columns) != {'timestamp', 'price_eur_mwh', 'source_resolution'}:
         raise ValueError('unexpected_source_schema')
     old['timestamp'] = pd.to_datetime(old['timestamp'], utc=True, errors='raise')
-    if old['timestamp'].duplicated().any() or old.isna().any().any():
+    if old['timestamp'].duplicated().any() or not old['timestamp'].is_monotonic_increasing or old.isna().any().any():
         raise ValueError('invalid_existing_source')
     old = old.set_index('timestamp')
     fresh = parse_price_observations(xml.decode('utf-8'))
@@ -49,14 +50,22 @@ def prepare(source, xml, source_sha, xml_sha):
     merged = pd.concat([old, fresh.loc[missing]]).sort_index()
     # Every old observation and column must survive unchanged.
     pd.testing.assert_frame_equal(merged.loc[old.index, old.columns], old, check_freq=False)
-    # Keep every original byte, including numeric formatting, unchanged.
-    # Existing ingestion/cleaning normalizes timestamp order on read.
+    # Insert rows chronologically while preserving each original CSV record byte.
+    # The incremental watermark reader rejects out-of-order source timestamps.
     if len(missing):
-        additions = fresh.loc[missing].reset_index()[['timestamp', 'price_eur_mwh', 'source_resolution']]
-        additions = additions.loc[:, list(pd.read_csv(io.BytesIO(source), nrows=0).columns)]
-        candidate = source + (b'' if source.endswith(b'\n') else b'\n') + additions.to_csv(index=False, header=False).encode()
+        lines = source.splitlines(keepends=True)
+        if not source.endswith(b'\n') or len(lines) != len(old) + 1:
+            raise ValueError('unsupported_source_record_layout')
+        if any(len(list(csv.reader(io.StringIO(line.decode('utf-8'))))) != 1 for line in lines):
+            raise ValueError('unsupported_source_record_layout')
+        records = dict(zip(old.index, lines[1:]))
+        columns = list(pd.read_csv(io.BytesIO(source), nrows=0).columns)
+        for timestamp in missing:
+            records[timestamp] = fresh.loc[[timestamp]].reset_index().loc[:, columns].to_csv(index=False, header=False).encode()
+        candidate = lines[0] + b''.join(records[timestamp] for timestamp in merged.index)
     else:
         candidate = source
+
     report = {
         'schema_version': 1, 'source_sha256': source_sha, 'xml_sha256': xml_sha,
         'candidate_sha256': sha(candidate), 'source_bytes': len(source),

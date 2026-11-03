@@ -174,4 +174,6 @@ def test_candidate_preserves_original_bytes_including_float_formatting():
     raw = xml([(1,100)],start='2026-10-24T11:00Z',end='2026-10-24T13:00Z').encode()
     original = parse_price_observations(raw.decode()).drop(m.ALLOWED).reset_index().to_csv(index=False).encode().replace(b'100.0',b'100.000000000')
     candidate, _ = m.prepare(original,raw,m.sha(original),m.sha(raw))
-    assert candidate.startswith(original)
+    assert all(line in candidate.splitlines(keepends=True) for line in original.splitlines(keepends=True))
+    result = pd.read_csv(__import__('io').BytesIO(candidate))
+    assert pd.to_datetime(result.timestamp, utc=True).is_monotonic_increasing

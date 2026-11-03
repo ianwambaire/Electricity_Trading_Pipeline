@@ -289,3 +289,13 @@ def test_valid_delivery_resolves_only_its_prior_publication_incident(monkeypatch
     state={};pipeline._run_next24h_stages(None,state)
     assert len(incidents)==1 and incidents[0][1:4]==('staging forecast publication','publication_failed','RESOLVED')
     assert state['next24h_forecast_status']=='GENERATED'
+
+
+def test_natural_flow_millisecond_early_start_is_valid():
+    now=dt.datetime(2026,11,3,9,48,tzinfo=dt.timezone.utc)
+    proof={'execution':{'started_at':'2026-11-03T09:47:01Z','issued_at':'2026-11-03T09:47:05Z','completed_at':'2026-11-03T09:47:12Z'}}
+    def api(path,body=None):
+        if path.startswith('/flow_runs/'):
+            return {'id':FLOW,'deployment_id':auto.DEPLOYMENT,'auto_scheduled':True,'expected_start_time':'2026-11-03T09:45:00Z','start_time':'2026-11-03T09:44:59.984633Z','state':{'type':'RUNNING'}}
+        return [{'flow_run_id':FLOW,'name':'Generate next24h production forecast','state':{'type':'COMPLETED'},'start_time':'2026-11-03T09:47:01Z','end_time':'2026-11-03T09:47:13Z'}]
+    auto.association(FLOW,proof,now,api)

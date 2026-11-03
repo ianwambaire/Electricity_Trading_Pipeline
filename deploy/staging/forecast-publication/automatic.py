@@ -60,7 +60,7 @@ def query(path,body=None):
 def association(flow_id,proof,now,api=query):
     flow=api('/flow_runs/'+uid(flow_id));require(flow.get('id')==flow_id and flow.get('deployment_id')==DEPLOYMENT and flow.get('auto_scheduled') is True)
     require((flow.get('state') or {}).get('type') in {'RUNNING','COMPLETED'})
-    scheduled=stamp(flow['expected_start_time']);require(scheduled.minute==45 and scheduled.second==scheduled.microsecond==0 and scheduled<=stamp(flow['start_time'])<=now)
+    scheduled=stamp(flow['expected_start_time']);require(scheduled.minute==45 and scheduled.second==scheduled.microsecond==0 and scheduled<=now and stamp(flow['start_time'])<=now)
     tasks=api('/task_runs/filter',{'task_runs':{'flow_run_id':{'any_':[flow_id]}},'limit':100})
     require(isinstance(tasks,list) and len(tasks)<100)
     tasks=[t for t in tasks if t.get('name','').startswith('Generate next24h production forecast')]

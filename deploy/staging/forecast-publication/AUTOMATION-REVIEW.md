@@ -198,3 +198,11 @@ candidate access still need authorized live verification. Linux helper installat
 sudo confinement, actual resource usage, Prefect response semantics and naturally
 scheduled publication must pass acceptance before automation is called operational.
 No production cutover or Streamlit retirement is included.
+
+## Executable activation package
+
+The installer and separate rollback are now prepared in automation-deployment/.
+Its REVIEW.md supersedes the earlier installer-needed and environment-delivery
+planning notes above. Activation uses the existing Prefect deployment job_variables
+environment override, not a shared .env edit or worker restart. Actual Linux
+compatibility and every live guard remain mandatory; no activation is authorized.

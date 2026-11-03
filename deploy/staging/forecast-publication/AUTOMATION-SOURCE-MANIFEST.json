@@ -1,7 +1,7 @@
 {
   "execution_authorized": false,
   "installed_tools": {
-    "automatic.py": "72620f241df03a7fdf33d0ada716b781c0ae2d911bd3f57e5492e9bd4cd870d7",
+    "automatic.py": "29621b1bd45ca8138ab3ae4e3f8e117a455e1dc970bd9d630c472adfd0051647",
     "prepare.py": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14",
     "publish.py": "7a989a0845599430713541a454378829bed96e160d2f2a13704eece9737d052c",
     "shared/__init__.py": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
@@ -9,16 +9,16 @@
   },
   "sources": {
     "deploy/staging/forecast-publication/AUTOMATION-REVIEW.md": {
-      "bytes": 14186,
-      "sha256": "35c4d1896c59cb724987bcaaaad45608f40078f5319a62a5ac6fadb1e65bb31b"
+      "bytes": 14623,
+      "sha256": "751c52738f93d997ec8ec0117cd3c692ca50de8e585984380a4ddf3c1e876d59"
     },
     "deploy/staging/forecast-publication/README.md": {
       "bytes": 25999,
       "sha256": "fc0e6af9d8d818fce76a9696f198c386b97adfdae9f699f32869e4bb6aa48b35"
     },
     "deploy/staging/forecast-publication/automatic.py": {
-      "bytes": 8219,
-      "sha256": "72620f241df03a7fdf33d0ada716b781c0ae2d911bd3f57e5492e9bd4cd870d7"
+      "bytes": 8227,
+      "sha256": "29621b1bd45ca8138ab3ae4e3f8e117a455e1dc970bd9d630c472adfd0051647"
     },
     "deploy/staging/forecast-publication/powerflow-publish-next24": {
       "bytes": 274,
@@ -49,8 +49,8 @@
       "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
     },
     "tests/test_automatic_publication.py": {
-      "bytes": 18185,
-      "sha256": "6956b486b68b2e8619278527fd8acd4ed01ddfd4c6af907fe0771f7960145483"
+      "bytes": 18935,
+      "sha256": "c9cec1f89892089c603fbd286a0dd7a2ef732b4349bc04b0cef4b9dc61754f2a"
     }
   },
   "trusted_platform_dependencies": [

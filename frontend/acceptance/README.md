@@ -1,0 +1,177 @@
+# PowerFlow staging React acceptance — local standalone Playwright
+
+Prepared locally only. No Chrome launch or staging request has occurred in this
+stage. Offline fixture results are not live application evidence. This harness
+uses standalone Playwright; it does not call the integrated browser/Work service.
+A future real execution requires separate owner authorization.
+
+## Existing tooling and exact scope
+
+No dependency installation, copying or production dependency-graph changes.
+The harness reads the existing external playwright-core 1.61.1 installation:
+
+`/Users/iannganga/Desktop/Make-Kenya-Clean/node_modules/playwright-core`
+
+It uses only its matching cached Chrome for Testing 149.0.7827.55, revision 1228:
+
+`/Users/iannganga/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`
+
+Node must be 22.22.0, macOS arm64. bindings.json pins the 106 existing Playwright
+files, all 325 regular Chrome bundle files and five framework symlink targets.
+Its SHA-256 is `78e8305b92e8ec338f6dc330456ca427b12c5cbeccce9eabfc7e78549ebfaccc`.
+These are local reference hashes, not an independent signed package attestation.
+No external files are copied or changed. Missing/version-changed/modified files,
+added files, unsafe ownership/modes, unexpected links or escapes block execution.
+Normal Chrome framework links are accepted only at their exact bound targets
+inside the cached bundle. Personal Chrome 157 and personal profiles are not used.
+No fallback browser, automatic download, npx or dependency refresh exists.
+
+Checks start at https://staging.powerflowenergy.dev/forecasting, then navigate via
+the actual UI to Pipeline Operations. Desktop 1440x900 and mobile-responsive
+390x844 use the same browser context and tab, preserving the application's
+sessionStorage-based session without reading or exporting it. Mobile checks are
+viewport/responsive checks, not iOS/Android or touch/user-agent emulation.
+
+## Commands and owner participation
+
+From the PowerFlow repository root, local-only verification (no import of the
+external Playwright library, no browser or network):
+
+```sh
+env -i PATH=/usr/bin:/bin /Users/iannganga/.nvm/versions/node/v22.22.0/bin/node frontend/acceptance/run.mjs --check
+```
+
+Offline unit tests (mocked browser objects; no Chrome/staging):
+
+```sh
+node --test --test-reporter=dot frontend/acceptance/acceptance.test.mjs
+```
+
+Preparation validation: 53 offline tests passed, including mocked lifecycle,
+owner/session failure, valid/expired/withheld states, exact chart/table matching,
+request blocking, response bounds, evidence sanitization and tool-file checks.
+Syntax checks passed. The real local --check verified the existing 431 regular
+tool/browser files and five expected links with zero browser launches or staging
+requests. These results do not establish real browser/session acceptance.
+
+Future launch command, ONLY after separate authorization:
+
+```sh
+env -i PATH=/usr/bin:/bin /Users/iannganga/.nvm/versions/node/v22.22.0/bin/node frontend/acceptance/run.mjs --run --owner-assisted-analyst
+```
+
+The clean environment prevents inherited debug/proxy/startup settings from
+logging authentication traffic or selecting alternate browser behavior. The
+runner rejects unexpected environment keys and requires an interactive terminal.
+No .env, secret provider, browser profile, cookie or token store is inspected.
+Use a terminal visible to the owner. The default/no-argument mode is --check;
+--run plus --owner-assisted-analyst are both required to launch.
+
+1. The runner verifies bindings, creates private evidence, and opens a NEW headed
+   Chrome for Testing instance and nonpersistent context at Forecast Intelligence.
+2. The OWNER clicks Continue to sign in and completes sign-in/MFA in that browser
+   with the EXISTING approved native Cognito Analyst test account. The harness
+   never fills or reads authentication fields. No password/code/token in chat or
+   terminal. No enrollment, recovery, signup, role changes or account changes.
+3. When Forecast Intelligence has loaded, type only READY in the terminal.
+   The runner additionally requires server GET /api/auth/me to confirm Analyst;
+   Admin, absent/failed role or a missing session blocks acceptance. Personal
+   identity fields are discarded. Exact account subject is owner-attested, not
+   copied/stored/pinned by this harness.
+4. The runner reloads the same authenticated tab once and checks desktop, then
+   navigates between Forecast Intelligence and Pipeline Operations and repeats at
+   mobile width. It never reads storage, saves storageState, seeds data, forces
+   publication, changes the clock or calls inference.
+5. The owned browser is closed on completion/failure. Owner login is bounded at
+   five minutes, browser run at 7.5 minutes, launch/actions at 20 seconds. No launch
+   retries. The app's normal read-only refreshes may occur; there is no separate
+   backend polling loop. No personal tab is attached, closed or modified.
+
+## Read-only guard and authentication exception
+
+The context blocks application POST/PUT/PATCH/DELETE/OPTIONS and all unapproved
+GET endpoints. Exact allowlist covers only reviewed Forecast/Pipeline read APIs,
+app routes and local static assets. Historical one-hour requests require exactly
+limit=500&offset=0; context requests allow only the issue_time query. No /admin or
+/account API, Profile route, export/download, websocket or popup is allowed.
+Service workers, downloads, extensions and browser background networking are
+blocked/disabled. TLS verification and browser sandboxing remain enabled.
+
+Authentication itself necessarily uses POST. During the owner-only login phase,
+the fixed reviewed Cognito hosted origin may handle /login, /mfa, /selectMfa and
+/oauth2/token, plus narrow GET login/assets and public issuer discovery/JWKS.
+These are the only auth exceptions; application writes remain blocked throughout.
+The harness reads NO authentication request headers, form bodies, token responses,
+cookies, storage or authentication fields. After READY, auth POSTs are blocked.
+No AWS SDK, credential retrieval, user creation, MFA enrollment or recovery is run.
+Native Cognito is the supported owner workflow. Google/federated login, new CDN
+origins, unknown managed-login paths or an authentication refresh may be blocked.
+Such a block requires review; the allowlist never expands automatically.
+
+## What is compared
+
+The observer captures only bounded, identity-encoded responses for /api/auth/me,
+/api/forecast/next24 and /api/operations/summary. Require declared Content-Length
+<=8 KiB for role or <=256 KiB otherwise, then verify actual bytes. Unknown lengths,
+compression, malformed content and oversized responses fail closed. Browser
+Accept-Encoding requests identity; that behavior remains untested in real Chrome.
+Only the role, selected forecast fields and Operations forecast status survive
+projection in memory. All other bodies, identity values and reason strings are
+excluded. Normal account JWTs continue to be managed by the app/browser, never
+read or constructed by the harness.
+
+For a valid current publication, check 24 finite h+1..h+24 UTC predictions,
+expected HGB model release, consistent issue/completion/three-hour cutoff and
+no-store. Compare each exact table time/value with its observed API row, hover
+all 24 plotted dots and compare tooltip timestamps/values (display precision
+three decimals), verify elapsed/future legends and separate historical labels.
+Compare issue, completion, cutoff, horizon and future-target facts with the API.
+Check one availability banner, visible chart, navigation and no document-wide
+horizontal overflow. Intentional table scrolling remains separate from root
+layout overflow. Pipeline Operations must display the matching forecast status
+and its Analyst restriction, without accessing Admin APIs.
+
+For 503 FORECAST_WITHHELD or an expired response, require WITHHELD and no live
+chart, table or forecast statistics. Historical one-hour information may remain
+only in its explicitly historical section. Report live rendering NOT_OBSERVED.
+A genuine withheld/expired state passing its checks yields overall PARTIAL,
+never a claim that live forecasts rendered. Expiry during a comparison yields
+an explicit FRESHNESS_BOUNDARY_DURING_CHECK gap, not a fabricated success.
+Current UTC timestamps are recorded per check; no time manipulation is used.
+
+PASS requires both viewport sequences and live rendering. FAIL records a proven
+contract/layout mismatch or unexpected browser/network errors. BLOCKED records
+missing tooling/login or an unapproved prerequisite. PARTIAL records unavailable
+live forecasts or a freshness boundary. Role-specific UI and server role are
+checked; this is not exhaustive server-side authorization testing. Public APIs
+lack receipt/bundle IDs and model file hashes, so this harness does not repeat
+remote bundle/pointer integrity verification. Independent backend evidence remains
+separate from browser acceptance.
+
+## Private evidence and limits
+
+Outputs are created only under ignored
+`data/backups/private-staging-browser-acceptance/acceptance-*`:
+
+- assessment.json: selected enums/counts/timestamps/viewport results only.
+- desktop/mobile-responsive availability, forecast (only when valid), Operations
+  screenshots. These are scoped to known application panels, excluding account
+  headers, not full browser pages. Operations free-text paragraphs/details are
+  masked. No auth screenshots, HAR, tracing, video, raw console text, network
+  headers, auth URLs/query strings, request bodies, profile files or state dumps.
+
+Require Git-ignore before creating evidence, no symlink parents, owner-only root
+and run directories (0700), files 0600. No credentials/raw errors in reports.
+Detected sensitive visible UI patterns stop screenshot capture. Such pattern
+checks cannot prove absence of every possible information leak; the owner should
+review private screenshots. Console/page errors and failed requests are counted,
+not persisted as strings; expected forecast 503 and cancelled reads are separate.
+The event bound is 500. Browser-level profile files are temporary Playwright-owned
+launch artifacts, not a saved authenticated context or reused personal profile.
+
+The browser has NOT been launched in preparation. OS/sandbox compatibility,
+Cognito UI resources, actual deployed selectors, real chart tooltips and real
+responsive behavior remain unverified until authorized execution. Strict selectors
+can identify a deployed UI version difference; do not silently substitute fixture
+or historical data. Fixture tests never serve/fulfill browser responses in a real
+run. No production files, services, databases, pipeline or model are changed.

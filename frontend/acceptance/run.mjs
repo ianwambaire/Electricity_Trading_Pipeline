@@ -10,6 +10,7 @@ import {createInterface} from 'node:readline/promises';
 import {AcceptanceError,requireThat,ORIGIN,START,LIMITS,safeReport,FAILURE_CODES} from './core.mjs';
 import {checkTooling,PROJECT} from './tooling.mjs';
 import {createMonitor,runChecks} from './browser.mjs';
+import {assertCleanEnvironment,environmentKeyReport} from './environment.mjs';
 const exec=promisify(execFile);
 export const EVIDENCE=path.join(PROJECT,'data/backups/private-staging-browser-acceptance');
 
@@ -42,7 +43,7 @@ export function launchOptions(tool) {
 export const CONTEXT={viewport:{width:1440,height:900},timezoneId:'UTC',locale:'en-GB',
   acceptDownloads:false,serviceWorkers:'block',ignoreHTTPSErrors:false,extraHTTPHeaders:{'Accept-Encoding':'identity'}};
 export async function accept({tools,load=spec=>import(spec),prompt=ownerReady,evidence=createEvidence,checks=runChecks}={}) {
-  requireThat(Object.keys(process.env).every(k=>['PATH','TMPDIR','LANG'].includes(k)),'CLEAN_ENV_REQUIRED');
+  assertCleanEnvironment();
   requireThat(process.stdin.isTTY&&process.stdout.isTTY,'TTY_REQUIRED');
   const tool=tools??await checkTooling();
   const folder=await evidence();
@@ -96,6 +97,12 @@ export async function accept({tools,load=spec=>import(spec),prompt=ownerReady,ev
 }
 export async function main(args=process.argv.slice(2)) {
   try {
+    if(args.length===1&&args[0]==='--inspect-environment') {
+      const report=environmentKeyReport();
+      console.log(JSON.stringify({mode:'ENVIRONMENT_KEYS_ONLY',boundary:'harness-node-entry',exactArguments:process.execArgv.length===0,
+        nodeVersion:process.versions.node,nodeExecutableMatchesBinding:process.execPath==='/Users/iannganga/.nvm/versions/node/v22.22.0/bin/node',
+        ...report,browserLaunches:0,stagingRequests:0}));return report.accepted?0:1;
+    }
     if(args.length===0||args.join(' ')==='--check') {
       await checkTooling();console.log(JSON.stringify({localTooling:'PASS',browserLaunches:0,stagingRequests:0}));return 0;
     }

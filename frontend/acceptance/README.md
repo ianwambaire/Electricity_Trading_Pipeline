@@ -63,6 +63,11 @@ env -i PATH=/usr/bin:/bin /Users/iannganga/.nvm/versions/node/v22.22.0/bin/node 
 The clean environment prevents inherited debug/proxy/startup settings from
 logging authentication traffic or selecting alternate browser behavior. The
 runner rejects unexpected environment keys and requires an interactive terminal.
+On macOS the only additional permitted key is __CF_USER_TEXT_ENCODING, generated
+by CoreFoundation at process initialization even after env -i. This is a
+platform-specific runtime exception, not an inherited credential/proxy/debug
+allowance. All other unexpected keys still fail CLEAN_ENV_REQUIRED. Its value
+is never read or discarded; the browser's explicit child environment is unchanged.
 No .env, secret provider, browser profile, cookie or token store is inspected.
 Use a terminal visible to the owner. The default/no-argument mode is --check;
 --run plus --owner-assisted-analyst are both required to launch.
@@ -175,3 +180,58 @@ responsive behavior remain unverified until authorized execution. Strict selecto
 can identify a deployed UI version difference; do not silently substitute fixture
 or historical data. Fixture tests never serve/fulfill browser responses in a real
 run. No production files, services, databases, pipeline or model are changed.
+
+## CLEAN_ENV_REQUIRED correction and local key-only diagnosis
+
+The first authorized execution did not launch Chrome. The original guard permitted
+only PATH, TMPDIR and LANG, but macOS's CoreFoundation inserts the public runtime
+key __CF_USER_TEXT_ENCODING before Node/harness entry. No value was inspected.
+
+Controlled local probes established the boundary:
+
+| Own process started under env -i PATH=/usr/bin:/bin | Observed safe keys |
+| --- | --- |
+| Native C probe, no CoreFoundation linkage | PATH |
+| Same source linked to CoreFoundation (no explicit framework calls) | PATH, __CF_USER_TEXT_ENCODING |
+| Bound Node 22.22.0, before harness imports | PATH, __CF_USER_TEXT_ENCODING |
+| Harness key-only mode, interactive terminal | PATH, __CF_USER_TEXT_ENCODING |
+
+The bound Node binary's otool -L metadata lists CoreFoundation. Thus env -i is
+working; the additional key arises at native framework initialization, before
+any harness child, browser, Playwright, sign-in or staging operation. The precise
+internal CoreFoundation function was not instrumented. No other process's
+/proc, ps environment, browser profile or secret provider is inspected.
+
+The correction is one explicit Darwin-only runtime key in environment.mjs. It
+does not permit that key on other platforms, discard variables, read values or
+change child-process environments. NODE_OPTIONS, DEBUG, HOME, proxies, credential
+keys and every unknown key remain rejected. Existing core/browser/tooling guards,
+106 Playwright files, 325 browser files and five expected links remain unchanged.
+
+A local diagnostic option never launches or authenticates:
+
+```sh
+env -i PATH=/usr/bin:/bin /Users/iannganga/.nvm/versions/node/v22.22.0/bin/node frontend/acceptance/run.mjs --inspect-environment
+```
+
+It returns fixed public key names only, redacts unknown names to a count, verifies
+argument/runtime identity metadata, and reports legacyGuardAccepted=false plus
+accepted=true for the confirmed macOS startup case. No values, raw command lines,
+secret-bearing key names or unrelated process environments are emitted. Extra
+CLI arguments are rejected rather than entering the browser path.
+
+```sh
+node --test --test-reporter=dot frontend/acceptance/acceptance.test.mjs frontend/acceptance/environment.test.mjs
+```
+
+Validation: 72 tests passed (53 original plus 19 environment cases). Tests use
+getter traps to prove values are not accessed, reject additional keys, exercise
+fixed argv and env -i/explicit-child environments, compile the tiny own-process
+native probe twice into temporary local paths, and compare framework-linked and
+unlinked entry states. Existing browser/tooling source hashes are checked against
+the prior reviewed files. The native probe requires the already installed macOS
+Command Line Tools; it does not install anything or invoke a browser/network API.
+
+The future acceptance command above is unchanged. Corrected source must be
+manually reviewed/committed and separately authorized before another real run.
+No acceptance retry, Chrome launch or staging request occurred during this fix.

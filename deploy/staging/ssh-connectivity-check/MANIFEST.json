@@ -1,0 +1,39 @@
+{
+  "action": "connectivity-only",
+  "artifacts": {
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/ssh-connectivity-check/REVIEW.md": {
+      "bytes": 7608,
+      "sha256": "0a19bf04cb996e2a597953e410d77c875cba527aafb7e5c106b6eb20db7b28f7"
+    },
+    "deploy/staging/ssh-connectivity-check/build.py": {
+      "bytes": 1279,
+      "sha256": "24bd355fded3b731910fe3239dd780aae4ef3cb9f78e4efd47d3df82d06fd73e"
+    },
+    "deploy/staging/ssh-connectivity-check/run.py": {
+      "bytes": 11556,
+      "sha256": "1d02edc366ac6ae0c4828daf9607637ebf2b27daf523dd00a61138b636678efa"
+    },
+    "tests/test_ssh_connectivity_check.py": {
+      "bytes": 12481,
+      "sha256": "2676f0d61dd9f3190a56d4f0cf81b1454cff5cee85244690130df2776ac9f306"
+    }
+  },
+  "limits": {
+    "attempts": 1,
+    "connection_seconds": 10,
+    "escalation_seconds": 5,
+    "stream_bytes": 32768,
+    "supervisor_seconds": 20
+  },
+  "remote_command": "/usr/bin/true",
+  "supervisor_sha256": "31e7dfef6c1ea6323b4f681b1621e961bc6c899d2633d51377ccba7b5a0157b6",
+  "version": 1
+}

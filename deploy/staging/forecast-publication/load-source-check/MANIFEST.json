@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-publication/load-source-check/REVIEW.md": {
+      "bytes": 6359,
+      "sha256": "2febbbcae75175d925032cd503ef45ce568433105cd21bbd80905924f564fdde"
+    },
+    "deploy/staging/forecast-publication/load-source-check/check.py": {
+      "bytes": 9215,
+      "sha256": "2c30940d64aafafb2570ddf19c4c17ad318b983ff2c00dfbe1a32880da5a497d"
+    },
+    "tests/test_load_source_check.py": {
+      "bytes": 7519,
+      "sha256": "425b94ff9f85d50729023f236040a364470bd1ca5856e18d208270e444f0b23a"
+    }
+  },
+  "executable_dependencies": [
+    "Python standard library only; trusted runtime still requires host adapter review"
+  ],
+  "missing_capabilities": [
+    "hash-bound unprivileged configured credential bridge",
+    "pinned SSH supervisor and stable snapshot adapter"
+  ],
+  "remote_authorization": false,
+  "remote_payload": null,
+  "remote_runner": null,
+  "reviewed_contracts_not_executed": {
+    "src/ingestion/fetch_entsoe_data.py": {
+      "bytes": 42598,
+      "sha256": "8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f"
+    },
+    "src/ingestion/historical_range.py": {
+      "bytes": 3125,
+      "sha256": "00a78fc717494d8c88b99b5a1130c7a7bba58e92105b28d46e176109dc327365"
+    },
+    "src/ingestion/incremental_utils.py": {
+      "bytes": 21236,
+      "sha256": "9fb9892c67808f6e7a0e7618776afd836e28133d4ac7be37e2cddd27e03a1a33"
+    },
+    "src/powerflow_secrets.py": {
+      "bytes": 5706,
+      "sha256": "4d67eff1ea532d6c6855160018cde95b01bed3b591a78e23d455bba2885a87f0"
+    },
+    "src/scheduled_pipeline.py": {
+      "bytes": 50391,
+      "sha256": "1eb95c4fad2d5f861ddee1ca5bee1507d7b02653ce3567bfb53b2f387a5ffb58"
+    }
+  },
+  "state": "LOCAL_CORE_ONLY_REMOTE_EXECUTION_BLOCKED",
+  "target_timestamps_utc": [
+    "2026-11-03T15:15:00Z",
+    "2026-11-03T15:30:00Z",
+    "2026-11-03T15:45:00Z"
+  ],
+  "version": 1
+}

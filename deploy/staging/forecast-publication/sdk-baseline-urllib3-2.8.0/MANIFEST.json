@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/MANIFEST.json": {
+      "bytes": 5023,
+      "sha256": "caafdcadedaa3fc899cd63e5005bd0f803990bea05ddba477c4f56815011c0e2"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/SDK-LOCK.json": {
+      "bytes": 31876,
+      "sha256": "da19f5a81c7741d19333e7bfcc25004c50fe2c83e31642c9f39c828518de35c4"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/sdk.py": {
+      "bytes": 19726,
+      "sha256": "dfbeff132a4513df93fb6e9bcf33d980370681b311fe0532c929bd9f5947d247"
+    },
+    "deploy/staging/forecast-publication/sdk-baseline-urllib3-2.8.0/REVIEW.md": {
+      "bytes": 8117,
+      "sha256": "c94b06b8cc8396e836df5a81d46c27df81fd8907bfcb96c6d3177d7e9920d6d6"
+    },
+    "deploy/staging/forecast-publication/sdk-baseline-urllib3-2.8.0/SDK-LOCK.json": {
+      "bytes": 31877,
+      "sha256": "4ff10a67faafbe36031e960e0afbce696187b7e3928da396e248ffc7ffdb2421"
+    },
+    "deploy/staging/forecast-publication/sdk-baseline-urllib3-2.8.0/build.py": {
+      "bytes": 2392,
+      "sha256": "5c825ba142cbe537624cf1fd250bf6bd9311ca0d21fd434aa5ea841333a4345e"
+    },
+    "deploy/staging/forecast-publication/sdk-baseline-urllib3-2.8.0/reference.py": {
+      "bytes": 5760,
+      "sha256": "3a97ea319e014271c29e376fa69ed8b336dc2b0cff76fb4273adadbb162ff84e"
+    },
+    "deploy/staging/forecast-publication/sdk-baseline-urllib3-2.8.0/reference/pypi-provenance.json": {
+      "bytes": 9533,
+      "sha256": "68c2b794eb6c28e944cbbb052d33318f2e1b787ac1724a00f00a0aa525362537"
+    },
+    "deploy/staging/forecast-publication/sdk-baseline-urllib3-2.8.0/reference/urllib3-2.8.0-py3-none-any.whl": {
+      "bytes": 135717,
+      "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
+    },
+    "src/powerflow_secrets.py": {
+      "bytes": 5706,
+      "sha256": "4d67eff1ea532d6c6855160018cde95b01bed3b591a78e23d455bba2885a87f0"
+    },
+    "tests/test_load_source_aws_adapter.py": {
+      "bytes": 27845,
+      "sha256": "b363760611cc30ba579d075128247590738bf1a13e4d1a75a8ee3c0912237c6d"
+    },
+    "tests/test_urllib3_280_compatibility.py": {
+      "bytes": 7730,
+      "sha256": "ca51e3fef9568db99e2c1b5af97a8e833c52d42649f8b78ebc68a04cb302d98e"
+    }
+  },
+  "purpose": "local-compatibility-reference-only",
+  "source": {
+    "base_sdk_lock_sha256": "da19f5a81c7741d19333e7bfcc25004c50fe2c83e31642c9f39c828518de35c4",
+    "index": "https://pypi.org/project/urllib3/2.8.0/",
+    "provenance": "PyPI TLS assertion and matching subject; no local Sigstore verification",
+    "wheel_sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+    "wheel_url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl"
+  },
+  "version": 1
+}

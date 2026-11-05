@@ -483,15 +483,15 @@ def next24h_forecast_task() -> dict:
     try:
         forecast, changed = run_next24h_forecast()
     except ForecastUnavailableError as error:
-        return _withheld_forecast_result(error)
-    return {
+        return _operational_task_result(_withheld_forecast_result(error))
+    return _operational_task_result({
         "status": "GENERATED" if changed else "UNCHANGED",
         "generated": True,
         "inference_receipt_id": forecast.attrs.get("inference_receipt_id"),
         "issue_time": forecast["forecast_issue_time"].iloc[0],
         "changed": changed,
         "provenance": forecast.attrs["provenance"],
-    }
+    })
 
 
 @task(name="Publish validated staging next24h forecast", retries=0)
@@ -909,6 +909,11 @@ def _run_next24h_stages(storage_sync, storage_state, run_id: str | None = None):
         # normal WITHHELD result before it can be marked failed.
         forecast_result = _withheld_forecast_result(error)
 
+    if forecast_result.get('prefect_task_run_id') is not None:
+        storage_state['next24h_prefect_task_run_id'] = forecast_result['prefect_task_run_id']
+    if forecast_result.get('inference_receipt_id') is not None:
+        storage_state['next24h_inference_receipt_id'] = forecast_result['inference_receipt_id']
+
     if forecast_result.get("status") == "WITHHELD":
         _record_forecast_withholding(
             forecast_result,
@@ -1044,7 +1049,39 @@ def _skip_derived_rebuild(
     )
 
 
-@flow(name="PowerFlow ENTSO-E Pipeline", log_prints=True)
+def _operational_evidence_terminal_hook(_flow, flow_run, state):
+    if os.environ.get('POWERFLOW_OPERATIONAL_EVIDENCE_ENABLED') != 'true':
+        return {'status': 'DISABLED'}
+    try:
+        from shared.operational_terminal import notify
+        result = notify(flow_run, state, enabled=True)
+    except Exception:
+        result = {'status': 'FAILED', 'reason': 'HOOK_UNAVAILABLE'}
+    # Fixed, bounded categories only; never print source exceptions or responses.
+    logger.warning('Operational evidence terminal delivery: %s', json.dumps(result))
+    return result
+
+
+def _operational_flow_identity():
+    try:
+        from shared.operational_terminal import flow_identity
+        return flow_identity()
+    except Exception:
+        logger.warning('Operational flow identity unavailable; terminal capture will fail closed.')
+        return {}
+
+
+def _operational_task_result(result):
+    try:
+        from shared.operational_terminal import task_result
+        return task_result(result)
+    except Exception:
+        logger.warning('Operational task identity unavailable; terminal capture will fail closed.')
+        return result
+
+
+@flow(name="PowerFlow ENTSO-E Pipeline", log_prints=True,
+      on_completion=[_operational_evidence_terminal_hook], on_failure=[_operational_evidence_terminal_hook])
 def powerflow_entsoe_pipeline(
     mode: str = "incremental",
     start_date: str | None = None,
@@ -1073,6 +1110,7 @@ def powerflow_entsoe_pipeline(
     storage_sync = StorageSync(storage_config, PROJECT_ROOT)
     storage_state = {
         "run_id": run_id,
+        **_operational_flow_identity(),
         "storage_backend": storage_config.backend,
         "s3_bucket": storage_config.s3_bucket,
         "s3_sync_status": "PENDING" if storage_config.backend == "s3" else "NOT_REQUIRED",

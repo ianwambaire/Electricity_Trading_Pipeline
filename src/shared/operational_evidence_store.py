@@ -172,51 +172,55 @@ def publish(root, raw, digest, expected_current, *, clock=lambda: dt.datetime.no
     """
     new = fresh(raw, digest, clock())  # validate before even creating the lock
     with locked(root) as (r, releases):
-        require(pointer(r) == expected_current, 'CONFLICT')
-        if expected_current is not None:
-            old_raw = content(releases, expected_current)
-            old = validate(old_raw, expected_current, clock())  # stale is valid structure
-            require(timestamp(new['execution']['scheduled_at']) >= timestamp(old['execution']['scheduled_at']), 'OLDER_RUN')
-            if timestamp(new['execution']['scheduled_at']) == timestamp(old['execution']['scheduled_at']):
-                require(all(new['execution'][k] == old['execution'][k] for k in ('flow_run_id', 'deployment_id')), 'IDENTITY')
-                if old['execution']['pipeline_run_id'] is not None:
-                    require(new['execution']['pipeline_run_id'] == old['execution']['pipeline_run_id'], 'IDENTITY')
-                if old['execution']['started_at'] is not None:
-                    require(new['execution']['started_at'] == old['execution']['started_at'] and
-                            new['execution']['outcome'] not in {'SCHEDULED', 'PENDING'}, 'TERMINAL_DRIFT')
-                require(timestamp(new['observed_at']) >= timestamp(old['observed_at']), 'OLDER_OBSERVATION')
-                require(old['execution']['outcome'] in {'SCHEDULED', 'PENDING', 'RUNNING'} or
-                        new['execution'] == old['execution'] and new['inference'] == old['inference'] and new['delivery'] == old['delivery'], 'TERMINAL_DRIFT')
-        if digest == expected_current:
-            return {'outcome': 'UNCHANGED', 'current': digest, 'previous': expected_current}
+        return _publish_locked(r, releases, raw, digest, expected_current, new, clock)
+
+
+def _publish_locked(r, releases, raw, digest, expected_current, new, clock):
+    require(pointer(r) == expected_current, 'CONFLICT')
+    if expected_current is not None:
+        old_raw = content(releases, expected_current)
+        old = validate(old_raw, expected_current, clock())  # stale is valid structure
+        require(timestamp(new['execution']['scheduled_at']) >= timestamp(old['execution']['scheduled_at']), 'OLDER_RUN')
+        if timestamp(new['execution']['scheduled_at']) == timestamp(old['execution']['scheduled_at']):
+            require(all(new['execution'][k] == old['execution'][k] for k in ('flow_run_id', 'deployment_id')), 'IDENTITY')
+            if old['execution']['pipeline_run_id'] is not None:
+                require(new['execution']['pipeline_run_id'] == old['execution']['pipeline_run_id'], 'IDENTITY')
+            if old['execution']['started_at'] is not None:
+                require(new['execution']['started_at'] == old['execution']['started_at'] and
+                        new['execution']['outcome'] not in {'SCHEDULED', 'PENDING'}, 'TERMINAL_DRIFT')
+            require(timestamp(new['observed_at']) >= timestamp(old['observed_at']), 'OLDER_OBSERVATION')
+            require(old['execution']['outcome'] in {'SCHEDULED', 'PENDING', 'RUNNING'} or
+                    new['execution'] == old['execution'] and new['inference'] == old['inference'] and new['delivery'] == old['delivery'], 'TERMINAL_DRIFT')
+    if digest == expected_current:
+        return {'outcome': 'UNCHANGED', 'current': digest, 'previous': expected_current}
+    try:
+        os.stat(digest, dir_fd=releases, follow_symlinks=False)
+    except FileNotFoundError:
+        temporary = '.partial-' + uuid.uuid4().hex
+        os.mkdir(temporary, 0o750, dir_fd=releases)
+        t = directory(releases, temporary)
         try:
-            os.stat(digest, dir_fd=releases, follow_symlinks=False)
-        except FileNotFoundError:
-            temporary = '.partial-' + uuid.uuid4().hex
-            os.mkdir(temporary, 0o750, dir_fd=releases)
-            t = directory(releases, temporary)
-            try:
-                os.fchown(t, os.geteuid(), os.fstat(r).st_gid)
-                os.fchmod(t, 0o750)
-                fd = os.open('evidence.json', os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o640, dir_fd=t)
-                with os.fdopen(fd, 'wb') as f:
-                    os.fchown(f.fileno(), os.geteuid(), os.fstat(r).st_gid)
-                    os.fchmod(f.fileno(), 0o640)
-                    f.write(raw)
-                    f.flush()
-                    os.fsync(f.fileno())
-                require(read_file(t, 'evidence.json') == raw, 'INTEGRITY')
-                fresh(raw, digest, clock())
-                os.fsync(t)
-            finally:
-                os.close(t)
-            # No writer outside this lock may modify the trusted store.
-            os.rename(temporary, digest, src_dir_fd=releases, dst_dir_fd=releases)
-            os.fsync(releases)
-        else:
-            require(content(releases, digest) == raw, 'INTEGRITY')
-        switch(r, releases, digest, expected_current, clock)
-        return {'outcome': 'PUBLISHED', 'current': digest, 'previous': expected_current}
+            os.fchown(t, os.geteuid(), os.fstat(r).st_gid)
+            os.fchmod(t, 0o750)
+            fd = os.open('evidence.json', os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o640, dir_fd=t)
+            with os.fdopen(fd, 'wb') as f:
+                os.fchown(f.fileno(), os.geteuid(), os.fstat(r).st_gid)
+                os.fchmod(f.fileno(), 0o640)
+                f.write(raw)
+                f.flush()
+                os.fsync(f.fileno())
+            require(read_file(t, 'evidence.json') == raw, 'INTEGRITY')
+            fresh(raw, digest, clock())
+            os.fsync(t)
+        finally:
+            os.close(t)
+        # No writer outside this lock may modify the trusted store.
+        os.rename(temporary, digest, src_dir_fd=releases, dst_dir_fd=releases)
+        os.fsync(releases)
+    else:
+        require(content(releases, digest) == raw, 'INTEGRITY')
+    switch(r, releases, digest, expected_current, clock)
+    return {'outcome': 'PUBLISHED', 'current': digest, 'previous': expected_current}
 
 
 def restore(root, expected_current, previous, *, clock=lambda: dt.datetime.now(UTC)):
@@ -227,3 +231,23 @@ def restore(root, expected_current, previous, *, clock=lambda: dt.datetime.now(U
     with locked(root) as (r, releases):
         switch(r, releases, previous, expected_current, clock)
     return {'current': previous, 'previous': expected_current}
+
+
+def publish_terminal(root, raw, digest, *, clock=lambda: dt.datetime.now(UTC)):
+    """Monotonic, idempotent terminal delivery, all decisions inside one lock."""
+    new = fresh(raw, digest, clock())
+    require(new['execution']['outcome'] in {'COMPLETED', 'FAILED', 'CANCELLED', 'CRASHED'}, 'NOT_TERMINAL')
+    with locked(root) as (r, releases):
+        current = pointer(r)
+        if current is not None:
+            old = validate(content(releases, current), current, clock())
+            if timestamp(new['execution']['scheduled_at']) < timestamp(old['execution']['scheduled_at']):
+                return {'status': 'SKIPPED_OLDER_RUN'}
+            if timestamp(new['execution']['scheduled_at']) == timestamp(old['execution']['scheduled_at']):
+                require(new['execution']['flow_run_id'] == old['execution']['flow_run_id'], 'IDENTITY')
+                # Observation time must not refresh duplicates or create releases.
+                fields = ('version', 'execution', 'inference', 'delivery', 'provenance')
+                require(all(new[k] == old[k] for k in fields), 'TERMINAL_DRIFT')
+                return {'status': 'SKIPPED_DUPLICATE'}
+        _publish_locked(r, releases, raw, digest, current, new, clock)
+        return {'status': 'PUBLISHED'}

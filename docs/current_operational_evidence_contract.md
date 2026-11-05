@@ -228,3 +228,14 @@ coverage associates persisted records, activates only a temporary fixture store,
 and reads identical public/Pipeline/Admin evidence; existing forecast publication
 and authorization regressions remain passing. No browser/live API acceptance,
 remote configuration check, operational activation or production mutation occurred.
+
+## Checkpoint 3 local continuation
+
+Terminal capture and the restricted delivery proposal now exist; see
+`deploy/staging/operational-evidence/REVIEW.md` for lifecycle evidence, exact privilege
+scope, stable-ID joins, idempotency, failure behavior and remaining Linux gates.
+Checkpoint 2's proposed temporal association is not used by terminal delivery.
+The flow hook remains disabled by default and no installed source/permission,
+service environment or publication has changed. The old deployment bindings are
+intentionally no longer executable against modified worker source; they remain
+preserved rather than refreshed. No API/authentication/forecast-expiry changes.

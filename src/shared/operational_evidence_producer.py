@@ -121,7 +121,7 @@ def receipt_bundle(files, observed_at):
     return bundle, digest
 
 
-def _associate(flow, tasks, records, stages, incidents, receipts, *, expected_deployment, observed_at):
+def _associate(flow, tasks, records, stages, incidents, receipts, *, expected_deployment, observed_at, stable_identity=False):
     start, end = natural(flow, expected_deployment, observed_at)
     require(type(tasks) is list and len(tasks) < 100, 'TASK_BOUND')
     for item in tasks:identifier(item['id'])
@@ -129,9 +129,26 @@ def _associate(flow, tasks, records, stages, incidents, receipts, *, expected_de
     ft = task(tasks, FORECAST_TASK, flow, start, end)
     pt = task(tasks, DELIVERY_TASK, flow, start, end)
     require(type(stages) is list and len(stages) <= 200 and len(records) <= 12 and len(incidents) <= 12, 'RECORD_BOUND')
-    if ft:
-        # Existing reviewed association: unique internal forecast-stage interval
-        # within two seconds of the exact Prefect task interval, not issue alone.
+    # New terminal capture uses a durable flow UUID in the pipeline summary.
+    # The legacy temporal branch remains only for old offline/inspection callers;
+    # the installed terminal source requires stable_identity=True below.
+    decoded = [(r, bounded_json(r['message'])) for r in records]
+    linked = [(r, m) for r, m in decoded if m.get('prefect_flow_run_id') == flow['id']]
+    stable = bool(linked)
+    require(not stable_identity or stable, 'STABLE_IDENTITY_REQUIRED')
+    if stable:
+        require(len(linked) == 1, 'SUMMARY_ASSOCIATION')
+        record, summary = linked[0]
+        require(summary.get('prefect_deployment_id') == expected_deployment, 'IDENTITY')
+        internal = summary.get('run_id')
+        if ft:
+            require(summary.get('next24h_prefect_task_run_id') == ft['id'] or
+                    summary.get('next24h_prefect_task_run_id') is None and ft['state']['type'] in {'FAILED', 'CRASHED'}, 'TASK_IDENTITY')
+        else:
+            require(summary.get('next24h_prefect_task_run_id') is None, 'TASK_IDENTITY')
+        matches = [s for s in stages if s['run_id'] == internal and
+                   s['stage_name'] == ('Next24h forecast generation' if ft else 'Total pipeline')]
+    elif ft:
         matches = [s for s in stages if s['stage_name'] == 'Next24h forecast generation'
                    and abs((timestamp(s['start_timestamp_utc']) - timestamp(ft['start_time'])).total_seconds()) <= 2
                    and abs((timestamp(s['end_timestamp_utc']) - timestamp(ft['end_time'])).total_seconds()) <= 2]
@@ -142,10 +159,15 @@ def _associate(flow, tasks, records, stages, incidents, receipts, *, expected_de
     stage = matches[0]; internal = stage['run_id']
     require(timestamp(stage['start_timestamp_utc']) <= timestamp(stage['end_timestamp_utc']), 'STAGE_INTERVAL')
     require(isinstance(internal, str) and re.fullmatch('[0-9a-f]{32}', internal) is not None, 'IDENTITY')
-    summaries = [(r, bounded_json(r['message'])) for r in records]
+    summaries = decoded
     summaries = [(r, m) for r, m in summaries if m.get('run_id') == internal]
     require(len(summaries) == 1, 'SUMMARY_ASSOCIATION')
     record, summary = summaries[0]
+    if stable:
+        require(summary.get('prefect_flow_run_id') == flow['id'], 'IDENTITY')
+        require(start <= timestamp(stage['start_timestamp_utc']) <= timestamp(stage['end_timestamp_utc']) <= end, 'STAGE_INTERVAL')
+        if ft:
+            require(timestamp(stage['start_timestamp_utc']) <= timestamp(ft['start_time']) <= timestamp(ft['end_time']) <= timestamp(stage['end_timestamp_utc']), 'STAGE_TASK_INTERVAL')
     require(start <= timestamp(record['run_time']) <= min(end + dt.timedelta(seconds=5), observed_at), 'SUMMARY_TIME')
     pipeline_status = 'SUCCESS' if flow['state']['type'] == 'COMPLETED' else 'FAILED'
     require(record['status'] == summary.get('status') == pipeline_status, 'EXECUTION_OUTCOME')
@@ -168,6 +190,7 @@ def _associate(flow, tasks, records, stages, incidents, receipts, *, expected_de
         bundle, digest = receipt_bundle(receipts[0], observed_at)
         execution = bundle['execution']; receipt_id = execution['run_id']; identifier(receipt_id)
         require(timestamp(ft['start_time']) <= timestamp(execution['started_at']) <= timestamp(execution['completed_at']) <= timestamp(ft['end_time']), 'RECEIPT_TASK')
+        if stable:require(summary.get('next24h_inference_receipt_id') == receipt_id, 'RECEIPT_IDENTITY')
         issue = bundle['forecasts'][0]['issue_time']
         require(timestamp(summary['next24h_forecast_issue_time']) == timestamp(issue), 'ISSUE_ASSOCIATION')
         if delivery == 'PUBLISHED':bundle_hash = digest
@@ -214,7 +237,7 @@ def associate(*args, **kwargs):
         raise InvalidEvidence('ASSOCIATION_UNVERIFIED') from None
 
 
-def _from_snapshot(connection, flow, tasks, receipts, *, expected_deployment, observed_at):
+def _from_snapshot(connection, flow, tasks, receipts, *, expected_deployment, observed_at, stable_identity=False):
     """SELECT-only reader; caller must own an existing consistent read-only snapshot.
 
     No path/credentials/network accepted. No PRAGMA write, migration or DB creation.
@@ -232,10 +255,10 @@ def _from_snapshot(connection, flow, tasks, receipts, *, expected_deployment, ob
     records = rows('SELECT run_time,status,substr(message,1,262145) AS message FROM pipeline_runs WHERE run_time>=? AND run_time<=? ORDER BY id DESC LIMIT 13', times, 12)
     stages = rows('SELECT run_id,stage_name,start_timestamp_utc,end_timestamp_utc,status FROM pipeline_stage_timings WHERE start_timestamp_utc>=? AND end_timestamp_utc<=? LIMIT 201', times, 200)
     incidents = rows('SELECT timestamp_utc,component,event_type,substr(details_json,1,262145) AS details_json FROM operational_incidents WHERE component=? AND event_type=? AND timestamp_utc>=? AND timestamp_utc<=? LIMIT 13', ('next24h forecast', 'forecast_withheld', *times), 12)
-    return associate(flow, tasks, records, stages, incidents, receipts, expected_deployment=expected_deployment, observed_at=observed_at)
+    return associate(flow, tasks, records, stages, incidents, receipts, expected_deployment=expected_deployment, observed_at=observed_at, stable_identity=stable_identity)
 
 
-def from_snapshot(connection, flow, tasks, receipts, *, expected_deployment, observed_at):
+def from_snapshot(connection, flow, tasks, receipts, *, expected_deployment, observed_at, stable_identity=False):
     """Dedicated snapshot connection, with a two-second SQL execution budget."""
     deadline = time.monotonic() + 2
     ticks = [0]
@@ -245,7 +268,7 @@ def from_snapshot(connection, flow, tasks, receipts, *, expected_deployment, obs
     connection.set_progress_handler(budget, 1000)
     try:
         return _from_snapshot(connection, flow, tasks, receipts,
-                              expected_deployment=expected_deployment, observed_at=observed_at)
+                              expected_deployment=expected_deployment, observed_at=observed_at, stable_identity=stable_identity)
     except InvalidEvidence:
         raise
     except (sqlite3.Error, ValueError, TypeError, KeyError, AttributeError, OverflowError):

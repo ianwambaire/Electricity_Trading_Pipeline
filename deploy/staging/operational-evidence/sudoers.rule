@@ -1,0 +1,2 @@
+# Proposal only; no installation or new privileges authorized.
+ec2-user ALL=(root) NOPASSWD: NOSETENV: sha256:45f78307a60a988b111a67a5d27bad80c1ad5df6c073cd47daa6b8f69d71261a /usr/local/sbin/powerflow-publish-operations ^--flow-run [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} --state [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$

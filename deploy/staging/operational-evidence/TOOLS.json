@@ -1,0 +1,9 @@
+{
+  "bootstrap.py": "fc062219206415c5394fe2817b99e49f62cfe106943e5094f5bc80d100735545",
+  "shared/__init__.py": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
+  "shared/forecast_publication.py": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902",
+  "shared/operational_capture.py": "b2e59812b56ec42e58b374a73f5c9ad14d0e0ae6a5bbfa515777a8b73e024910",
+  "shared/operational_evidence.py": "9338a4e5062362d5ab1c754a994e5b56b31b6ed96e398f1b40ee9df650b53b29",
+  "shared/operational_evidence_producer.py": "c4969093ad6b8361c11d96b194c00098cb42f87ef78ebba5c0cdeed82dab582c",
+  "shared/operational_evidence_store.py": "d7df9672d83794df1f0d2bc5ef3b435025ddcbc7af2b5907f443ddc327aa7a47"
+}

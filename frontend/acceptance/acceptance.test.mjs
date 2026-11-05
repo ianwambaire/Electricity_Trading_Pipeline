@@ -197,7 +197,11 @@ for(const scenario of ['success','withheld','owner-not-ready','launch-fails','wr
     for(const [i,s] of [process.stdin,process.stdout].entries())descriptors[i]?Object.defineProperty(s,'isTTY',descriptors[i]):delete s.isTTY;
   });
   const surface=fakeSurface();let mockLaunches=0,closes=0;
-  surface.page.goto=async()=>surface.handlers.response(response('/api/auth/me',{role:scenario==='wrong-identity'?'Admin':'Analyst'}));
+  surface.page.url=()=>ORIGIN+'/forecasting';
+  surface.page.goto=async()=>{
+    surface.handlers.response(response('/api/auth/me',{role:scenario==='wrong-identity'?'Admin':'Analyst'}));
+    return {status:()=>200};
+  };
   Object.assign(surface.context,{newPage:async()=>surface.page,setDefaultTimeout(){},setDefaultNavigationTimeout(){}});
   const browser={newContext:async options=>{assert.equal(options,CONTEXT);return surface.context;},close:async()=>closes++};
   const load=async()=>({chromium:{launch:async options=>{

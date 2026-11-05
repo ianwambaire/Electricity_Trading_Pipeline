@@ -54,27 +54,46 @@ export function createMonitor({onFatal=()=>{}}={}) {
     acceptance(){phase='acceptance';records.clear();},
     reset(ids){for(const id of ids) records.delete(id);},
     waitRequired,
-    async install(context,page) {
-      await context.route('**/*',route=>(async()=>{
+    async install(context,page,{setup}={}) {
+      const run=setup?(step,fn)=>setup.run(step,fn):async(step,fn)=>fn();
+      await run('INSTALL_REQUEST_GUARD',()=>context.route('**/*',route=>(async()=>{
         event();const request=route.request(),decision=policy(request.url(),request.method(),phase);
         if(!decision.allow) {
           diagnostics.blockedRequests++;if(decision.code==='APPLICATION_MUTATION_BLOCKED') diagnostics.blockedMutations++;
+          setup?.rejectPolicy(decision.code,request.url(),Boolean(request.redirectedFrom?.()));
           fail(decision.code);await route.abort('blockedbyclient');return;
         }
         // No headers(), postData(), credentials, URLs or bodies are logged.
         await route.continue();
-      })().catch(()=>fail('REQUEST_GUARD_FAILED')));
-      await context.routeWebSocket('**/*',ws=>{fail('WEBSOCKET_NOT_APPROVED');void ws.close().catch(()=>{});});
-      context.on('page',popup=>{if(popup!==page){fail('POPUP_NOT_APPROVED');void popup.close().catch(()=>{});}});
-      page.on('response',r=>{void response(r).catch(error=>fail(error instanceof AcceptanceError?error.code:'API_CAPTURE_FAILED'));});
+      })().catch(()=>fail('REQUEST_GUARD_FAILED'))));
+      await run('INSTALL_WEBSOCKET_GUARD',()=>context.routeWebSocket('**/*',ws=>{
+        setup?.rejectPolicy('WEBSOCKET_NOT_APPROVED','');fail('WEBSOCKET_NOT_APPROVED');void ws.close().catch(()=>{});
+      }));
+      await run('INSTALL_EVENT_MONITOR',async()=>{
+      context.on('page',popup=>{if(popup!==page){setup?.rejectPolicy('POPUP_NOT_APPROVED','');fail('POPUP_NOT_APPROVED');void popup.close().catch(()=>{});}});
+      page.on('close',()=>setup?.closed());
+      function mainNavigation(request) {
+        try {return request?.isNavigationRequest?.()&&request.frame()===page.mainFrame();}
+        catch {fail('BROWSER_EVENT_MONITOR_FAILED');return false;}
+      }
+      page.on('response',r=>{
+        try {
+          if(mainNavigation(r.request?.()))setup?.navigationResponse(r.status(),r.url(),Boolean(r.request().redirectedFrom?.()));
+        } catch {fail('BROWSER_EVENT_MONITOR_FAILED');}
+        void response(r).catch(error=>fail(error instanceof AcceptanceError?error.code:'API_CAPTURE_FAILED'));
+      });
       page.on('console',msg=>{event();if(msg.type()==='error' && phase==='acceptance') diagnostics.consoleErrors++;});
       page.on('pageerror',()=>{event();if(phase==='acceptance') diagnostics.pageErrors++;});
       page.on('requestfailed',request=>{
+        try {
+          if(mainNavigation(request))setup?.requestFailed(request.failure()?.errorText,request.url());
+        } catch {fail('BROWSER_EVENT_MONITOR_FAILED');}
         event();if(phase!=='acceptance' || safeId(request.url())==='REDACTED_RESOURCE')return;
         if(request.failure()?.errorText==='net::ERR_ABORTED')diagnostics.cancelledRequests++;
         else diagnostics.unexpectedNetworkFailures++;
       });
-      page.on('download',d=>{fail('DOWNLOAD_NOT_APPROVED');void d.cancel().catch(()=>{});});
+      page.on('download',d=>{setup?.rejectPolicy('DOWNLOAD_NOT_APPROVED','');fail('DOWNLOAD_NOT_APPROVED');void d.cancel().catch(()=>{});});
+      });
     }
   };
 }

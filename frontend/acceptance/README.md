@@ -235,3 +235,83 @@ Command Line Tools; it does not install anything or invoke a browser/network API
 The future acceptance command above is unchanged. Corrected source must be
 manually reviewed/committed and separately authorized before another real run.
 No acceptance retry, Chrome launch or staging request occurred during this fix.
+
+## Setup-substep diagnostics (local preparation after the November 4 attempt)
+
+Historical evidence: 2026-11-04 17:58:45–17:59:09 UTC returned
+BROWSER_STEP_UNVERIFIED in the coarse BROWSER_LAUNCH phase. Seven monitor events,
+zero blocked requests, no sign-in, and no other retained files were available.
+That report contains neither a substep nor exception/transport metadata. It cannot
+establish the original exception or its cause. Active monitoring narrows the
+candidate sequence but is not proof of a particular timeout, TLS or policy fault.
+The original assessment is preserved unchanged.
+
+The instrumented sequence is now:
+
+1. LOAD_PLAYWRIGHT (import the checked external library).
+2. LAUNCH_BROWSER (same executable/options and 20-second launch bound).
+3. INSTALL_BROWSER_MONITOR (disconnection event).
+4. CREATE_CONTEXT (same isolated context).
+5. CONFIGURE_TIMEOUTS (same 20-second action/navigation limits).
+6. CREATE_PAGE.
+7. INSTALL_REQUEST_GUARD (same read-only HTTP allowlist).
+8. INSTALL_WEBSOCKET_GUARD (same deny policy).
+9. INSTALL_EVENT_MONITOR (responses/failures, console, close and other events).
+10. INITIAL_NAVIGATION (same /forecasting and waitUntil=domcontentloaded).
+11. OWNER_SIGN_IN and VERIFY_ANALYST.
+12. ACCEPTANCE_CHECKS, then COMPLETE.
+
+A structured setup field records only step, lastCompleted, category, networkCode,
+resource class, main-navigation httpStatus, redirected/closed booleans and a fixed
+policy reason. Failed steps are never marked complete. Deliberate browser cleanup
+cannot overwrite the failure with a spurious closure or late network event.
+Sanitization reconstructs fields from exact enums; no input URL, arbitrary error
+name/code, raw message, stack, headers, body or environment is serialized.
+
+Categories distinguish Playwright import, executable launch, context/page creation,
+configuration, interception and event-monitor failure; navigation/other Playwright
+timeouts; DNS/network/TLS errors; unexpected redirects; request-policy rejection;
+staging/authentication document HTTP failure; browser/page closure; rule rejection;
+and unknown Playwright exceptions. Only listed Chromium net::ERR_* tokens and
+standard closure/timeout patterns are inspected transiently. Unknown error text is
+not retained. Public resource classes replace URLs, including authentication URLs
+with authorization-code/state query parameters.
+
+During initial navigation, the observer records only main-document HTTP status,
+known target class and redirect association, or a fixed main-navigation failure
+code. The navigation completion also requires a response, a permitted initial
+staging/auth target and a non-error document status. An initial HTML HTTP 503 is
+STAGING_HTTP_FAILURE, separate from the existing forecast API 503 withholding
+contract. Unknown redirects remain blocked; the code does not follow an expanded
+origin allowlist. A first recorded guard failure takes precedence over a later
+abort/timeout, so REQUEST_POLICY_REJECTED retains its specific fixed reason.
+
+Policy review found no locally demonstrated mismatch for the initial staging URL,
+bundled JS/CSS/fonts, public Cognito issuer metadata or the approved native Cognito
+login redirect. The frontend starts sign-in only on the owner's button action.
+The public frontend .env.example confirms the same approved hosted origin. No
+private .env or authentication data was read. The HTTP policy function remains
+byte-identical (SHA-256
+3925e4721235642ce04882299f001c21c872952128d5abc1728f9499e9aa736b).
+The rejection of unapproved origins, paths, asset queries, account mutations and
+non-native authentication remains intentional; a future rejection is evidence to
+review, not permission to widen the policy automatically.
+
+Validation: 112 offline tests passed (53 acceptance, 19 environment, 40 setup).
+Setup mocks fail each operation once, retain its last completed step and verify
+single launch/no retry. Cases cover transport/TLS tokens, navigation timeout,
+closures, document HTTP 503, allowed Cognito redirect, blocked foreign redirect,
+policy-vs-timeout precedence, observer errors, server role failure and unknown
+errors containing synthetic private URLs/tokens. Tests verify redaction and the
+unchanged read-only policy, environment guard and tool bindings. Only mock browser
+objects and local fixtures are used; existing native environment fixtures launch
+no browser and make no network requests. Actual live cause remains UNVERIFIED.
+
+```sh
+node --test --test-reporter=dot frontend/acceptance/acceptance.test.mjs frontend/acceptance/environment.test.mjs frontend/acceptance/setup.test.mjs
+```
+
+The future launch command and all authentication, resource, evidence and timeout
+restrictions are unchanged. Manual review/commit and a new explicit one-attempt
+authorization are required before execution. No browser retry, staging request or
+source-policy workaround was performed during this preparation.

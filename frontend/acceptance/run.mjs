@@ -11,6 +11,7 @@ import {AcceptanceError,requireThat,ORIGIN,START,LIMITS,safeReport,FAILURE_CODES
 import {checkTooling,PROJECT} from './tooling.mjs';
 import {createMonitor,runChecks} from './browser.mjs';
 import {assertCleanEnvironment,environmentKeyReport} from './environment.mjs';
+import {createSetupDiagnostic} from './setup-diagnostics.mjs';
 const exec=promisify(execFile);
 export const EVIDENCE=path.join(PROJECT,'data/backups/private-staging-browser-acceptance');
 
@@ -49,24 +50,32 @@ export async function accept({tools,load=spec=>import(spec),prompt=ownerReady,ev
   const folder=await evidence();
   const result={status:'BLOCKED',phase:'BROWSER_LAUNCH',startedAt:new Date().toISOString(),finishedAt:null,origin:ORIGIN,
     browser:'Chrome for Testing 149.0.7827.55',session:'UNVERIFIED',results:[],operations:[],screenshots:[],diagnostics:{},failure:null};
+  const setup=createSetupDiagnostic();
   let browser,context,timer,monitor;
   const abort=new AbortController();
   try {
-    const {chromium}=await load(pathToFileURL(tool.library).href);
-    try {browser=await chromium.launch(launchOptions(tool));} catch {throw new AcceptanceError('BROWSER_LAUNCH_FAILED');}
+    const {chromium}=await setup.run('LOAD_PLAYWRIGHT',()=>load(pathToFileURL(tool.library).href));
+    browser=await setup.run('LAUNCH_BROWSER',()=>chromium.launch(launchOptions(tool)));
+    await setup.run('INSTALL_BROWSER_MONITOR',async()=>{browser.on?.('disconnected',()=>setup.closed());});
     timer=setTimeout(()=>{abort.abort(new AcceptanceError('RUN_DEADLINE'));void browser.close();},LIMITS.runMs);
-    context=await browser.newContext(CONTEXT);
-    context.setDefaultTimeout(LIMITS.actionMs);context.setDefaultNavigationTimeout(LIMITS.actionMs);
-    const page=await context.newPage();
+    context=await setup.run('CREATE_CONTEXT',()=>browser.newContext(CONTEXT));
+    await setup.run('CONFIGURE_TIMEOUTS',async()=>{context.setDefaultTimeout(LIMITS.actionMs);context.setDefaultNavigationTimeout(LIMITS.actionMs);});
+    const page=await setup.run('CREATE_PAGE',()=>context.newPage());
     monitor=createMonitor({onFatal:code=>abort.abort(new AcceptanceError(code))});
-    await monitor.install(context,page);
-    await page.goto(START,{waitUntil:'domcontentloaded'});
+    await monitor.install(context,page,{setup});
+    await setup.run('INITIAL_NAVIGATION',async()=>{
+      setup.navigationResponse(null,START);
+      const response=await page.goto(START,{waitUntil:'domcontentloaded'});
+      monitor.assertSafe();setup.finishNavigation(response,page.url());
+    });
     result.phase='OWNER_SIGN_IN';
     const loginTimer=setTimeout(()=>abort.abort(new AcceptanceError('OWNER_LOGIN_TIMEOUT')),LIMITS.loginMs);
-    try {await prompt(abort.signal);} catch(error) {throw abort.signal.aborted?abort.signal.reason:error;}
+    try {await setup.run('OWNER_SIGN_IN',()=>prompt(abort.signal));} catch(error) {throw abort.signal.aborted?abort.signal.reason:error;}
     finally {clearTimeout(loginTimer);}
-    await monitor.waitRequired(['/api/auth/me']);monitor.assertSafe();
-    requireThat(monitor.records.get('/api/auth/me').body.role==='Analyst','ANALYST_SESSION_REQUIRED');
+    await setup.run('VERIFY_ANALYST',async()=>{
+      await monitor.waitRequired(['/api/auth/me']);monitor.assertSafe();
+      requireThat(monitor.records.get('/api/auth/me').body.role==='Analyst','ANALYST_SESSION_REQUIRED');
+    });
     result.session='SERVER_VERIFIED_ANALYST';monitor.acceptance();
     const writeImage=async(locator,name,options={})=>{
       requireThat(/^(desktop|mobile-responsive)-(availability|forecast|operations)\.png$/.test(name),'UNEXPECTED_PAGE');
@@ -76,21 +85,28 @@ export async function accept({tools,load=spec=>import(spec),prompt=ownerReady,ev
       requireThat(image.length<=5_000_000,'BROWSER_STEP_UNVERIFIED');
       await fs.writeFile(path.join(folder,name),image,{flag:'wx',mode:0o600});
     };
-    Object.assign(result,await checks(page,monitor,{writeImage,progress:result}));
+    Object.assign(result,await setup.run('ACCEPTANCE_CHECKS',()=>checks(page,monitor,{writeImage,progress:result})));
     requireThat(['desktop','mobile-responsive'].every(name=>result.results.some(r=>r.viewport.name===name)
       &&result.operations.some(r=>r.viewport===name)),'INCOMPLETE_VIEWPORT_ACCEPTANCE');
     result.status=result.results.every(x=>x.liveRendering==='OBSERVED')?'PASS':'PARTIAL';
     result.phase='COMPLETE';
+    await setup.run('COMPLETE',async()=>{});
   } catch(error) {
+    // Prefer an already observed fixed guard cause over its later abort/timeout.
+    try {monitor?.assertSafe();} catch(guardError) {error=guardError;}
+    result.setup=setup.failure(error,error instanceof AcceptanceError);
     result.failure=sanitizedFailure(error);
+    if(result.failure==='BROWSER_STEP_UNVERIFIED')result.failure=result.setup.category;
     result.status=result.failure==='FRESHNESS_BOUNDARY_DURING_CHECK'?'PARTIAL':result.session==='UNVERIFIED'?'BLOCKED':
       /(?:SESSION|OWNER_LOGIN|LAUNCH|TOOL|EVIDENCE|TTY|ENV|UNAPPROVED|BODY_BOUND_UNVERIFIED|BODY_ENCODING_UNVERIFIED)/.test(result.failure)?'BLOCKED':'FAIL';
   } finally {
     clearTimeout(timer);
+    setup.cleanup();
     // No storageState(), tracing, HAR, video, cookie API, token reads or profile reuse.
     if(browser)await browser.close().catch(()=>{});
     result.finishedAt=new Date().toISOString();
     result.diagnostics=monitor?.diagnostics??{};
+    result.setup=setup.snapshot();
     await fs.writeFile(path.join(folder,'assessment.json'),JSON.stringify(safeReport(result),null,2)+'\n',{flag:'wx',mode:0o600});
   }
   return {report:safeReport(result),evidence:folder};

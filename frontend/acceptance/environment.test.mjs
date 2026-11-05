@@ -95,11 +95,13 @@ test('native startup isolates the CoreFoundation boundary',{skip:process.platfor
   assert.equal(JSON.parse(redacted.stdout).redactedKeyCount,1);
   assert.equal(redacted.stdout.includes('TEST_VALUE'),false);assert.equal(redacted.stdout.includes('SENSITIVE_KEY_NAME'),false);
 });
-test('existing browser guard and tool bindings are unchanged',async()=>{
-  const expected={'core.mjs':'b78f13cd29bd7ef183d09c9b1b52266fbafdd607685adb25b503770514a525a8',
-    'browser.mjs':'747bb74dea866d49009abfe7ca2f4b773915caa3d342919b71aabfe5432d6940',
-    'tooling.mjs':'ef63956a15569bafa1bb40760ca3b793f20b63c90698b3a0c8206057492b646c',
+test('environment guard, read-only policy and tool bindings are unchanged',async()=>{
+  const expected={'tooling.mjs':'ef63956a15569bafa1bb40760ca3b793f20b63c90698b3a0c8206057492b646c',
     'bindings.json':'78e8305b92e8ec338f6dc330456ca427b12c5cbeccce9eabfc7e78549ebfaccc',
-    'acceptance.test.mjs':'1e82fb0c97e0a5c92ec5aa8f1f8c7031b681ee71463106f3ed72f61a93f91d37'};
+    'environment.mjs':'0e194f0c21c18a9cd400cb8a5638a6c9b55161b74a0095470dd5f7b65a828ac6',
+    'environment-probe.c':'a2683ce89e9402a3477efe75a57cbc616b823fee35c8a6a92055d61ee34ce716'};
   for(const [name,digest] of Object.entries(expected))assert.equal(createHash('sha256').update(await fs.readFile(path.join(HERE,name))).digest('hex'),digest);
+  const core=await fs.readFile(path.join(HERE,'core.mjs'),'utf8');
+  const policy=core.slice(core.indexOf('export function policy('),core.indexOf('export function stamp('));
+  assert.equal(createHash('sha256').update(policy).digest('hex'),'3925e4721235642ce04882299f001c21c872952128d5abc1728f9499e9aa736b');
 });

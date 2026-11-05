@@ -1,3 +1,4 @@
+import {CurrentOperationsProvider} from './operations/CurrentOperationsProvider'
 import { ProtectedRoutes, AuthCallbackPage } from './auth/ProtectedRoutes'
 import { Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
@@ -17,7 +18,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ defa
 // Shared route tree for the authenticated application and isolated UI tests.
 // Production entry always reaches it through ProtectedRoutes below.
 export function WorkspaceRoutes() {
-  return <Routes><Route element={<AppLayout />}>
+  return <CurrentOperationsProvider><Routes><Route element={<AppLayout />}>
     <Route index element={<MarketOverview />} />
     <Route path="forecasting" element={<ForecastingPage />} />
     <Route path="anomalies" element={<AnomaliesPage />} />
@@ -26,7 +27,7 @@ export function WorkspaceRoutes() {
     <Route path="models" element={<ModelsPage />} />
     <Route path="profile" element={<ProfilePage />} />
     <Route path="*" element={<NotFoundPage />} />
-  </Route></Routes>
+  </Route></Routes></CurrentOperationsProvider>
 }
 
 export default function App() {

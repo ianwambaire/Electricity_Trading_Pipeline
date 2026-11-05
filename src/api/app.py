@@ -55,11 +55,13 @@ class APISettings:
     public_metadata_root: Path | None = None
     anomaly_report: Path | None = None
     next24_publication_root: Path | None = None
+    operational_publication_root: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "APISettings":
         root = Path(root)
         return cls(
+            operational_publication_root=Path(os.environ["POWERFLOW_OPERATIONAL_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_OPERATIONAL_PUBLICATION_ROOT") else None,
             next24_publication_root=Path(os.environ["POWERFLOW_FORECAST_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_FORECAST_PUBLICATION_ROOT") else None,
             market_silver=root / "data/processed/silver_electricity_market_data.csv",
             public_metadata_root=root,
@@ -449,7 +451,7 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
             timestamp_utc=datetime.now(timezone.utc),
         )
 
-    @application.get("/pipeline/status", response_model=PipelineStatusResponse)
+    @application.get("/pipeline/status", response_model=PipelineStatusResponse, summary="Historical pipeline snapshot")
     def pipeline_status() -> PipelineStatusResponse:
         return _latest_pipeline_status(configured.operational_database)
 
@@ -517,6 +519,17 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
             raise HTTPException(422, detail='Demand charts require at least six points.')
         return market_chart(market_store, start, end, max_points, series)
 
+    from .current_operations import current_selection
+
+    @application.get('/operations/current', tags=['Current operational evidence'])
+    @application.get('/pipeline/current', tags=['Current operational evidence'])
+    def public_current_operations(request: Request):
+        return current_selection(request, configured.operational_publication_root)
+
+    @application.get('/admin/operations/current', dependencies=[Depends(require_admin)], tags=['Admin reports'])
+    def admin_current_operations(request: Request):
+        return current_selection(request, configured.operational_publication_root, admin=True)
+
     @application.get("/operations/summary", response_model=OperationsSummary)
     def public_operations_summary():
         if configured.next24_publication_root is not None:
@@ -558,7 +571,7 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     def realized_evaluation_route():
         return realized_evaluation(configured.public_metadata_root)
 
-    @application.get("/admin/operations", response_model=AdminOperations,
+    @application.get("/admin/operations", response_model=AdminOperations, summary="Historical administrative operations",
                      dependencies=[Depends(require_admin)], tags=["Admin reports"])
     def admin_operations_route():
         return admin_operations(configured.operational_database)

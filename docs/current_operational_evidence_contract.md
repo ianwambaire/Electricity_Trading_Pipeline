@@ -1,7 +1,7 @@
 # Current operational evidence — checkpoint 1
 
-Status: local contract and offline store tests only. No live producer, API switch,
-privilege rule, deployment package or authorization is introduced here. Existing
+Status: checkpoint 1 contract plus checkpoint 2 local association/API/React integration.
+No live producer activation, privilege rule, deployment package or authorization is introduced here. Existing
 forecast validators, expiry, automatic delivery and immutable releases are unchanged.
 The two new modules use only Python's standard library (Unix store uses flock).
 
@@ -106,48 +106,104 @@ hash, revalidates complete content AND operational freshness under the same lock
 and atomically switches the regular pointer. Expired evidence cannot be restored as current. This is
 an offline library primitive, not authorization to run recovery on EC2.
 
-## Producer integration — next checkpoint, not implemented
+## Checkpoint 2 producer integration (local only)
 
-Extend the existing natural scheduled pipeline finalization/completion lifecycle.
-Use actual Prefect scheduled origin/deployment/flow/task metadata, internal pipeline
-UUID and its committed summary, matching incident (if any), receipt and delivery
-outcome. Reuse the reviewed association/receipt checks; do not merely trust a flag
-or accept arbitrary caller IDs. Actual flow completion must already be recorded;
-a callback before that fact is persisted must report missing evidence rather than
-substitute its own wall clock. Confirm the exact Prefect lifecycle hook offline
-before deployment. Include failure outcomes when persisted; inability to publish
-operational evidence must not rewrite inference success or fail a successful run.
-No new scheduler, forecast execution or publication attempt is needed.
+`shared.operational_evidence_producer` now provides latest_natural, associate and
+from_snapshot. These functions do not call Prefect, open files, import model
+execution, invoke the publisher or change pipeline behavior. They accept already
+authenticated/bounded Prefect responses and committed receipt bytes from a trusted
+producer, not HTTP arguments. Source capture and lifecycle invocation remain the
+next separately reviewed boundary. No new scheduler is introduced.
 
-No producer extractor is implemented in this checkpoint: the contract validates
-relationships, not live Prefect authenticity. Restricted publisher privilege design,
-source association, dependency binding and Linux identity tests remain prerequisites.
+Latest natural selection requires the expected deployment, auto_scheduled=True,
+canonical IDs and the verified hourly :45 schedule. It does not substitute an
+older completed execution if the latest observed due natural execution is still
+running or incomplete. Actual start and completion times must exist; missing or
+conflicting evidence fails closed, never using callback wall clock as completion.
 
-## Consumer integration — next checkpoint, not implemented
+A unique forecast task (including its actual Prefect-generated name suffix) maps
+to exactly one persisted Next24h forecast generation stage within the existing
+reviewed two-second timestamp tolerance. Its internal UUID selects exactly one
+pipeline summary. Task/flow intervals, pipeline summary status and generated flag,
+issue time and persisted stage outcome must agree. For early failure before a
+forecast task, a unique Total pipeline stage and failed summary are required;
+unknown forecasting/delivery outcomes stay UNKNOWN, not successful or NOT_RUN by
+assumption. Cancelled/crashed executions without persisted summary/times cannot
+currently be associated and remain explicitly unverified.
 
-Introduce one configured operational-root selector shared by all three API readers.
-Resolve one selection per request and expose identical evidence_id, observed_at,
-scheduled_at and evidence status. Public projection contains only execution times,
-execution/inference/delivery outcomes and fixed provenance. Admin projection adds
-IDs and recognized incident detail ONLY behind the existing require_admin guard.
-The admin=True library parameter is not authorization and must never come directly
-from an HTTP query. Selection/projection schema allows offline role-separation tests.
+Generated outcomes require one matching five-artifact committed receipt with its
+reciprocal integrity manifest. The adapter reuses verify_inference_receipt and the
+existing full 31-feature/24-target forecast validator. A small in-memory assembly
+mirrors the existing builder's wire format without invoking its file-writing CLI
+or changing preserved deployment tools. Expired receipt structure can establish
+historical inference/delivery facts; it cannot establish live forecast availability.
+Raw features/market data never enter the operational publication. The persisted
+PUBLISHED outcome and exact task order are required; no active-pointer or API
+availability inference is made here. Exact published_at remains null because it
+is not persisted by the current publisher.
 
-Executive Overview and Pipeline Operations should consume that same public object;
-Admin Operations consumes the same selection plus Admin fields. Across separate
-requests a publication can change: compare evidence_id and refetch rather than mix
-IDs. Current execution fields must be blank/unavailable for non-VALID evidence.
-Old SQLite history/timings may remain in a distinctly named historical section,
-never used to fill current fields. V1 includes the latest execution only; it cannot
-invent last-success time, source watermarks, quality checks, full run history,
-incidents or timings. Those remain explicitly unavailable or historical until
-separately supported. Forecast availability stays sourced from select_publication,
-not inference/delivery history. Existing live forecast schema/expiry stays intact.
+WITHHELD needs a matching internal stage/summary and a real withholding timestamp.
+When a matching incident exists, its UUID, timestamp, status and source-watermark
+summary must agree. Only recognized fixed reason/gate categories are emitted;
+unrecognized detail becomes UNKNOWN, absent detail remains null. Duplicate or
+inconsistent incidents fail closed. Missing or unrecognized delivery status is
+explicit UNKNOWN or a rejected inconsistency; no successful outcome is invented.
 
-No active API response schema or frontend behavior changes in this checkpoint.
-Existing role checks and historical routes are unchanged. The next checkpoint must
-add API integration and tests proving the configured current path never falls back,
-then update React consumers with type/schema tests. No deployment before review.
+from_snapshot executes fixed bounded SELECTs only on a caller-owned query_only
+connection with an active read transaction. It does not open or mount the writable
+production database or accept an arbitrary query. The dedicated connection gets a two-second SQL progress budget (checked every
+1000 SQLite VM instructions; callback budget also bounded), cleared on exit. The
+producer's future capture layer must supply a consistent snapshot with existing
+journal/no-follow/ownership protections and a bounded connection timeout. API modules never import this
+producer or receive its connection. A hash authenticates bytes, not their origin;
+trusted source capture and restricted root-owned store access remain prerequisites.
+
+## Checkpoint 2 shared API and React consumers (local only)
+
+Optional configuration: POWERFLOW_OPERATIONAL_PUBLICATION_ROOT, proposed separate
+root /srv/powerflow/operational-publications. If unset, current evidence is MISSING.
+No provisioned path or permission is changed by this code. Existing historical root
+and forecast publication configuration/validators remain unchanged.
+
+- GET /operations/current and GET /pipeline/current share current_selection.
+- GET /admin/operations/current uses the same selection and existing require_admin.
+- Each request reads the immutable store once, with shared projection and fixed
+  public-field allowlist. Public projection omits IDs and detailed gate evidence.
+  Admin/Analyst/anonymous boundaries and no-store are tested.
+- VALID/STALE/MISSING/INVALID remain distinct. Current fields are null for every
+  non-VALID result. No current endpoint consults SQLite, even when the root is
+  missing, unconfigured or corrupt. No historical fallback parameter exists.
+- Existing /operations/summary, /pipeline/status and /admin/operations are retained
+  as historical sources. React labels their execution fields and history as such.
+  The old Operations summary's forecast-publication overlay stays independent.
+
+One CurrentOperationsProvider inside the protected workspace polls the public
+endpoint, so Overview and Pipeline reuse the same response across navigation.
+Both pages show the same scheduled/start/completion times and separate execution,
+inference and delivery outcomes. Client-side operational cutoff also masks current
+fields without waiting for another response. Admin association details are fetched
+only in the server-confirmed Admin branch and displayed only when evidence_id and
+current execution match the public response and remain fresh. Version mismatches
+show an explicit refresh message rather than mixing IDs/times. Separate HTTP
+requests are not globally atomic; hash comparison handles a legitimate intervening
+pointer switch. No identity-provider or role changes are introduced.
+
+V1 is latest execution only: it does not invent latest-success history, source
+watermarks, quality checks, full history or measured durations. These stay in
+clearly historical sections until separately supported. Existing next24 selection,
+expiry, chart inputs and forecast API behavior are unchanged. PUBLISHED never
+changes operational forecast_eligibility from NOT_ASSESSED.
+
+## Remaining activation boundary
+
+The adapter and consumers are connected in offline tests. No live Prefect hook,
+source-reader transport, privileged operational writer launcher or publication
+activation is installed/enabled. Next checkpoint should implement/test the terminal
+Prefect lifecycle capture and restricted delivery boundary: actual flow end must
+already be persisted, all source IDs/artifacts independently verified, and evidence
+publication failure must not rewrite inference success. Reuse the current scheduler
+and trusted publication lifecycle. Linux namespace/group992 access, ownership,
+lock/durability semantics, deployment hashes and rollback require later review.
 
 ## Offline validation
 
@@ -162,3 +218,13 @@ post-switch sync failure, explicit recovery and unchanged forecast-store bytes.
 Python 3.9 grammar checks passed; no Python 3.9 execution was available. Linux
 UID/GID 992, service mount namespace, ACL, durability and privileged installation
 behavior remain unverified. No network, database, Prefect or model calls were made.
+
+Checkpoint 2 final offline validation (Python 3.14.7/macOS, Node/JSDOM): 345
+selected Python cases passed, including 51 new producer/API integration cases;
+113 frontend tests passed, including 11 new current-evidence cases. ESLint,
+TypeScript checking and Vite production build passed. New Python source/test
+Python 3.9 grammar checks passed (not Python 3.9 execution). Synthetic end-to-end
+coverage associates persisted records, activates only a temporary fixture store,
+and reads identical public/Pipeline/Admin evidence; existing forecast publication
+and authorization regressions remain passing. No browser/live API acceptance,
+remote configuration check, operational activation or production mutation occurred.

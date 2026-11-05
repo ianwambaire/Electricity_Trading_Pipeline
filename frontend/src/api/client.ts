@@ -1,3 +1,4 @@
+import {parseCurrentOperations} from './currentOperations.ts'
 import { parseProfile, parseAccountAction, accountErrorMessages } from './profile.ts'
 import { parseMfaSetup, parseMfaAction } from './mfa.ts'
 import { parseInfluence, parseContext, parseExploration, parseRealized, parseAdminOperations, parsePriceComparison, parseForecastProvenance } from './parity.ts'
@@ -44,6 +45,8 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
 }
 
 export const api = {
+  currentOperations: (signal?:AbortSignal) => request('/operations/current', value=>parseCurrentOperations(value), signal),
+  currentAdminOperations: (signal?:AbortSignal) => request('/admin/operations/current', value=>parseCurrentOperations(value,true), signal),
   startMfa: (signal?: AbortSignal) => request('/account/mfa/setup', parseMfaSetup, signal, {method:'POST'}),
   verifyMfa: (setup_ticket:string, code:string, signal?: AbortSignal) => request('/account/mfa/verify', parseMfaAction, signal, {method:'POST',body:{setup_ticket,code}}),
   cancelMfa: (setup_ticket:string, signal?: AbortSignal) => request('/account/mfa/cancel', parseMfaAction, signal, {method:'POST',body:{setup_ticket}}),

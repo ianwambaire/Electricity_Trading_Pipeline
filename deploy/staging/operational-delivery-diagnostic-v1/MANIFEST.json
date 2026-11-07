@@ -1,0 +1,18 @@
+{
+  "files": {
+    "REVIEW.md": "c2b0fc3c46befa6a31c95ecf087bc9553f97d4d0d9207077290f4aab49454747",
+    "inspect.py": "46f1f58024f4514e87a650a9eb4a2503836b43ba27452ab7f5d6424d2140d3b8",
+    "payload.py": "448a48edfa64254edc551d7b16292235b7c0a42ad1683bbd276eaa9bce0578f7",
+    "run.py": "44937a3788a52884c6a8bacb70fb207a341152d1ebf770d460b577b8fad2e9e9"
+  },
+  "limits": {
+    "grace_seconds": 5,
+    "local_seconds": 150,
+    "remote_seconds": 90,
+    "ssh_attempts": 1
+  },
+  "read_only": true,
+  "slot": "2026-11-07T08:45:00+00:00",
+  "v5_manifest": "cdd828defc52ea258852b88aa852d1d470ca915d098021d6ff8fd2be9b05223b",
+  "version": 1
+}

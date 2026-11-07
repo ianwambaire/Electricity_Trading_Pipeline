@@ -1,0 +1,15 @@
+{
+  "baseline_producer_sha256": "c4969093ad6b8361c11d96b194c00098cb42f87ef78ebba5c0cdeed82dab582c",
+  "baseline_v5_manifest_sha256": "cdd828defc52ea258852b88aa852d1d470ca915d098021d6ff8fd2be9b05223b",
+  "diagnostic_manifest_sha256": "46033814c6c997cff4ce916f22983c380009d1bfacc578edf017516eefdbc754",
+  "execution_authorized": false,
+  "files": {
+    "deploy/staging/operational-capture-correction-v1/CHANGE.patch": "e7e0ff9c55589a28384f73d686955e0d52c106efcc5ed1be48945e77b108de07",
+    "deploy/staging/operational-capture-correction-v1/REVIEW.md": "1dd9df0766ffba2e593b737ef37a94d44771f13ff091520a92ae43dbca863f0d",
+    "deploy/staging/operational-capture-correction-v1/operational_evidence_producer.py": "f0e94ea827c76cdfbd84ad1eb686d65f490c52babd5bb15379c4d739e4dc7477",
+    "tests/test_operational_capture_correction.py": "59a8b3513cabc555eddfc21ec5a9683461b0537359723fda2b31090a8c916819"
+  },
+  "replaces_only": "shared/operational_evidence_producer.py",
+  "status": "LOCAL_CORRECTION_ONLY",
+  "version": 1
+}

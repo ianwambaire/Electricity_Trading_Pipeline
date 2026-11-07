@@ -1,0 +1,45 @@
+{
+  "config_gid": 0,
+  "config_mode": "0644",
+  "config_path": "/etc/nginx/conf.d/powerflow-staging-https.conf",
+  "config_sha256": "ba9cc88e8a9b8f9401a713ccc2289f1c4375aa734745a6bfdbb431ce240e96ba",
+  "config_uid": 0,
+  "direct_candidate_probe_limitation": "Used /api prefix; not evidence of proxy-stripped backend contract",
+  "inspection_utc": "2026-11-07T07:20:44.379716+00:00",
+  "main_config_sha256": "ddb11315ef7e5ddc1f409048895adc6b95d960ca29489e61340a6d14e3f8b35a",
+  "nginx_running": true,
+  "original_failed_endpoint": "NOT_RECORDED",
+  "previous_transaction": "321a9d8a1d7a483d923b84bc1917b0a9",
+  "proposed_config_sha256": "ee2549fd1196f5691fb60627dc75d408e9dbc858225383d198945e4597f6d7b7",
+  "routed_responses": {
+    "/api/admin/operations/current": {
+      "body_truncated": false,
+      "content_length": 146,
+      "content_type": "text/html",
+      "http_status": 404,
+      "measured_bytes": 146,
+      "sanitized_detail": "NGINX_HTML_NOT_FOUND",
+      "would_fail_http_content_type_guard": true
+    },
+    "/api/operations/current": {
+      "body_truncated": false,
+      "content_length": 146,
+      "content_type": "text/html",
+      "http_status": 404,
+      "measured_bytes": 146,
+      "sanitized_detail": "NGINX_HTML_NOT_FOUND",
+      "would_fail_http_content_type_guard": true
+    },
+    "/api/pipeline/current": {
+      "body_truncated": false,
+      "content_length": 146,
+      "content_type": "text/html",
+      "http_status": 404,
+      "measured_bytes": 146,
+      "sanitized_detail": "NGINX_HTML_NOT_FOUND",
+      "would_fail_http_content_type_guard": true
+    }
+  },
+  "syntax_validation": "DEFERRED_NO_VERIFIED_WRITE_FREE_NGINX_TEST",
+  "v4_rollback_status": "ROLLED_BACK"
+}

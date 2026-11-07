@@ -1,0 +1,12 @@
+{
+  "files": {
+    "prefect-3.7.5.dist-info/METADATA": "67847c90f7bd56da4ada3522db4ede4fc8013e4f1ab3ee1dd0be102e672e00ee",
+    "prefect/flow_engine.py": "164dcfb645740a664bff7611651cfe92afb52fc936995557ef23587d1c001f3f",
+    "prefect/workers/base.py": "703c596378c2679b26ef107f117a71bb17ba5c851d32a4343ab712362c04b1c6"
+  },
+  "metadata_url": "https://pypi.org/pypi/prefect/3.7.5/json",
+  "requires_python": "<3.15,>=3.10",
+  "version": "3.7.5",
+  "wheel_bytes": 14766992,
+  "wheel_sha256": "214837b7cb1e10f8fec59018253cd8ef65c8b394b7df29c511b645b0ff5e4478"
+}

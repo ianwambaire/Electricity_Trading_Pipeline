@@ -1,0 +1,6 @@
+{
+  "basis": "Independently reproduced committed predecessor; explicitly owner-approved for technical compatibility and the new release baseline only. Exact host equality remains mandatory.",
+  "git_commit": "436d7364fa07dae8d01d60bddfc78ef9d12022cd",
+  "historical_deployment_authorization_established": false,
+  "monitoring_sha256": "fb9fc1004c79e7888a9b762bfae73cdeec7038c025718dffb5cd21dfa8397bfd"
+}

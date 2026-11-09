@@ -177,6 +177,10 @@ def test_frozen_hgb_through_receipt_bundle_and_api(tmp_path,monkeypatch):
             'issue_time':data['publication']['issue_time'],'completed_at':data['publication']['completed_at']})
         assert evidence.status_code==200 and evidence.json()['provenance_evidence']=='available'
         clock[0]=(issue+pd.Timedelta(hours=3,microseconds=1)).to_pydatetime()
+        retained=client.get('/forecast/next24')
+        assert retained.status_code==200
+        assert retained.json()['forecasts']==response.json()['forecasts']
+        clock[0]=(issue+pd.Timedelta(hours=24)).to_pydatetime()
         expired=client.get('/forecast/next24')
         assert expired.status_code==503 and expired.json()=={'detail':{'code':'FORECAST_WITHHELD'}}
         assert 'no-store' in expired.headers['cache-control']

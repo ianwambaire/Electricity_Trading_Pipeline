@@ -14,7 +14,8 @@ test('fresh publication uses its own evidence instead of frozen historical pipel
 })
 test('expiry masks retained values and reports WITHHELD without waiting for another API poll',()=>{
  const state={data:parseNext24(fixture()),loading:false,error:null,receivedAt:'2026-01-05T10:00:00Z'}
- assert.equal(publicationState(state,issue+3*3600000).data,state.data)
+ assert.equal(publicationState(state,issue+3*3600000-1).data,state.data)
+ assert.equal(publicationState(state,issue+3*3600000).data,null)
  const expired=publicationState(state,issue+3*3600000+1)
  assert.equal(expired.data,null);assert.equal(expired.error?.code,'FORECAST_WITHHELD')
  assert.equal(classifyForecast(null,null,issue+4*3600000,expired.error?.code).label,'WITHHELD')

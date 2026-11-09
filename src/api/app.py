@@ -52,6 +52,7 @@ class APISettings:
     forecast_vintage_health: Path
     exogenous_readiness: Path
     market_silver: Path | None = None
+    realized_publication_root: Path | None = None
     public_metadata_root: Path | None = None
     anomaly_report: Path | None = None
     next24_publication_root: Path | None = None
@@ -108,6 +109,8 @@ class ForecastPublication(StrictResponseModel):
     issue_time: datetime
     expires_at: datetime
     completed_at: datetime
+    availability_policy: Literal['ISSUE_HORIZON_V1']
+    refresh_due_at: datetime
 
 
 class Next24ForecastResponse(StrictResponseModel):
@@ -345,6 +348,11 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     if settings is None and ((runtime.deployed and not data_root) or (data_root is not None and not Path(data_root).is_absolute())):
         raise ValueError('An absolute published data root is required for the deployed API')
     configured = settings or APISettings.from_root(Path(data_root) if data_root else PROJECT_ROOT)
+    realized_root=configured.realized_publication_root
+    if settings is None and os.environ.get('POWERFLOW_REALIZED_REPORT_ROOT'):
+        realized_root=Path(os.environ['POWERFLOW_REALIZED_REPORT_ROOT'])
+        if not realized_root.is_absolute() or '..'in realized_root.parts:raise ValueError('Invalid realized publication root')
+        if runtime.deployed and realized_root!=Path('/srv/powerflow/realized-performance'):raise ValueError('Unapproved realized publication root')
     market_store = MarketStore(configured.market_silver)
 
     @asynccontextmanager
@@ -461,10 +469,12 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         if configured.next24_publication_root is None:
             return _next24_report(configured.next24_forecast)
         from shared.forecast_publication import time as publication_time, MAX_AGE
+        from shared.forecast_availability import SERVING_HORIZON, AVAILABILITY_POLICY
         bundle = select_publication(configured.next24_publication_root).require_valid()
         issue = publication_time(bundle["forecasts"][0]["issue_time"])
         return Next24ForecastResponse(row_count=24, forecasts=bundle["forecasts"], publication=ForecastPublication(
-            status="VALID", issue_time=issue, expires_at=issue+MAX_AGE,
+            status="VALID", issue_time=issue, expires_at=issue+SERVING_HORIZON,
+            refresh_due_at=issue+MAX_AGE, availability_policy=AVAILABILITY_POLICY,
             completed_at=bundle["execution"]["completed_at"]))
 
     @application.get("/forecast/one-hour", response_model=OneHourForecastResponse)
@@ -569,6 +579,9 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
 
     @application.get("/forecast/realized-evaluation", response_model=RealizedEvaluation)
     def realized_evaluation_route():
+        if realized_root is not None:
+            from .realized_reporting import evaluation
+            return evaluation(realized_root)
         return realized_evaluation(configured.public_metadata_root)
 
     @application.get("/admin/operations", response_model=AdminOperations, summary="Historical administrative operations",

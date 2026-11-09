@@ -22,12 +22,13 @@ export function ForecastSummary({ report, pipeline, errorCode }: { errorCode?: s
       ['Model release', first.model_release], ['Issue time', formatTime(first.issue_time)],
       ...(visibleReport?.publication ? [
         ['Inference completed', formatTime(visibleReport.publication.completed_at)],
-        ['Freshness cutoff', formatTime(visibleReport.publication.expires_at)],
+        [visibleReport.publication.availability_policy ? 'Forecast horizon expiry' : 'Freshness cutoff', formatTime(visibleReport.publication.expires_at)],
+        ...(visibleReport.publication.refresh_due_at ? [['Refresh expected by',formatTime(visibleReport.publication.refresh_due_at)]] : []),
       ] as [string,string][] : []),
       ['Target start', formatTime(first.target_time)], ['Target end', formatTime(visibleReport!.forecasts.at(-1)!.target_time)],
-      ['Forecast rows', visibleReport!.row_count], ['Still future targets', visibleReport!.forecasts.filter(row => Date.parse(row.target_time) > now).length],
+      ['Forecast rows · full issued horizon', visibleReport!.row_count], ['Still future targets', visibleReport!.forecasts.filter(row => Date.parse(row.target_time) > now).length],
     ]} />}
-    {statistics && visibleReport && <><KpiGrid items={[
+    {statistics && visibleReport && <><p className="data-note">Statistics and export cover the full issued horizon, including elapsed targets. They are not a live-only next-24-hour summary.</p><KpiGrid items={[
       {label:'Average · EUR/MWh',value:numberLabel(statistics.average)}, {label:'Median · EUR/MWh',value:numberLabel(statistics.median)},
       {label:'Minimum · EUR/MWh',value:numberLabel(statistics.minimum.predicted_price_eur_mwh),note:formatTime(statistics.minimum.target_time)},
       {label:'Maximum · EUR/MWh',value:numberLabel(statistics.maximum.predicted_price_eur_mwh),note:formatTime(statistics.maximum.target_time)},

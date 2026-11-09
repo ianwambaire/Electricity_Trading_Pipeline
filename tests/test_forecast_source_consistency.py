@@ -14,6 +14,7 @@ from api.app import APISettings, create_app
 from api.operations_summary import unavailable_operations
 from api.security import CognitoVerifier, JwksCache
 import shared.forecast_publication as contract
+import shared.forecast_availability as availability
 from test_forecast_publication import fixture, encoded, ISSUE, NOW
 from test_api_security import SETTINGS, public, token, auth
 
@@ -51,11 +52,11 @@ def make_client(tmp_path, monkeypatch, signing, *, configured=True):
         'latest_success_time':ISSUE-timedelta(days=3),'forecast_status':'WITHHELD',
         'forecast_reason':'Historical withholding, not current publication evidence.'})
     monkeypatch.setattr(app_module,'operations_summary',lambda *_args,**_kwargs:snapshot)
-    real=contract.read_active;clock=[NOW];reads=[]
+    real=availability.read_active;clock=[NOW];reads=[]
     def read(directory):
         reads.append(directory)
         return real(directory,clock[0])
-    monkeypatch.setattr(contract,'read_active',read)
+    monkeypatch.setattr(availability,'read_active',read)
     return TestClient(app),settings,root,clock,reads
 
 
@@ -104,7 +105,7 @@ def test_no_stale_or_missing_fallback_and_independent_status(tmp_path,monkeypatc
     if kind.startswith('invalid'):bundle['inputs']['price_history'].pop(next(iter(bundle['inputs']['price_history'])))
     if kind=='missing_evidence':bundle.pop('provenance')
     if kind!='missing':write_bundle(root,bundle)
-    if 'expired' in kind:clock[0]=ISSUE+timedelta(hours=3,microseconds=1)
+    if 'expired' in kind:clock[0]=ISSUE+timedelta(hours=24)
     with c:
         for path in ['/forecast/next24','/admin/forecast/provenance']:
             result=c.get(path,headers=admin(signing))
@@ -156,7 +157,7 @@ def test_cross_request_publication_change_rejects_issue_and_same_issue_revision(
 def test_admin_authorization_is_checked_before_reading_publication(tmp_path,monkeypatch,signing,state):
     c,settings,root,clock,reads=make_client(tmp_path,monkeypatch,signing)
     if state!='missing':write_bundle(root,fixture())
-    if state=='expired':clock[0]=ISSUE+timedelta(hours=4)
+    if state=='expired':clock[0]=ISSUE+timedelta(hours=24)
     with c:
         assert c.get('/admin/forecast/provenance').status_code==401
         assert c.get('/admin/forecast/provenance',headers=auth(token(signing))).status_code==403
@@ -210,7 +211,7 @@ def test_real_adapter_missing_and_corrupt_snapshot_keeps_publication_independent
 def test_product_availability_never_uses_retained_csv_when_publication_expired(tmp_path,monkeypatch,signing):
     from api.operations_summary import operations_summary
     c,settings,root,clock,_=make_client(tmp_path,monkeypatch,signing)
-    write_bundle(root,fixture());clock[0]=ISSUE+timedelta(hours=4)
+    write_bundle(root,fixture());clock[0]=ISSUE+timedelta(hours=24)
     monkeypatch.setattr(app_module,'operations_summary',operations_summary)
     with c:
         summary=c.get('/operations/summary').json()

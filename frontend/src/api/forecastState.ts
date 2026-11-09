@@ -7,9 +7,10 @@ export function classifyForecast(report: ForecastReport<Next24Row> | null, pipel
   if (errorCode === 'FORECAST_WITHHELD') return {label: 'WITHHELD', description: 'No valid, unexpired forecast publication is available.'}
   if (report?.publication) {
     const issue = Date.parse(report.publication.issue_time), expires = Date.parse(report.publication.expires_at)
-    if (now < issue || now > expires) return {label: 'WITHHELD', description: 'This forecast publication has expired or is not yet eligible.'}
+    if (now < issue || now >= expires) return {label: 'WITHHELD', description: 'This forecast publication has expired or is not yet eligible.'}
     const remaining = report.forecasts.filter(row => Date.parse(row.target_time) > now).length
-    return {label: 'Valid published forecast', description: `${remaining} of 24 issue-relative target hours remain future. Expires ${formatTime(report.publication.expires_at)}. Historical pipeline status is separate.`}
+    const delayed = report.publication.refresh_due_at != null && now >= Date.parse(report.publication.refresh_due_at)
+    return {label: delayed ? 'Published forecast · refresh delayed' : 'Valid published forecast', description: `${remaining} of 24 issue-relative target hours remain future. Expires ${formatTime(report.publication.expires_at)}. ${delayed ? 'Awaiting a newer eligible issue; this is an older published forecast, not newly refreshed data. ' : ''}This is not a new 24 hours from now. Elapsed targets are not live predictions. Historical pipeline status is separate.`}
   }
   const status = pipeline?.forecast_status?.toUpperCase()
   if (status === 'WITHHELD' || status === 'UNAVAILABLE') return { label: status === 'WITHHELD' ? 'Withheld' : 'Unavailable', description: 'The latest recorded pipeline status reports no new forecast. Any retained report is reference data only; the API does not provide the detailed cause.' }

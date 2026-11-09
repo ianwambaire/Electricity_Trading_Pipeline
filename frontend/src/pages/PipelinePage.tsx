@@ -8,10 +8,12 @@ import { formatTime } from '../api/forecastState'
 import { useApi } from '../hooks/useApi'
 import { ApiPanel, Facts } from '../components/data/ApiPanel'
 import { PageHeading } from '../components/ui/PageHeading'
+import {operationalForecastState} from '../api/operationalForecastState'
 
 export function PipelinePage() {
-  const now = useClock()
-  const operations = useApi(api.operations)
+  const fetchedOperations = useApi(api.operations)
+  const now = useClock(fetchedOperations.data?.forecast_expires_at?Date.parse(fetchedOperations.data.forecast_expires_at):undefined)
+  const operations = {...fetchedOperations,data:operationalForecastState(fetchedOperations.data,now)}
   const health = useApi(api.health)
   const pipeline = useApi(api.pipeline)
   const account = useServerAccount()

@@ -1,7 +1,8 @@
 """Single read-only selection of active forecast evidence per request.
 
-No response schema or persisted publication format is changed. Legacy snapshots
-are a separate source mode, never a fallback for a configured publication.
+Persisted bundle bytes and strict publication admission remain unchanged. API
+availability explicitly attests the remaining issue-relative horizon. Legacy
+snapshots are a separate source mode, never a fallback for a configured publication.
 """
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,6 +10,7 @@ from typing import Literal
 
 from fastapi import HTTPException
 from shared import forecast_publication as contract
+from shared import forecast_availability as availability
 from .restricted_reports import ForecastProvenance
 from .operations_summary import ProductSummary
 
@@ -46,8 +48,12 @@ class PublicationSelection:
     def operations(self, summary):
         if self.bundle is not None:
             issue = contract.time(self.bundle['provenance']['issue_time'])
-            cutoff = issue + contract.MAX_AGE
-            reason = f'Valid published forecast; issue {issue.isoformat()}, freshness cutoff {cutoff.isoformat()}.'
+            cutoff = issue + availability.SERVING_HORIZON
+            refresh_due = issue + contract.MAX_AGE
+            reason = (f'Valid published forecast within its remaining issue-relative horizon; issue {issue.isoformat()}, '
+                      f'horizon expiry {cutoff.isoformat()}. Refresh expected by {refresh_due.isoformat()}; '
+                      'after that time this is an older forecast awaiting refresh, not a newly issued next 24 hours. '
+                      'Elapsed targets are not live predictions.')
         else:
             reason = {
                 'EXPIRED': 'The forecast publication has expired. No historical forecast is substituted.',
@@ -64,6 +70,8 @@ class PublicationSelection:
             'explanation': ('Recorded snapshot assessment: ' + summary.health + '. ' + summary.explanation
                             + ' This is not live pipeline health. Publication availability is assessed separately.'),
             'forecast_status': self.status, 'forecast_reason': reason,
+            'forecast_expires_at': cutoff if self.bundle is not None else None,
+            'forecast_refresh_due_at': refresh_due if self.bundle is not None else None,
             'forecast_reason_provenance': 'Active controlled publication, independently validated at request time; not the historical pipeline run status.',
             'completeness_note': 'Historical operational snapshot only. A successful recorded run does not establish forecast issuance. ' + summary.completeness_note,
         })
@@ -71,7 +79,7 @@ class PublicationSelection:
 
 def select_publication(root):
     try:
-        return PublicationSelection('VALID', contract.read_active(root))
+        return PublicationSelection('VALID', availability.read_active(root))
     except contract.ExpiredPublication:
         return PublicationSelection('EXPIRED')
     except contract.MissingPublication:

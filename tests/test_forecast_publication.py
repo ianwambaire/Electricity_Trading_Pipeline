@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from api.app import APISettings, create_app
 import shared.forecast_publication as contract
+import shared.forecast_availability as availability
 
 ROOT=Path(__file__).parents[1]
 spec=importlib.util.spec_from_file_location('forecast_publisher',ROOT/'deploy/staging/forecast-publication/publish.py')
@@ -118,15 +119,15 @@ def test_api_overlay_expiry_and_no_historical_fallback(tmp_path,monkeypatch):
     root=storage(tmp_path);p,digest=source(tmp_path,fixture());publisher.publish(root,p,digest,None,lambda:NOW)
     historical=tmp_path/'snapshot';settings=APISettings.from_root(historical)
     settings.next24_forecast.parent.mkdir(parents=True);settings.next24_forecast.write_text('historical sentinel')
-    before=settings.next24_forecast.read_bytes();real_read=contract.read_active;clock=[NOW]
-    monkeypatch.setattr(contract,'read_active',lambda directory:real_read(directory,clock[0]))
+    before=settings.next24_forecast.read_bytes();real_read=availability.read_active;clock=[NOW]
+    monkeypatch.setattr(availability,'read_active',lambda directory:real_read(directory,clock[0]))
     with TestClient(create_app(replace(settings,next24_publication_root=root))) as client:
         good=client.get('/forecast/next24');assert good.status_code==200
         assert good.headers['cache-control']=='no-store'
         data=good.json();assert data['publication']['status']=='VALID' and len(data['forecasts'])==24
-        assert set(data['publication'])=={'status','issue_time','expires_at','completed_at'}
+        assert set(data['publication'])=={'status','issue_time','expires_at','completed_at','availability_policy','refresh_due_at'}
         assert 'inputs' not in data and 'execution' not in data
-        clock[0]=ISSUE+dt.timedelta(hours=3,seconds=1)
+        clock[0]=ISSUE+dt.timedelta(hours=24)
         expired=client.get('/forecast/next24');assert expired.status_code==503
         assert expired.json()=={'detail':{'code':'FORECAST_WITHHELD'}}
         assert expired.headers['cache-control']=='no-store'

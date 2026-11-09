@@ -45,6 +45,8 @@ class OperationsSummary(PublicModel):
     latest_complete_market_hour: datetime | None
     forecast_status: str | None
     forecast_reason: str | None
+    forecast_expires_at: datetime | None = None
+    forecast_refresh_due_at: datetime | None = None
     forecast_reason_provenance: str = "Public-safe category from latest recorded status/reason; raw operational text is restricted."
     s3_sync_status: str | None
     recent_checks_passed: int | None

@@ -137,6 +137,13 @@ class ReleaseEvaluation(PublicModel):
 
 
 class RealizedEvaluation(PublicModel):
+    report_status: Literal['VALID','STALE','LEGACY_UNVERIFIED'] = 'LEGACY_UNVERIFIED'
+    data_status: Literal['AVAILABLE','INSUFFICIENT_DATA','UNVERIFIED'] = 'UNVERIFIED'
+    generated_at: datetime | None = None
+    fresh_until: datetime | None = None
+    observed_through: datetime | None = None
+    coverage: dict[str,int] | None = None
+    source_sha256: dict[str,str] | None = None
     assessed_at: datetime
     report_sha256: str
     releases: list[ReleaseEvaluation]

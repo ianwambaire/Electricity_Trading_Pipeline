@@ -36,9 +36,13 @@ def load_observed_prices(path: Path = RAW_PRICE_PATH) -> pd.DataFrame:
 def match_realized_forecasts(
     history: pd.DataFrame,
     observed: pd.DataFrame,
+    *, now: pd.Timestamp | None = None,
 ) -> pd.DataFrame:
     if history.empty or observed.empty:
         return pd.DataFrame(columns=REALIZED_COLUMNS)
+    current=pd.Timestamp.now(tz='UTC') if now is None else pd.Timestamp(now)
+    if current.tzinfo is None:raise ValueError('UTC scoring time required.')
+    current=current.tz_convert('UTC')
     issued = history.copy()
     actual = observed.copy()
     issued["forecast_issue_time"] = pd.to_datetime(
@@ -58,6 +62,12 @@ def match_realized_forecasts(
     )
     if actual["target_timestamp"].duplicated().any():
         raise ValueError("Actual hourly price timestamps must be unique.")
+    for key in ('horizon_hours','predicted_price_eur_mwh'):issued[key]=pd.to_numeric(issued[key],errors='raise')
+    actual['price_eur_mwh']=pd.to_numeric(actual['price_eur_mwh'],errors='raise')
+    if issued.duplicated(['model_release','forecast_issue_time','horizon_hours']).any():raise ValueError('Duplicate forecast identity.')
+    if not np.isfinite(issued[['horizon_hours','predicted_price_eur_mwh']].to_numpy(dtype=float)).all() or not np.isfinite(actual['price_eur_mwh'].to_numpy(dtype=float)).all():raise ValueError('Invalid forecast or observed value.')
+    if not (issued['horizon_hours'].between(1,24)&(issued['horizon_hours']%1==0)&((issued['target_timestamp']-issued['forecast_issue_time'])==pd.to_timedelta(issued['horizon_hours'],unit='h'))).all():raise ValueError('Invalid forecast target alignment.')
+    actual=actual.loc[actual.target_timestamp+pd.Timedelta(hours=1)<=current]
     issued = issued.loc[
         (issued["forecast_issue_time"] < issued["target_timestamp"])
         & (issued["issued_at_utc"] < issued["target_timestamp"])
@@ -124,6 +134,19 @@ def update_next24h_monitoring(
     performance_path: Path = PERFORMANCE_PATH,
 ) -> tuple[int, int]:
     history_path, raw_price_path = Path(history_path), Path(raw_price_path)
+    import os
+    if os.environ.get('POWERFLOW_REALIZED_REPORT_ENABLED')=='true':
+        from models.realized_reporting import build
+        from shared.realized_report_store import publish
+        from shared.realized_report import failure
+        import datetime as dt
+        root=Path(os.environ.get('POWERFLOW_REALIZED_REPORT_ROOT','/srv/powerflow/realized-performance'))
+        if not root.is_absolute() or '..'in root.parts:raise ValueError('Invalid realized report root.')
+        now=dt.datetime.now(dt.timezone.utc)
+        try:document=build(history_path,raw_price_path,history_path.parent/'next24h_inference',now=now)
+        except Exception:document=failure('INVALID_INPUT',now)
+        publish(root,document,now=now)
+
     if not history_path.exists() or not raw_price_path.exists():
         return 0, 0
     history = pd.read_csv(history_path)

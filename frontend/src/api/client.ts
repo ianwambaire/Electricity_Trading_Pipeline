@@ -31,6 +31,12 @@ export async function request<T>(path: string, parse: (value: unknown) => T, sig
       try { const body = await response.json(); withheld = body?.detail?.code === 'FORECAST_WITHHELD' } catch { /* Never expose raw bodies. */ }
       if (withheld) throw new ApiError('Forecast withheld because the publication is expired, invalid, or unavailable.', 503, 'FORECAST_WITHHELD')
     }
+    if (path === '/forecast/realized-evaluation' && !response.ok && [404,503].includes(response.status)) {
+      const messages:Record<string,string>={REALIZED_REPORT_MISSING:'No realized performance report has been published.',REALIZED_INPUTS_MISSING:'Realized reporting is waiting for forecast history, committed receipts or observed prices.',REALIZED_REPORT_FAILED:'The realized performance report could not be generated. No substitute metrics are shown.',REALIZED_REPORT_INVALID:'The realized report failed integrity validation. No substitute metrics are shown.'}
+      let code:string|null=null
+      try {const body=await response.json();const candidate=body?.detail?.code;if(typeof candidate==='string'&&Object.hasOwn(messages,candidate))code=candidate} catch { /* Discard raw error bodies. */ }
+      if(code)throw new ApiError(messages[code],response.status,code)
+    }
     if (response.status === 403) throw new ApiError('Your account does not have permission for this information.', 403)
     // Do not surface raw server/proxy bodies: operational details may be sensitive.
     if (!response.ok) throw new ApiError(response.status === 404 ? 'This report is not available from the API.' : response.status === 503 ? 'The backend report is unavailable or invalid.' : `API request failed (HTTP ${response.status}).`, response.status)

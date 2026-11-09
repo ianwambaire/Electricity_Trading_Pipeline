@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
-  "scope": "local parser fix and offline two-quarter repair preparation; no production execution authorized",
-  "historical_production_baseline": {
-    "path": "src/ingestion/fetch_entsoe_data.py",
-    "sha256": "ee1d225895fbf929127a577ca4f85a6855643186a7590cda5eaa27ac6aa21a2a",
-    "verified_at_utc": "2026-10-31T14:20:24Z",
-    "requires_fresh_reverification": true
+  "scope": "A03 parser installation and exactly two historical prices; apply/rollback require separate explicit approval",
+  "supersedes_manifest_sha256": "51d284558f11c66e015de636581221e9bd13f10a948c76373408c2abaaca269f",
+  "verified_at_utc": "2026-11-01T17:22:17.578326+00:00",
+  "baseline": {
+    "parser_sha256": "ee1d225895fbf929127a577ca4f85a6855643186a7590cda5eaa27ac6aa21a2a",
+    "prices_sha256": "93785a3e2e768a25299cf03ebf5008fb17186c6bb28eeb55a932beacf7ddacc8",
+    "xml_sha256": "4bbda676e1460ba3c7904df3c33b79e3d007ab8808ce3c1dcbd186b4f46cab24"
   },
   "artifacts": [
     {
@@ -15,8 +16,18 @@
     },
     {
       "path": "tests/test_price_a03.py",
-      "bytes": 9112,
-      "sha256": "54d7983bddbd196a08d5cf472cf1c8a40b6f80c36dd5a4b35727203e60cc64f6"
+      "bytes": 9317,
+      "sha256": "840c51941df55ab5165ee9ecc45c2a80febc8849f6589e512bc7f69c52d12c9b"
+    },
+    {
+      "path": "tests/test_a03_deployment_package.py",
+      "bytes": 12352,
+      "sha256": "fbb87849f1c9c9a7d3764ccbf75b8512682b956e12464b8ff23ea378501eda77"
+    },
+    {
+      "path": "deploy/remediation/a3-bounded-local.py",
+      "bytes": 1431,
+      "sha256": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
     },
     {
       "path": "deploy/staging/a03-price-recovery/LOCAL-AUDIT.json",
@@ -25,13 +36,13 @@
     },
     {
       "path": "deploy/staging/a03-price-recovery/REVIEW.md",
-      "bytes": 7848,
-      "sha256": "99973f258113ed9b71aa3342ddd6585eb4b6e517dfa721235587500bac891c71"
+      "bytes": 7935,
+      "sha256": "3a4e2effbb76bd9b1edb31d716f858cd959d4c22d0f791ba769c87f8749e1961"
     },
     {
       "path": "deploy/staging/a03-price-recovery/VALIDATION.json",
-      "bytes": 998,
-      "sha256": "ab6c1ca52f036699a63ee0aedd52a65a46a94d2c2850d40b405625f84f203d70"
+      "bytes": 1398,
+      "sha256": "b48c3bb61bb264039a36a55defc6187723f8baeec6b65f5ddf861c2a9276c974"
     },
     {
       "path": "deploy/staging/a03-price-recovery/audit.py",
@@ -39,9 +50,64 @@
       "sha256": "d5d64c781b5244ee5419ed6868eb06cc01d269d5fb8c2057d6b6dc208ac7c9eb"
     },
     {
+      "path": "deploy/staging/a03-price-recovery/final/BOUND-INPUTS.json",
+      "bytes": 3758,
+      "sha256": "810c44eec766c207b3eac32a17d90e4a2ff7a312a448949616db0271f30e7ea3"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/PREFLIGHT-RESULTS.json",
+      "bytes": 8522,
+      "sha256": "244c49ec957ca92fc457c064a463c54e35a3a3c993e3be181e36b2765888afdf"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/REVIEW.md",
+      "bytes": 8008,
+      "sha256": "6316f77a83577a812058053e9ec3ff2423a295db93a98b9b69439feca4555664"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/SOURCE-VERIFICATION.json",
+      "bytes": 1082,
+      "sha256": "574d5327dd12769bf9a9e0cc909b94659f1fd8693495b9cd22ff065e49cac416"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/build-package.py",
+      "bytes": 5017,
+      "sha256": "07baeb659475732a1d2193421e72f6681671cc64968a36a68c9d1b35a424d537"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/deploy-body.py",
+      "bytes": 10622,
+      "sha256": "59c9717a8dc710712e35fe203e3ec544b2eaa2ad25633037b94cb2f9910c35b7"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/deploy-payload.py",
+      "bytes": 111673,
+      "sha256": "0d2aec4f4a0794645c2aa89ff3cc35e764926dadccabc0fd4120287f693aa6b9"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/preflight-child.py",
+      "bytes": 6493,
+      "sha256": "4549aac199db89935c5545aeb818468b1128a6df4c5019475c3f784921ee308b"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/preflight-payload.py",
+      "bytes": 28003,
+      "sha256": "12d686385d28bf05e44efb7eb84c2daa51cbbd6a7809494ed3faed45d00ddcf3"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/run-deployment.py",
+      "bytes": 3487,
+      "sha256": "ce6f3dbf047985c45a706c67886b107183009f5fa72831a53269f052b6492e2e"
+    },
+    {
+      "path": "deploy/staging/a03-price-recovery/final/run-preflight.py",
+      "bytes": 2408,
+      "sha256": "c00b685d59ad7cafe29528fcec01ec88ea734561deae6a51fca48fa08c71a3b7"
+    },
+    {
       "path": "deploy/staging/a03-price-recovery/repair.py",
-      "bytes": 5173,
-      "sha256": "7c40d4f9af17d1c8024c826e1d5449b691f579afc06bdf1564fae83eea85dd8e"
+      "bytes": 5646,
+      "sha256": "2fd056dbad729cf793b72deb8ee9a57fd47747c5e2fc5bdc188545533bc5dd84"
     },
     {
       "path": "deploy/staging/a03-price-recovery/verify-package.py",

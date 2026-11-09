@@ -88,16 +88,17 @@ After approving exact report, use the same command plus:
 ```
 
 Output directory must not exist; mode 0700, files 0600. original.csv is the exact
-source-byte backup; candidate.csv preserves every existing source byte and appends
-only missing allowlisted quarters; report.json binds original/XML/candidate hashes.
+source-byte backup; candidate.csv preserves every existing CSV record byte and inserts
+only missing allowlisted quarters in chronological order; report.json binds original/XML/candidate hashes.
 No-op is byte-identical when already repaired. No source CSV is ever replaced by
 the tool. It creates no journals, database backups, checkpoints or pipeline outputs.
 
 ## Atomic installation protocol (must be hash-bound in execution approval)
 
-A production execution runner is intentionally NOT included: fresh source/XML
-hashes and approved private paths are still unknown. Before approval, bind these
-into the runner and review it; do not improvise shell cp/mv commands on EC2.
+The final execution runner and freshly verified source/XML bindings are now
+in final/. See final/REVIEW.md for the exact scope, execution and rollback
+commands. Do not improvise shell cp/mv commands on EC2. The original preparation
+manifest 51d284... is superseded by the new root MANIFEST.json.
 
 For each parser/CSV replacement: verify no writers and baseline again; exclusively
 create same-filesystem sibling temporary file, preserve expected owner/group/mode,

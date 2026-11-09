@@ -1,21 +1,30 @@
 {
-  "scope": "LOCAL ONLY; no production access or changes",
-  "python": "3.14",
-  "tests": {
-    "passed": 256,
+  "scope": "LOCAL package development and ONE successful authorized read-only production inspection; no deployment",
+  "python_tests": {
+    "passed": 281,
     "failed": 0,
-    "command": "MPLBACKEND=Agg venv/bin/python -B -m pytest tests/test_price_a03.py tests/test_incremental_pipeline.py tests/test_next24h*.py tests/test_inference_evidence.py tests/test_forecast_publication.py tests/test_api_price_aggregation.py tests/test_entsoe_forecast*.py -q"
+    "command": "MPLBACKEND=Agg venv/bin/python -B -m pytest tests/test_a03_deployment_package.py tests/test_price_a03.py tests/test_incremental_pipeline.py tests/test_next24h*.py tests/test_inference_evidence.py tests/test_forecast_publication.py tests/test_api_price_aggregation.py tests/test_entsoe_forecast*.py -q"
   },
-  "a01_a03_repair_regression_cases": 30,
-  "syntax": "5 Python files parsed successfully",
+  "a01_a03_repair_tests": 30,
+  "deployment_guard_tests": 25,
+  "syntax": {
+    "files": 13,
+    "status": "PASS",
+    "remote_payload_python39_grammar": "PASS"
+  },
   "existing_web_release": {
     "release_id": "phase-next24-evidence-20261031",
     "files": 70,
     "verification": "PASS",
     "rebuilt": false,
-    "includes_new_parser_fix": false
+    "includes_parser_fix": false
   },
-  "initial_test_attempt": "macOS Matplotlib GUI abort; subsequent runs use MPLBACKEND=Agg and pass",
-  "frontend": "Not changed; frontend tests/build not rerun",
-  "production_ready": "Parser correction tested; fresh baseline/XML and a reviewed hash-bound production execution runner remain required"
+  "no_production_writes": true,
+  "no_git_operations": true,
+  "limitations": [
+    "Fresh runtime source hashes and no-overlap/capacity guards are mandatory at deployment; changed CSV is a hard stop.",
+    "Original XML authenticity/TLS was checked during retrieval; no fabricated historical inference evidence.",
+    "No production installation or rollback has been executed; effective execution remains unverified.",
+    "Preserved model/code hashes are reviewed prior baselines enforced at deployment, not all re-read by this inspection."
+  ]
 }

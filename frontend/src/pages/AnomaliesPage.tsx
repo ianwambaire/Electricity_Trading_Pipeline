@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useState } from 'react'
 import { api } from '../api/client'
 import type { AnomalyEvent } from '../api/restoration'
 import { formatTime } from '../api/forecastState'
-import { useApi } from '../hooks/useApi'
+import { useHistoricalApi } from '../hooks/useHistoricalApi'
 import { ApiPanel, Facts } from '../components/data/ApiPanel'
 import { PageHeading } from '../components/ui/PageHeading'
 import { EmptyState, LoadingState } from '../components/ui/States'
@@ -14,11 +14,11 @@ const HistoricalChart=lazy(()=>import('../components/data/HistoricalChart').then
 function EventsTable({rows}:{rows:AnomalyEvent[]}){return <div className="table-scroll" tabIndex={0}><table><thead><tr><th>Event time (UTC)</th><th>Price (EUR/MWh)</th><th>Load (MW)</th></tr></thead><tbody>{rows.map(row=><tr key={row.timestamp}><td>{formatTime(row.timestamp)}</td><td>{numberLabel(row.price_eur_mwh,20)}</td><td>{numberLabel(row.load_mw,20)}</td></tr>)}</tbody></table></div>}
 export function AnomaliesPage(){
  const [query,setQuery]=useState('');const [offset,setOffset]=useState(0)
- const summary=useApi(useCallback(signal=>api.anomalySummary(query,signal),[query]))
- const markers=useApi(useCallback(signal=>api.anomalyEvents(`${query}&order=time_asc&limit=1000`,signal),[query]))
- const top=useApi(useCallback(signal=>api.anomalyEvents(`${query}&order=price_desc&limit=20`,signal),[query]))
- const page=useApi(useCallback(signal=>api.anomalyEvents(`${query}&order=time_desc&limit=100&offset=${offset}`,signal),[query,offset]))
- const chart=useApi(useCallback(signal=>api.marketChart(query,signal),[query]))
+ const summary=useHistoricalApi(useCallback(signal=>api.anomalySummary(query,signal),[query]))
+ const markers=useHistoricalApi(useCallback(signal=>api.anomalyEvents(`${query}&order=time_asc&limit=1000`,signal),[query]))
+ const top=useHistoricalApi(useCallback(signal=>api.anomalyEvents(`${query}&order=price_desc&limit=20`,signal),[query]))
+ const page=useHistoricalApi(useCallback(signal=>api.anomalyEvents(`${query}&order=time_desc&limit=100&offset=${offset}`,signal),[query,offset]))
+ const chart=useHistoricalApi(useCallback(signal=>api.marketChart(query,signal),[query]))
  return <><PageHeading title="Anomaly Detection" description="Historical statistical outliers detected from electricity price and load."/><p className="data-note">Statistical outliers in recorded prices and demand are not verified market faults or forecast errors.</p><DateRangeFilter onApply={q=>{setOffset(0);setQuery(q)}}/>
  <ApiPanel title="Detected anomaly summary" state={summary}>{data=><><KpiGrid items={[{label:'Detected events · selected range',value:numberLabel(data.count,0)},{label:'Maximum price · EUR/MWh',value:numberLabel(data.maximum_price)},{label:'Minimum price · EUR/MWh',value:numberLabel(data.minimum_price)},{label:'Mean anomalous load · MW',value:numberLabel(data.average_load_mw)}]}/><Facts items={[["Report state",data.report_status],['Total report events',data.total_report_rows],['First selected event',formatTime(data.first_event)],['Last selected event',formatTime(data.last_event)]]}/>{data.count===0&&<EmptyState awaitingIntegration={false} title={data.report_status==='empty'?'Valid report contains zero anomalies':'No anomaly events in the selected dates'} description="No matching events were recorded for this period."/>}<details className="methodology"><summary>Detection method and limitations</summary><p>{data.method}. {data.provenance}. {data.limitation} Contamination is a fitting parameter, not an event probability. Events ranked by price are not ranked by anomaly severity.</p></details></>}</ApiPanel>
  <div className="mt-6"><ApiPanel title="Electricity price history and detected events" state={chart}>{data=><><Facts items={[["Price history begins",formatTime(data.coverage.first_observation)],['Price history through',formatTime(data.coverage.latest_observation)]]}/><ApiPanel title="Anomaly overlay" state={markers}>{events=>events.next_offset!==null?<div className="notice notice-warning">More than 1,000 events match. Narrow the date range to display every marker; no truncated overlay is shown.</div>:data.row_count?<Suspense fallback={<LoadingState label="Loading anomaly chart…"/>}><HistoricalChart report={data} events={events.events}/></Suspense>:<EmptyState awaitingIntegration={false} title="No background price observations" description="Anomaly records remain available in the tables; no background prices are invented."/>}</ApiPanel></>}</ApiPanel></div>

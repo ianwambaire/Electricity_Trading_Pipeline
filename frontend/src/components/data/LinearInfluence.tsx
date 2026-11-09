@@ -2,12 +2,12 @@ import { lazy, Suspense, useState } from 'react'
 import { api } from '../../api/client'
 import { rankCoefficients } from '../../api/parity'
 import { downloadCsv } from '../../api/csv'
-import { useApi } from '../../hooks/useApi'
+import { useHistoricalApi } from '../../hooks/useHistoricalApi'
 import { ApiPanel, Facts } from './ApiPanel'
 import { LoadingState } from '../ui/States'
 const Chart=lazy(()=>import('./CoefficientChart').then(m=>({default:m.CoefficientChart})))
 export function LinearInfluence() {
-  const report=useApi(api.influence)
+  const report=useHistoricalApi(api.influence)
   const [sort,setSort]=useState<'magnitude'|'name'>('magnitude')
   return <ApiPanel title="One-hour Linear Regression — Feature Influence" state={report}>{data=>{
     const ranked=rankCoefficients(data.features,sort)

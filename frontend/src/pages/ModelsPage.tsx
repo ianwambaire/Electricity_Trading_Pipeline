@@ -2,14 +2,14 @@ import { LinearInfluence } from '../components/data/LinearInfluence'
 import { useServerAccount } from '../auth/serverAccountContext'
 import { api } from '../api/client'
 import { formatTime } from '../api/forecastState'
-import { useApi } from '../hooks/useApi'
+import { useHistoricalApi } from '../hooks/useHistoricalApi'
 import { ApiPanel, Facts } from '../components/data/ApiPanel'
 import { PageHeading } from '../components/ui/PageHeading'
 import { Panel } from '../components/ui/Panel'
 
 export function ModelsPage() {
   const server = useServerAccount()
-  const models = useApi(api.models)
+  const models = useHistoricalApi(api.models)
   return <><PageHeading category="Platform" title="Model Insights" description="Understand the operational forecasting model and its historical evaluation."/>
     <p className="data-note">Linear Regression provides an interpretable one-hour baseline for evaluating forecasting approaches. The frozen operational HGB model predicts the next 24 hours. Their different horizons and evaluation periods do not support a direct ranking.</p>
     <ApiPanel title="Model summaries" state={models}>{data=><div className="model-cards">{data.models.map(model=><Panel key={model.key} title={model.key==='next24h'?'Production 24-hour model':'Historical one-hour baseline'} description={model.purpose}><div className="api-content"><Facts items={[

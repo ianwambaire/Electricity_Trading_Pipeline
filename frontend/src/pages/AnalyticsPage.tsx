@@ -6,7 +6,7 @@ import { api } from '../api/client'
 import { generationKeys } from '../api/publicData'
 import type { GenerationKey } from '../api/publicData'
 import { formatTime } from '../api/forecastState'
-import { useApi } from '../hooks/useApi'
+import { useHistoricalApi } from '../hooks/useHistoricalApi'
 import { ApiPanel, Facts } from '../components/data/ApiPanel'
 import { PageHeading } from '../components/ui/PageHeading'
 import { Panel } from '../components/ui/Panel'
@@ -17,7 +17,7 @@ const label = (key: string) => key.replace(/_mw$/, '').replaceAll('_', ' ')
 const value = (n: number | null) => n === null ? 'Missing' : n.toLocaleString(undefined,{maximumFractionDigits:2})
 
 export function AnalyticsPage() {
-  const coverage = useApi(api.marketCoverage)
+  const coverage = useHistoricalApi(api.marketCoverage)
   const [range,setRange] = useState({start:'',end:''})
   const [offset,setOffset] = useState(0)
   const [formError,setFormError] = useState('')
@@ -28,7 +28,7 @@ export function AnalyticsPage() {
     if (range.end) params.set('end',range.end)
     return api.marketHistory(params.toString(),signal)
   },[range,offset])
-  const history = useApi(load)
+  const history = useHistoricalApi(load)
   function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)

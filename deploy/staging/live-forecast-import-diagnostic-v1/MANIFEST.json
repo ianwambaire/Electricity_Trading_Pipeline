@@ -1,0 +1,18 @@
+{
+  "artifacts": {
+    "deploy/staging/live-forecast-import-diagnostic-v1/REVIEW.md": "f25a13c1b584902a586b471e61397e6f990e4012216c5b5b367c3397d4e1ff2c",
+    "deploy/staging/live-forecast-import-diagnostic-v1/build.py": "d4800702c2ecb4a7c3780f4d25b149b66eeb3cd5f9acf0cd8c119c53c2c27b2c",
+    "deploy/staging/live-forecast-import-diagnostic-v1/child.py": "6a8c058a4662a48edbe11080ef8aff9cb0dec32780de0fa792d6eba149c71dc6",
+    "deploy/staging/live-forecast-import-diagnostic-v1/inspect.py": "2688364e0e3289163dc085b138bcb5cce538ce3f7396be1e246f1fee78b22853",
+    "deploy/staging/live-forecast-import-diagnostic-v1/run.py": "74311179013fdef90a4562ca6e3a54e663111c0bd35f980ce325016b52f4c65d",
+    "tests/test_live_forecast_import_diagnostic.py": "7fcb7c695dc125cdd48a5768d148baa1d56056893be5f4f9a55a5595a5f1ae0b"
+  },
+  "child_sha256": "fde41b21e449f326ec04a80464c732f7457c2cdc33e6d4bc2733a2942126d2cf",
+  "execution_authorized": false,
+  "original_child_sha256": "3457963a5be46bb7975b4021e81eb8875e5723bb7a1cfd05076e3aab30cfcf10",
+  "parent_manifest": "e184215a3959c61dbd41e66e47a78af7951c90bb903d30f4ebb6a2d28ee6aa19",
+  "parent_preflight": "e9f16758a03f4690e845e1ac31f6f1cb6607767ede46588210069ef76ef3b564",
+  "payload_sha256": "02c2c233284495c455dac1cb372ba2a0792b0a983c386d71a7ad301e564b06a0",
+  "release": "phase-live-forecast-import-diagnostic-20261107-v1",
+  "version": 1
+}

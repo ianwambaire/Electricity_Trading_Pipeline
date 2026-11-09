@@ -1,14 +1,16 @@
+import {operationsPolicy,operationsId,OPS_OBSERVED,CURRENT,operationalResponse} from './operations-core.mjs';
 import {AcceptanceError,requireThat,ORIGIN,START,LIMITS,OBSERVED_API,VIEWPORTS,policy,safeId,checkForecast,forecastEvidence,stamp,formatTime} from './core.mjs';
 
-export function createMonitor({onFatal=()=>{}}={}) {
+export function createMonitor({onFatal=()=>{},operations=false,expectedRole='Analyst'}={}) {
   const records=new Map(),listeners=new Set();
+  const requestPolicy=operations?operationsPolicy:policy,identify=operations?operationsId:safeId,observed=operations?OPS_OBSERVED:OBSERVED_API;
   let phase='login',fatal=null;
   const diagnostics={consoleErrors:0,pageErrors:0,unexpectedNetworkFailures:0,cancelledRequests:0,expectedWithheld:0,blockedRequests:0,blockedMutations:0,events:0};
   function fail(code) { if(!fatal) {fatal=code;onFatal(code);} for(const fn of listeners) fn(); }
   function event() { if(++diagnostics.events>LIMITS.events) fail('EVENT_BOUND_EXCEEDED'); }
   async function response(r) {
-    event();const id=safeId(r.url());
-    if(!OBSERVED_API.has(id)) {
+    event();const id=identify(r.url());
+    if(!observed.has(id)) {
       if(phase==='acceptance' && id!=='REDACTED_RESOURCE' && r.status()>=400) diagnostics.unexpectedNetworkFailures++;
       return;
     }
@@ -23,8 +25,10 @@ export function createMonitor({onFatal=()=>{}}={}) {
     const checkedAt=Date.now(),status=r.status();
     const headers={cacheControl:await r.headerValue('cache-control')};
     if(id==='/api/auth/me') {
-      requireThat(status===200 && value?.role==='Analyst','ANALYST_SESSION_REQUIRED');
-      value={role:'Analyst'}; // Never retain subject, email, display name or headers.
+      requireThat(status===200 && value?.role===expectedRole,operations?'ROLE_SESSION_REQUIRED':'ANALYST_SESSION_REQUIRED');
+      value={role:expectedRole}; // Never retain subject, email, display name or headers.
+    } else if(operations&&CURRENT.includes(id)) {
+      value=operationalResponse(status,headers,value,id==='/api/admin/operations/current');
     } else if(id==='/api/operations/summary') {
       requireThat(['VALID','EXPIRED','WITHHELD','INVALID','MISSING_PUBLICATION','UNVERIFIED'].includes(value?.forecast_status),'OPERATIONS_STATUS_INVALID');
       value={forecast_status:value.forecast_status};
@@ -57,7 +61,7 @@ export function createMonitor({onFatal=()=>{}}={}) {
     async install(context,page,{setup}={}) {
       const run=setup?(step,fn)=>setup.run(step,fn):async(step,fn)=>fn();
       await run('INSTALL_REQUEST_GUARD',()=>context.route('**/*',route=>(async()=>{
-        event();const request=route.request(),decision=policy(request.url(),request.method(),phase);
+        event();const request=route.request(),decision=requestPolicy(request.url(),request.method(),phase);
         if(!decision.allow) {
           diagnostics.blockedRequests++;if(decision.code==='APPLICATION_MUTATION_BLOCKED') diagnostics.blockedMutations++;
           setup?.rejectPolicy(decision.code,request.url(),Boolean(request.redirectedFrom?.()));
@@ -88,7 +92,7 @@ export function createMonitor({onFatal=()=>{}}={}) {
         try {
           if(mainNavigation(request))setup?.requestFailed(request.failure()?.errorText,request.url());
         } catch {fail('BROWSER_EVENT_MONITOR_FAILED');}
-        event();if(phase!=='acceptance' || safeId(request.url())==='REDACTED_RESOURCE')return;
+        event();if(phase!=='acceptance' || identify(request.url())==='REDACTED_RESOURCE')return;
         if(request.failure()?.errorText==='net::ERR_ABORTED')diagnostics.cancelledRequests++;
         else diagnostics.unexpectedNetworkFailures++;
       });

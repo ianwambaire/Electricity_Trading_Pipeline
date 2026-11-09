@@ -315,3 +315,49 @@ The future launch command and all authentication, resource, evidence and timeout
 restrictions are unchanged. Manual review/commit and a new explicit one-attempt
 authorization are required before execution. No browser retry, staging request or
 source-policy workaround was performed during this preparation.
+
+## Operational-current acceptance (V5 staging)
+
+This focused mode tests Executive Overview and Pipeline Operations at 1440×900
+and 390×844. Admin additionally verifies the normal authenticated
+`/api/admin/operations/current` response and masks association identifiers in
+screenshots. Analyst verifies the server-reported role and absence of the Admin
+association panel. It does **not** claim a live authenticated Analyst HTTP 403:
+the UI makes no such request, and the harness never extracts/replays tokens.
+Public `/api/operations/current` and `/api/pipeline/current` responses must match;
+the application's strict parser rejects Admin fields in public data. Current
+records must agree across both pages and viewports. A publication change during
+checks stops the comparison rather than mixing versions. VALID is not evidence
+of a live next24 forecast; that remains a separate acceptance condition.
+
+Run each role in a separate invocation/fresh isolated browser context:
+
+```sh
+env -i PATH=/usr/bin:/bin /Users/iannganga/.nvm/versions/node/v22.22.0/bin/node frontend/acceptance/run.mjs --run --operations --owner-assisted-admin
+env -i PATH=/usr/bin:/bin /Users/iannganga/.nvm/versions/node/v22.22.0/bin/node frontend/acceptance/run.mjs --run --operations --owner-assisted-analyst
+```
+
+The owner explicitly requires Google federation. This mode alone permits the
+Google accounts HTTPS sign-in/OAuth paths and narrowly scoped login assets during
+owner-assisted login, plus Cognito's `/oauth2/idpresponse`. The default forecast
+mode's native-only policy remains unchanged. Google account management, recovery,
+enrollment, unrelated origins and staging mutations remain blocked. No auth
+request/response content, credentials, headers, cookies, storage or profiles are
+read or retained. An unapproved resource fails closed; there is no automatic
+policy widening or browser retry. The owner types READY only after sign-in.
+
+Authentication origin reference: Google OIDC discovery
+https://accounts.google.com/.well-known/openid-configuration and AWS Cognito social
+IdP documentation; the existing application identifies Google federation.
+No change to Cognito, users, roles or application authentication is involved.
+
+Sanitized assessment and scoped screenshots remain under the private Git-ignored
+`data/backups/private-staging-browser-acceptance/` directory. Missing/stale/invalid
+records are tested honestly; current operational acceptance stays PARTIAL unless
+VALID is genuinely observed. Console/network counts are reported independently,
+including unavailable historical reports. No historical snapshot substitutes for
+current execution evidence. Run offline checks with:
+
+```sh
+/Users/iannganga/.nvm/versions/node/v22.22.0/bin/node --test frontend/acceptance/*.test.mjs
+```

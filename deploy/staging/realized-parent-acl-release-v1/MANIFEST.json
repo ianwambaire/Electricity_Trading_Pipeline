@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463",
+    "deploy/staging/realized-parent-acl-release-v1/REVIEW.md": "6c574d621a9e291f5d2c4a89e82f9c493cb63eaa984b702f13b2d9d81b84e1e3",
+    "deploy/staging/realized-parent-acl-release-v1/acl_read.py": "44051bf8781fb8e34604a934d78e54d6bf832f671d0d1201e3b8acac9f74d617",
+    "deploy/staging/realized-parent-acl-release-v1/build.py": "29667a3c1872c0ec3514ec1a21e54c7f8218eca2b0fa9711a7eb422e386cad97",
+    "deploy/staging/realized-parent-acl-release-v1/guards.py": "97c65c936b098ca9a78e1812693fba3c2e6b615f113caf457c37c5e0f9057e41",
+    "deploy/staging/realized-parent-acl-release-v1/policy.py": "a1bae4204c563037577809df7ac8be19fe819c3d67c6cd8f99a9a9620072c3b4",
+    "deploy/staging/realized-parent-acl-release-v1/probe.py": "6e84ced5121538f3820ce994884f0020b88b64e2658313c36dc17bb91423235f",
+    "deploy/staging/realized-parent-acl-release-v1/protocol.py": "404e83ec6757f70947eb1c67f5803b7d08965498edcedc04b09c1bec2c5b7bf9",
+    "deploy/staging/realized-parent-acl-release-v1/run.py": "fb3451406474a5495e88a37b6e723304e39342612c1d71b09482274d52163462",
+    "deploy/staging/realized-parent-acl-release-v1/transaction.py": "d4b1c0b1e506d34d3b53fc09da6457c36958bd4e57f951128791ff1b4c2a16eb",
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/inspect.py": "0e900dccdcd189938c1a17211b7e35fd886cfc99b9201e46de2b23d7da99782d",
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/producer.py": "f9d24eb3ba673f354eaa4e7d8307210c13d9cca3f21cc36ce99a3488a15019ce",
+    "deploy/staging/realized-parent-traversal-diagnostic-v3/MANIFEST.json": "6fb6cd73259c8c6961cc954cc636603abb90a2fcae7983ade15578d7d166fcbe",
+    "deploy/staging/realized-parent-traversal-diagnostic-v3/run.py": "a764d71549ef7bd3ddfaff4c97df5150980ca1177af0c0a2726da4d7a7558d73",
+    "tests/test_realized_parent_acl_release.py": "ca7195d0b5fea284aa77f85e32ee82f8b279a50ed3501113119cabd94073305d"
+  },
+  "execution_authorized": false,
+  "limits": {
+    "apply": {
+      "escalation_seconds": 5,
+      "local_seconds": 75,
+      "remote_seconds": 45,
+      "ssh_attempts": 1,
+      "stream_bytes": 8192
+    },
+    "preflight": {
+      "escalation_seconds": 5,
+      "local_seconds": 60,
+      "remote_seconds": 30,
+      "ssh_attempts": 1,
+      "stream_bytes": 8192
+    },
+    "rollback": {
+      "escalation_seconds": 5,
+      "local_seconds": 75,
+      "remote_seconds": 45,
+      "ssh_attempts": 1,
+      "stream_bytes": 8192
+    }
+  },
+  "parent_manifest": "6fb6cd73259c8c6961cc954cc636603abb90a2fcae7983ade15578d7d166fcbe",
+  "payloads": {
+    "apply": {
+      "binding": "dbb65bdd2213ba08f7ebafbdc699dfc10c9de1f85af719d38ff2e976fc1e879b",
+      "bytes": 48251,
+      "sha256": "a7a7d4735bfefbc9e5191c3ef2e121b385165afec0ce31914c170fe748697e3f"
+    },
+    "preflight": {
+      "binding": "f6df1bf7f1bba9724de01eca5ec4191d9b52b08aafd0202cb9a0a420bc35332b",
+      "bytes": 39279,
+      "sha256": "4834b13fe6eddfa3fba8ff1b907b838ce56792cc2f814bce093b1b450ccec827"
+    },
+    "rollback": {
+      "binding": "46ef2e3dd87e14282b34fb70efa74cde22f0beadd96837c5020550e87582017f",
+      "bytes": 48254,
+      "sha256": "1d75b8b0a5fa6237aa409b6a749b6ea406b3368881c267a23d5162165047d543"
+    }
+  },
+  "release": "phase-realized-parent-acl-20261108-v1",
+  "transaction": "6b59b34d211a4d7286e598137a512e8e",
+  "version": 1
+}

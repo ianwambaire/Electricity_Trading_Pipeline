@@ -1,0 +1,20 @@
+{
+  "artifacts": {
+    "deploy/staging/realized-parent-traversal-diagnostic-v2/MANIFEST.json": "303af3ff285c1628081bec69bd28dd3502e0bc0994765c753a3800b3a3e6ab05",
+    "deploy/staging/realized-parent-traversal-diagnostic-v2/run.py": "31c56b9861e068d8cf49e51586f3d536bf90f35e921a31daae77583a39332dc0",
+    "deploy/staging/realized-parent-traversal-diagnostic-v3/REVIEW.md": "8f8b326dae0d3b4ee3e52f6207542aa67cb37924017aa2ade76792f6a2b6c97c",
+    "deploy/staging/realized-parent-traversal-diagnostic-v3/build.py": "76e4745e5c697b50e9f3d8ab24c6f64029ec87ebc849e2511286473482f62d7a",
+    "deploy/staging/realized-parent-traversal-diagnostic-v3/run.py": "a764d71549ef7bd3ddfaff4c97df5150980ca1177af0c0a2726da4d7a7558d73",
+    "tests/test_realized_parent_traversal_diagnostic_v3.py": "3c6f83c7051d687d2de39e9cd115beae6618a2b0fb4c5bea51eb5da1bcc0bcf5"
+  },
+  "execution_authorized": false,
+  "frame_id": "ad38f060fca7a4f8737598f8591dfb1041ee378ccdd59f53aa678301ace8e8d7",
+  "parent_manifest": "303af3ff285c1628081bec69bd28dd3502e0bc0994765c753a3800b3a3e6ab05",
+  "payload": {
+    "bytes": 17883,
+    "sha256": "a01971eb4d9d47fbf1418dacbdcceaae2a98e78e6a09de87861f79b6ca1bfc2c"
+  },
+  "release": "phase-realized-parent-traversal-diagnostic-20261108-v3",
+  "stdin_policy": "PAYLOAD_REQUIRED_STDINNULL_NO",
+  "version": 1
+}

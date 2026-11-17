@@ -57,6 +57,7 @@ class APISettings:
     anomaly_report: Path | None = None
     next24_publication_root: Path | None = None
     operational_publication_root: Path | None = None
+    price_only_fallback_path: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "APISettings":
@@ -64,6 +65,9 @@ class APISettings:
         return cls(
             operational_publication_root=Path(os.environ["POWERFLOW_OPERATIONAL_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_OPERATIONAL_PUBLICATION_ROOT") else None,
             next24_publication_root=Path(os.environ["POWERFLOW_FORECAST_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_FORECAST_PUBLICATION_ROOT") else None,
+            price_only_fallback_path=Path(os.environ["POWERFLOW_PRICE_ONLY_FALLBACK_PATH"])
+            if os.environ.get("POWERFLOW_PRICE_ONLY_FALLBACK") == "true"
+            and os.environ.get("POWERFLOW_PRICE_ONLY_FALLBACK_PATH") else None,
             market_silver=root / "data/processed/silver_electricity_market_data.csv",
             public_metadata_root=root,
             anomaly_report=root / "data/reports/detected_anomalies.csv",
@@ -109,8 +113,8 @@ class ForecastPublication(StrictResponseModel):
     issue_time: datetime
     expires_at: datetime
     completed_at: datetime
-    availability_policy: Literal['ISSUE_HORIZON_V1']
-    refresh_due_at: datetime
+    availability_policy: Literal['ISSUE_HORIZON_V1', 'PRICE_ONLY_FALLBACK_V1'] | None = None
+    refresh_due_at: datetime | None = None
 
 
 class Next24ForecastResponse(StrictResponseModel):
@@ -470,7 +474,26 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
             return _next24_report(configured.next24_forecast)
         from shared.forecast_publication import time as publication_time, MAX_AGE
         from shared.forecast_availability import SERVING_HORIZON, AVAILABILITY_POLICY
-        bundle = select_publication(configured.next24_publication_root).require_valid()
+        selection = select_publication(configured.next24_publication_root)
+        if selection.status in {"EXPIRED", "MISSING_PUBLICATION"} and configured.price_only_fallback_path is not None:
+            from shared.price_only_forecast import MODEL_RELEASE, load
+            fallback = load(configured.price_only_fallback_path, datetime.now(timezone.utc))
+            if fallback is not None:
+                issue, completed, expiry, values = fallback
+                return Next24ForecastResponse(
+                    row_count=24,
+                    forecasts=[
+                        Next24ForecastRow(issue_time=issue, target_time=issue + timedelta(hours=horizon),
+                                          horizon_hours=horizon, predicted_price_eur_mwh=value,
+                                          model_release=MODEL_RELEASE)
+                        for horizon, value in enumerate(values, 1)
+                    ],
+                    publication=ForecastPublication(
+                        status="VALID", issue_time=issue, completed_at=completed,
+                        expires_at=expiry, availability_policy="PRICE_ONLY_FALLBACK_V1",
+                    ),
+                )
+        bundle = selection.require_valid()
         issue = publication_time(bundle["forecasts"][0]["issue_time"])
         return Next24ForecastResponse(row_count=24, forecasts=bundle["forecasts"], publication=ForecastPublication(
             status="VALID", issue_time=issue, expires_at=issue+SERVING_HORIZON,

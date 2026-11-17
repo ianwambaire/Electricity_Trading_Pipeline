@@ -16,6 +16,20 @@ test('next24 contract preserves negative prices and rejects malformed horizons, 
     assert.throws(() => parseNext24({ ...fixture, forecasts: fixture.forecasts.map((r,i) => i ? r : { ...r, ...replacement }) }))
   }
 })
+test('price-only fallback expires within 15 minutes of completion', () => {
+  const forecasts = fixture.forecasts.map(row => ({ ...row, model_release: 'fallback-price-only-seasonal-median-v1' }))
+  const publication = {
+    status: 'VALID', issue_time: forecasts[0].issue_time,
+    completed_at: new Date(issue + 55 * 60000).toISOString(),
+    expires_at: new Date(issue + 70 * 60000).toISOString(),
+    availability_policy: 'PRICE_ONLY_FALLBACK_V1',
+  }
+  assert.equal(parseNext24({ ...fixture, forecasts, publication }).publication?.expires_at, publication.expires_at)
+  assert.throws(() => parseNext24({ ...fixture, publication }))
+  assert.throws(() => parseNext24({ ...fixture, forecasts, publication: {
+    ...publication, expires_at: new Date(issue + 71 * 60000).toISOString(),
+  } }))
+})
 test('withholding overrides retained data or missing data; historical/stale/recent remain distinct', () => {
   const report = parseNext24(fixture)
   assert.equal(classifyForecast(report, pipeline, issue).label, 'Withheld')

@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import stat
 from unittest.mock import patch
 import pandas as pd
 import pytest
@@ -123,6 +124,47 @@ def test_failed_activation_preserves_previous(namespace,inputs):
         with pytest.raises(OSError):store.publish(namespace,b,now=NOW+dt.timedelta(minutes=1))
     assert store.read_active(namespace,NOW+dt.timedelta(minutes=1))[1]==first
     assert not list(namespace.glob('.current-*'))
+    second=store.publish(namespace,b,now=NOW+dt.timedelta(minutes=1))
+    assert second!=first and (namespace/'releases'/first/'report.json').is_file()
+    assert store.read_active(namespace,NOW+dt.timedelta(minutes=1))[1]==second
+
+
+def test_publication_modes_with_setid_syscalls_denied(namespace, monkeypatch):
+    releases = namespace / 'releases'
+    releases.chmod(0o2750)  # Bootstrap sets the reader group on the parent.
+    group = releases.stat().st_gid
+    mkdir, fchmod = os.mkdir, os.fchmod
+
+    def deny_setid(call):
+        def guarded(target, mode, **kwargs):
+            if mode & (stat.S_ISUID | stat.S_ISGID):
+                raise PermissionError('synthetic RestrictSUIDSGID denial')
+            return call(target, mode, **kwargs)
+        return guarded
+
+    document = contract.failure('MISSING_HISTORY', NOW)
+    with monkeypatch.context() as patch:
+        patch.setattr(store.os, 'mkdir', deny_setid(mkdir))
+        patch.setattr(store.os, 'fchmod', deny_setid(fchmod))
+        previous_umask = os.umask(0o077)
+        try:
+            digest = store.publish(namespace, document, now=NOW)
+        finally:
+            os.umask(previous_umask)
+
+    release = releases / digest
+    for path, mode in [(release, 0o750), (release / 'report.json', 0o640),
+                       (namespace / 'current', 0o640)]:
+        info = path.stat()
+        assert info.st_gid == group
+        assert stat.S_IMODE(info.st_mode) == mode
+    assert store.read_active(namespace, NOW) == (document, digest)
+
+    # The one-shot rollback withdraws the pointer and retains the release.
+    (namespace / 'current').rename(namespace / '.withdrawn-test')
+    with pytest.raises(FileNotFoundError):
+        store.read_active(namespace, NOW)
+    assert (release / 'report.json').read_bytes() == contract.encode(document)
 
 @pytest.mark.parametrize('kind',['symlink','permissions','older','marker'])
 def test_namespace_guards(namespace,inputs,kind):

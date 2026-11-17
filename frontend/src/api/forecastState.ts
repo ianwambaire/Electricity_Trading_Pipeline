@@ -3,14 +3,18 @@ import type { ForecastReport, Next24Row, PipelineStatus } from './contracts.ts'
 // Display classification only. The backend's configurable issuance threshold is
 // not exposed by this API. This never changes backend eligibility or publishes data.
 export const DISPLAY_RECENCY_HOURS = 3
+export const PRICE_ONLY_FALLBACK_RELEASE = 'fallback-price-only-seasonal-median-v1'
 export function classifyForecast(report: ForecastReport<Next24Row> | null, pipeline: PipelineStatus | null, now: number, errorCode?: string | null) {
   if (errorCode === 'FORECAST_WITHHELD') return {label: 'WITHHELD', description: 'No valid, unexpired forecast publication is available.'}
   if (report?.publication) {
     const issue = Date.parse(report.publication.issue_time), expires = Date.parse(report.publication.expires_at)
     if (now < issue || now >= expires) return {label: 'WITHHELD', description: 'This forecast publication has expired or is not yet eligible.'}
     const remaining = report.forecasts.filter(row => Date.parse(row.target_time) > now).length
+    if (report.forecasts[0]?.model_release === PRICE_ONLY_FALLBACK_RELEASE) {
+      return {label: 'Live fallback forecast', description: `Price-only estimates from the previous 14 days. ${remaining} of 24 forecast hours are still ahead.`}
+    }
     const delayed = report.publication.refresh_due_at != null && now >= Date.parse(report.publication.refresh_due_at)
-    return {label: delayed ? 'Published forecast · refresh delayed' : 'Valid published forecast', description: `${remaining} of 24 issue-relative target hours remain future. Expires ${formatTime(report.publication.expires_at)}. ${delayed ? 'Awaiting a newer eligible issue; this is an older published forecast, not newly refreshed data. ' : ''}This is not a new 24 hours from now. Elapsed targets are not live predictions. Historical pipeline status is separate.`}
+    return {label: delayed ? 'Published forecast · refresh delayed' : 'Valid published forecast', description: `${remaining} of 24 forecast hours are still ahead. Expires ${formatTime(report.publication.expires_at)}.${delayed ? ' Waiting for the next forecast.' : ''}`}
   }
   const status = pipeline?.forecast_status?.toUpperCase()
   if (status === 'WITHHELD' || status === 'UNAVAILABLE') return { label: status === 'WITHHELD' ? 'Withheld' : 'Unavailable', description: 'The latest recorded pipeline status reports no new forecast. Any retained report is reference data only; the API does not provide the detailed cause.' }

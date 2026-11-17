@@ -333,3 +333,19 @@ button:disabled { cursor: wait; opacity: .55; }
 .table-scroll:focus-visible { outline-offset: -3px; }
 .account-security-row > div { min-width: 0; }
 button { overflow-wrap: anywhere; }
+
+.forecast-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  background: var(--surface);
+}
+.forecast-status strong { color: var(--navy); font-size: 16px; }
+.forecast-status p { margin-top: 3px; font-size: 14px; line-height: 1.45; }
+.forecast-status .secondary-button { gap: 8px; }
+.forecast-issue-details { margin-top: 16px; }
+.forecast-metrics { margin-top: 22px; }
+.forecast-metrics h2 { color: var(--navy); font-weight: 600; font-size: 18px; }
+.forecast-metrics .metric-grid { margin-top: 12px; }

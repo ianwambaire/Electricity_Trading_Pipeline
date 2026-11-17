@@ -47,9 +47,11 @@ test('Analyst does not request Admin reports; Admin requests protected endpoints
  assert.ok(!calls.some(x=>x.startsWith('/api/admin/')))
  view.unmount();calls.length=0
  const admin=render(<AuthContext.Provider value={auth}><ServerAccountContext.Provider value={roles('Admin')}><MemoryRouter initialEntries={['/pipeline']}><Suspense><WorkspaceRoutes/></Suspense></MemoryRouter></ServerAccountContext.Provider></AuthContext.Provider>)
- await waitFor(()=>assert.ok(calls.includes('/api/admin/operations')&&calls.includes('/api/admin/monitoring/forecast-vintages')))
+ await waitFor(()=>assert.ok(calls.includes('/api/admin/operations')))
  await waitFor(()=>assert.ok(admin.getAllByText('Access denied').length))
- assert.ok(!calls.includes('/api/monitoring/forecast-vintages'))
+ assert.ok(!calls.some(path => /\/monitoring\/(forecast-vintages|exogenous-readiness)$/.test(path)))
+ assert.equal(admin.queryByRole('heading', { name: 'Forecast-vintage monitoring' }), null)
+ assert.equal(admin.queryByRole('heading', { name: 'Exogenous dataset readiness' }), null)
 })
 
 test('mobile navigation opens labelled dialog and closes on route selection; desktop collapse remains accessible',async()=>{

@@ -24,9 +24,19 @@ function operations(){return {assessed_at:iso(issue+2.9*hour),health:'Historical
 
 test('new policy retains a timely admitted forecast after refresh is due, without calling it newly refreshed',()=>{
  const r=parseNext24(fixture());const state=classifyForecast(r,null,issue+4*hour)
- assert.equal(state.label,'Published forecast · refresh delayed');assert.match(state.description,/20 of 24/);assert.match(state.description,/not newly refreshed/)
+ assert.equal(state.label,'Published forecast · refresh delayed');assert.match(state.description,/20 of 24/);assert.match(state.description,/Waiting for the next forecast/)
  assert.equal(publicationState({data:r,loading:false,error:null,receivedAt:null},issue+23*hour).data,r)
  assert.equal(publicationState({data:r,loading:false,error:null,receivedAt:null},issue+24*hour).data,null)
+})
+test('price-only fallback has its own label and is hidden at its freshness cutoff',()=>{
+ const completed=issue+5*60000,expires=completed+15*60000
+ const f=fixture()
+ const report=parseNext24({...f,forecasts:f.forecasts.map(row=>({...row,model_release:'fallback-price-only-seasonal-median-v1'})),publication:{
+  status:'VALID',issue_time:iso(issue),completed_at:iso(completed),expires_at:iso(expires),availability_policy:'PRICE_ONLY_FALLBACK_V1',
+ }})
+ assert.equal(classifyForecast(report,null,expires-1).label,'Live fallback forecast')
+ assert.equal(classifyForecast(report,null,expires).label,'WITHHELD')
+ assert.equal(publicationState({data:report,loading:false,error:null,receivedAt:null},expires).data,null)
 })
 test('new policy rejects unknown versions, stale inference, shifted expiry and partial metadata',()=>{
  for(const mutate of [

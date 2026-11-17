@@ -1,0 +1,15 @@
+[Unit]
+Description=Publish the PowerFlow price-only forecast snapshot
+
+[Service]
+Type=oneshot
+User=ec2-user
+Group=powerflow-api
+WorkingDirectory=/home/ec2-user/Electricity_Trading_Pipeline
+Environment=PYTHONPATH=src
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Provision the output directory as ec2-user:powerflow-api, mode 0750.
+ExecStart=/home/ec2-user/Electricity_Trading_Pipeline/.venv-prod/bin/python -m shared.price_only_forecast data/raw/entsoe/prices.csv /srv/powerflow/price-only-forecast/current.json
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true

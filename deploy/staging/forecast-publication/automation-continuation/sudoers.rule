@@ -1,0 +1,2 @@
+# Dedicated publisher only; does not alter existing administrator grants.
+ec2-user ALL=(root) NOPASSWD: NOSETENV: sha256:b27f0f7603df15ef0d6babec1aca7779c6db49447f68027589db3c9c6bee83b9 /usr/local/sbin/powerflow-publish-next24 ^--receipt [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} --flow-run [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$

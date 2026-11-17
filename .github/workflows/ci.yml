@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   test:
-    name: Python 3.14 checks
+    name: Python 3.14 release gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -37,13 +37,13 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-            requirements-prod.txt
+            requirements/shared.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
-          python -m pip install -r requirements-prod.txt
+          python -m pip check
 
       - name: Verify protected production artifacts
         shell: bash
@@ -57,8 +57,8 @@ jobs:
           1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650  artifacts/models/releases/next24h/next24h_release_manifest.json
           EOF
 
-      - name: Run test suite
-        run: python -m pytest -q
+      - name: Run release-gating tests
+        run: python -m pytest -q --release-gating --basetemp "$RUNNER_TEMP/powerflow-pytest"
 
       - name: Check production imports
         run: python scripts/check_production_imports.py
@@ -68,3 +68,62 @@ jobs:
 
       - name: Check diff whitespace
         run: git diff --check
+
+  api-runtime:
+    name: Isolated API runtime and security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: src
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements/api*.lock
+      - name: Install locked API test environment
+        run: python -m pip install -r requirements/api-test.lock
+      - run: python -m pip check
+      - run: python scripts/check_api_runtime.py
+      - name: Run API authorization and runtime regressions without research packages
+        run: python -m pytest -q --basetemp "$RUNNER_TEMP/powerflow-api-pytest" -m "not model_runtime" tests/test_api.py tests/test_api_security.py tests/test_account_management.py tests/test_mfa.py tests/test_backend_hardening.py tests/test_public_market_api.py tests/test_api_deployment.py tests/test_phase5_restoration.py tests/test_streamlit_decoupling.py
+
+  orchestration-runtime:
+    name: Separate production orchestration imports
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: src
+      MPLBACKEND: Agg
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -r requirements-prod.txt
+      - run: python -m pip check
+      - run: python scripts/check_production_imports.py
+
+  frontend:
+    name: React tests and production artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+      - run: node scripts/check-build.mjs
+      - run: npm audit --audit-level=high

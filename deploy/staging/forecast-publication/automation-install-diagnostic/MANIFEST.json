@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-publication/automation-install-diagnostic/REVIEW.md": {
+      "bytes": 5478,
+      "sha256": "54977b9bb544ff0009f5dd528c24e44e33970407f3f8091cd55e5324e25b967c"
+    },
+    "deploy/staging/forecast-publication/automation-install-diagnostic/build.py": {
+      "bytes": 1046,
+      "sha256": "40965e0576ca9e468073dff2aa353cbfac577d1a82140a7613e75b7162a9fa4a"
+    },
+    "deploy/staging/forecast-publication/automation-install-diagnostic/inspect.py": {
+      "bytes": 8697,
+      "sha256": "8f727a84513e3070bd40392e71d4e46282501d8bc9c53eebe80952f5fb962ba0"
+    },
+    "deploy/staging/forecast-publication/automation-install-diagnostic/run.py": {
+      "bytes": 11498,
+      "sha256": "9b915228514a2d2ebbeeadd3a1c00cc1d783971958950b2e6ed500a282d16f77"
+    },
+    "tests/test_automation_install_diagnostic.py": {
+      "bytes": 12229,
+      "sha256": "6cc94b0fd251c06c422740955c4936679eea93b754495c3b15f1db2678da67c3"
+    }
+  },
+  "original_manifest_sha256": "48a17404aa82c2fc16ab961311a7007224e1ee7016ecbc6ca5de04bed8aed389",
+  "remote_payload_sha256": "fff30ac0c5a0b84c3c33f0e6e527f10efb5b04bafca12e390b0668b99c985c23",
+  "transaction": "73080d9ca8fd4c3f9f143fd4ae84a123",
+  "version": 1
+}

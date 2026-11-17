@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "target": "https://staging.powerflowenergy.dev/api/admin/operations/current",
+  "remoteMutation": false,
+  "files": {
+    "frontend/acceptance/analyst-authorization/README.md": "28142c20cf257c2ea0e49a79db9ff5e8488b31e0c5c1672d2e20bfe541b82c88",
+    "frontend/acceptance/analyst-authorization/build.mjs": "f7bf4a27f9630df37ea9d3acaee004c69c7dde61168f3ccb3bae88d2401a11aa",
+    "frontend/acceptance/analyst-authorization/core.mjs": "ddf9e64c0b2743cf440643af63a5eadc98c56405d1855d47c3cc2246e7e10864",
+    "frontend/acceptance/analyst-authorization/core.test.mjs": "228f146a5ec0aec51053fe9f6ebe0ea9a9a2709978f046b9d267fd7a60655200",
+    "frontend/acceptance/analyst-authorization/run.mjs": "5d091b1237f41e6e6918a99b43b61e8b8ad3462e13e4bf1a537e8e5373e5958e",
+    "frontend/acceptance/bindings.json": "78e8305b92e8ec338f6dc330456ca427b12c5cbeccce9eabfc7e78549ebfaccc",
+    "frontend/acceptance/browser.mjs": "3dfab45071cc2fa9c8d82ca8349c6184ab8354009b646e0007c4b10e3070d4d2",
+    "frontend/acceptance/core.mjs": "3b5e79e349307a1f1ab9132c30fd48115dd50343919da064144f5e728186821b",
+    "frontend/acceptance/environment.mjs": "0e194f0c21c18a9cd400cb8a5638a6c9b55161b74a0095470dd5f7b65a828ac6",
+    "frontend/acceptance/operations-core.mjs": "fd515e979360fbe748fb3325e0fa504c5d58e3454ed4cdd723fb29f1f52e2583",
+    "frontend/acceptance/operations.mjs": "f48b9f81120fc5b0ecdd61bd4050c132e091b1f8fa82a65c7a8b4327d207ee1d",
+    "frontend/acceptance/run.mjs": "49db8c23256c1a6174108d8c5cf280bef5842bfccff885922c03c5ce519f0653",
+    "frontend/acceptance/setup-diagnostics.mjs": "1ef8ba5d5c76c7daebf3fafc24923996a8c96046bb5ec5c23d50b572d2515bc4",
+    "frontend/acceptance/tooling.mjs": "ef63956a15569bafa1bb40760ca3b793f20b63c90698b3a0c8206057492b646c",
+    "frontend/src/api/currentOperations.ts": "4dda9ab585d7985e449b5e554c3906e54dca31520ce0f1238bc2498d3f4c3bab"
+  }
+}

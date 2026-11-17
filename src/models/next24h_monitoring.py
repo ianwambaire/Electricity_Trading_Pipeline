@@ -7,6 +7,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from shared.forecast_evaluation import (
+    summarize_realized_performance, MONITORING_MIN_PAIRS, HORIZON_MIN_PAIRS, REALIZED_COLUMNS,
+)
+
 from models.next24h_production import HISTORY_PATH, _atomic_csv
 from processing.build_silver_dataset import aggregate_hourly_prices
 
@@ -14,81 +18,10 @@ from processing.build_silver_dataset import aggregate_hourly_prices
 RAW_PRICE_PATH = Path("data/raw/entsoe/prices.csv")
 REALIZED_PATH = Path("data/reports/next24h_realized_errors.csv")
 PERFORMANCE_PATH = Path("data/reports/next24h_performance.csv")
-REALIZED_COLUMNS = (
-    "forecast_issue_time", "target_timestamp", "horizon_hours", "issued_at_utc",
-    "predicted_price_eur_mwh", "model_release", "actual_price_eur_mwh",
-    "absolute_error", "squared_error", "signed_error",
-)
 PERFORMANCE_COLUMNS = (
     "scope", "horizon_hours", "observations", "mae", "rmse", "bias",
     "rolling_window", "rolling_mae", "rolling_rmse", "rolling_bias",
 )
-MONITORING_MIN_PAIRS = 20
-HORIZON_MIN_PAIRS = 5
-
-
-def summarize_realized_performance(
-    realized: pd.DataFrame,
-    *,
-    now: pd.Timestamp | None = None,
-    min_pairs: int = MONITORING_MIN_PAIRS,
-    min_horizon_pairs: int = HORIZON_MIN_PAIRS,
-) -> dict:
-    """Summarize only pre-target issued, subsequently realized forecasts.
-
-    Windows use observed target timestamps relative to ``now``, not a fixed
-    number of rows. Small samples remain explicitly insufficient.
-    """
-    if min_pairs < 1 or min_horizon_pairs < 1:
-        raise ValueError("Monitoring sample thresholds must be positive.")
-    current = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
-    current = current.tz_localize("UTC") if current.tzinfo is None else current.tz_convert("UTC")
-    windows = {"24h": pd.Timedelta(hours=24), "7d": pd.Timedelta(days=7),
-               "30d": pd.Timedelta(days=30)}
-    empty = {"status": "Insufficient data", "pair_count": 0,
-             "mae": None, "rmse": None, "bias": None}
-    if realized.empty:
-        return {"overall": empty.copy(), "windows": {name: empty.copy() for name in windows},
-                "horizons": pd.DataFrame(columns=["horizon_hours", "pair_count", "mae", "rmse", "bias", "status"]),
-                "target_dates": 0}
-    pairs = realized.copy()
-    for name in ("forecast_issue_time", "target_timestamp", "issued_at_utc"):
-        pairs[name] = pd.to_datetime(pairs[name], errors="coerce", utc=True)
-    for name in ("signed_error", "absolute_error", "squared_error", "horizon_hours"):
-        pairs[name] = pd.to_numeric(pairs[name], errors="coerce")
-    pairs = pairs.loc[
-        (pairs["forecast_issue_time"] < pairs["target_timestamp"])
-        & (pairs["issued_at_utc"] < pairs["target_timestamp"])
-        & (pairs["target_timestamp"] <= current)
-        & np.isfinite(pairs[["signed_error", "absolute_error", "squared_error"]].to_numpy(dtype=float)).all(axis=1)
-    ]
-
-    def metrics(frame: pd.DataFrame, minimum: int) -> dict:
-        result = {**empty, "pair_count": len(frame)}
-        if len(frame) >= minimum:
-            result.update({
-                "status": "Available",
-                "mae": float(frame["absolute_error"].mean()),
-                "rmse": float(np.sqrt(frame["squared_error"].mean())),
-                "bias": float(frame["signed_error"].mean()),
-            })
-        return result
-
-    horizon_rows = []
-    for horizon in range(1, 25):
-        frame = pairs.loc[pairs["horizon_hours"] == horizon]
-        horizon_rows.append({"horizon_hours": horizon, **metrics(frame, min_horizon_pairs)})
-    return {
-        "overall": metrics(pairs, min_pairs),
-        "windows": {
-            name: metrics(
-                pairs.loc[pairs["target_timestamp"] > current - duration], min_pairs
-            )
-            for name, duration in windows.items()
-        },
-        "horizons": pd.DataFrame(horizon_rows),
-        "target_dates": int(pairs["target_timestamp"].dt.date.nunique()),
-    }
 
 
 def load_observed_prices(path: Path = RAW_PRICE_PATH) -> pd.DataFrame:
@@ -103,9 +36,13 @@ def load_observed_prices(path: Path = RAW_PRICE_PATH) -> pd.DataFrame:
 def match_realized_forecasts(
     history: pd.DataFrame,
     observed: pd.DataFrame,
+    *, now: pd.Timestamp | None = None,
 ) -> pd.DataFrame:
     if history.empty or observed.empty:
         return pd.DataFrame(columns=REALIZED_COLUMNS)
+    current=pd.Timestamp.now(tz='UTC') if now is None else pd.Timestamp(now)
+    if current.tzinfo is None:raise ValueError('UTC scoring time required.')
+    current=current.tz_convert('UTC')
     issued = history.copy()
     actual = observed.copy()
     issued["forecast_issue_time"] = pd.to_datetime(
@@ -125,6 +62,12 @@ def match_realized_forecasts(
     )
     if actual["target_timestamp"].duplicated().any():
         raise ValueError("Actual hourly price timestamps must be unique.")
+    for key in ('horizon_hours','predicted_price_eur_mwh'):issued[key]=pd.to_numeric(issued[key],errors='raise')
+    actual['price_eur_mwh']=pd.to_numeric(actual['price_eur_mwh'],errors='raise')
+    if issued.duplicated(['model_release','forecast_issue_time','horizon_hours']).any():raise ValueError('Duplicate forecast identity.')
+    if not np.isfinite(issued[['horizon_hours','predicted_price_eur_mwh']].to_numpy(dtype=float)).all() or not np.isfinite(actual['price_eur_mwh'].to_numpy(dtype=float)).all():raise ValueError('Invalid forecast or observed value.')
+    if not (issued['horizon_hours'].between(1,24)&(issued['horizon_hours']%1==0)&((issued['target_timestamp']-issued['forecast_issue_time'])==pd.to_timedelta(issued['horizon_hours'],unit='h'))).all():raise ValueError('Invalid forecast target alignment.')
+    actual=actual.loc[actual.target_timestamp+pd.Timedelta(hours=1)<=current]
     issued = issued.loc[
         (issued["forecast_issue_time"] < issued["target_timestamp"])
         & (issued["issued_at_utc"] < issued["target_timestamp"])
@@ -191,6 +134,19 @@ def update_next24h_monitoring(
     performance_path: Path = PERFORMANCE_PATH,
 ) -> tuple[int, int]:
     history_path, raw_price_path = Path(history_path), Path(raw_price_path)
+    import os
+    if os.environ.get('POWERFLOW_REALIZED_REPORT_ENABLED')=='true':
+        from models.realized_reporting import build
+        from shared.realized_report_store import publish
+        from shared.realized_report import failure
+        import datetime as dt
+        root=Path(os.environ.get('POWERFLOW_REALIZED_REPORT_ROOT','/srv/powerflow/realized-performance'))
+        if not root.is_absolute() or '..'in root.parts:raise ValueError('Invalid realized report root.')
+        now=dt.datetime.now(dt.timezone.utc)
+        try:document=build(history_path,raw_price_path,history_path.parent/'next24h_inference',now=now)
+        except Exception:document=failure('INVALID_INPUT',now)
+        publish(root,document,now=now)
+
     if not history_path.exists() or not raw_price_path.exists():
         return 0, 0
     history = pd.read_csv(history_path)

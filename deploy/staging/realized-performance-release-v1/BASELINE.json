@@ -1,0 +1,5 @@
+{
+  "basis": "Committed repository predecessor; exact host equality is mandatory at read-only preflight. No host hashes accepted as baseline.",
+  "git_commit": "221693a96525afa4b96a2289297aa84cb00c6418",
+  "monitoring_sha256": "077e2ccfb388be623b01a655071d75f6de87aa093a71a27e52a4ceafd42ffe0a"
+}

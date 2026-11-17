@@ -5,17 +5,36 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import re
 import sqlite3
-from contextlib import closing
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from .runtime import RuntimeSettings, SafeRequestMiddleware, SafeExceptionMiddleware, event
+from .readiness import Readiness
+from .database import read_snapshot
 from pydantic import BaseModel, ConfigDict, Field
 
+
+from .market_data import MarketChart, MarketSummary, market_chart, market_summary, MarketCoverage, MarketHistory, MarketStore
+from .anomalies import AnomalySummary, AnomalyEvents, anomaly_summary, anomaly_events
+from .operations_summary import OperationsSummary, operations_summary, unavailable_operations
+from .forecast_source import select_publication
+from typing import Literal
+from .model_summaries import ModelsResponse, model_summaries
+
+
+from .security import CognitoVerifier, SecuritySettings, CurrentUser, require_authenticated_user, require_admin
+from .restricted_reports import ForecastProvenance, forecast_provenance, AccountResponse, VintageDiagnostics, ReadinessDiagnostics, LinearInfluence, vintage_diagnostics, readiness_diagnostics, linear_influence
 
 APPLICATION_NAME = "PowerFlow API"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -32,11 +51,26 @@ class APISettings:
     one_hour_forecast: Path
     forecast_vintage_health: Path
     exogenous_readiness: Path
+    market_silver: Path | None = None
+    realized_publication_root: Path | None = None
+    public_metadata_root: Path | None = None
+    anomaly_report: Path | None = None
+    next24_publication_root: Path | None = None
+    operational_publication_root: Path | None = None
+    price_only_fallback_path: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "APISettings":
         root = Path(root)
         return cls(
+            operational_publication_root=Path(os.environ["POWERFLOW_OPERATIONAL_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_OPERATIONAL_PUBLICATION_ROOT") else None,
+            next24_publication_root=Path(os.environ["POWERFLOW_FORECAST_PUBLICATION_ROOT"]) if os.environ.get("POWERFLOW_FORECAST_PUBLICATION_ROOT") else None,
+            price_only_fallback_path=Path(os.environ["POWERFLOW_PRICE_ONLY_FALLBACK_PATH"])
+            if os.environ.get("POWERFLOW_PRICE_ONLY_FALLBACK") == "true"
+            and os.environ.get("POWERFLOW_PRICE_ONLY_FALLBACK_PATH") else None,
+            market_silver=root / "data/processed/silver_electricity_market_data.csv",
+            public_metadata_root=root,
+            anomaly_report=root / "data/reports/detected_anomalies.csv",
             operational_database=root / "database/electricity_trading.db",
             next24_forecast=root / "data/reports/next24h_forecast.csv",
             one_hour_forecast=root / "data/reports/actual_vs_predicted.csv",
@@ -74,9 +108,19 @@ class Next24ForecastRow(StrictResponseModel):
     model_release: str
 
 
+class ForecastPublication(StrictResponseModel):
+    status: Literal["VALID"]
+    issue_time: datetime
+    expires_at: datetime
+    completed_at: datetime
+    availability_policy: Literal['ISSUE_HORIZON_V1', 'PRICE_ONLY_FALLBACK_V1'] | None = None
+    refresh_due_at: datetime | None = None
+
+
 class Next24ForecastResponse(StrictResponseModel):
     row_count: int
     forecasts: list[Next24ForecastRow]
+    publication: ForecastPublication | None = None
 
 
 class OneHourForecastRow(StrictResponseModel):
@@ -88,6 +132,10 @@ class OneHourForecastRow(StrictResponseModel):
 class OneHourForecastResponse(StrictResponseModel):
     row_count: int
     forecasts: list[OneHourForecastRow]
+    total_rows: int
+    limit: int
+    offset: int
+    has_more: bool
 
 
 def _utc_datetime(value: Any, field_name: str) -> datetime:
@@ -160,8 +208,7 @@ def _latest_pipeline_status(path: Path) -> PipelineStatusResponse:
             status_code=503, detail="Operational metadata is not available."
         )
     try:
-        uri = f"{path.resolve().as_uri()}?mode=ro"
-        with closing(sqlite3.connect(uri, uri=True)) as connection:
+        with read_snapshot(path) as connection:
             table = connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pipeline_runs'"
             ).fetchone()
@@ -262,7 +309,7 @@ def _next24_report(path: Path) -> Next24ForecastResponse:
     return Next24ForecastResponse(row_count=len(forecasts), forecasts=forecasts)
 
 
-def _one_hour_report(path: Path) -> OneHourForecastResponse:
+def _one_hour_report(path: Path, limit: int = 500, offset: int = 0) -> OneHourForecastResponse:
     rows = _read_csv_rows(path, "One-hour forecast report")
     required = {"timestamp", "actual_price", "predicted_price"}
     if not rows:
@@ -289,17 +336,124 @@ def _one_hour_report(path: Path) -> OneHourForecastResponse:
         raise HTTPException(
             status_code=503, detail="One-hour forecast report is invalid."
         ) from exc
-    return OneHourForecastResponse(row_count=len(forecasts), forecasts=forecasts)
+    # Page from the newest observations, then return chronological chart order.
+    # Validate the full persisted report first: pagination must not hide bad rows.
+    forecasts.sort(key=lambda row: row.target_time, reverse=True)
+    total = len(forecasts)
+    page = sorted(forecasts[offset:offset + limit], key=lambda row: row.target_time)
+    return OneHourForecastResponse(row_count=len(page), forecasts=page,
+        total_rows=total, limit=limit, offset=offset, has_more=offset + len(page) < total)
 
 
-def create_app(settings: APISettings | None = None) -> FastAPI:
+def create_app(settings: APISettings | None = None, *, security_settings: SecuritySettings | None = None, runtime_settings: RuntimeSettings | None = None) -> FastAPI:
     """Create the service with explicit read-only paths for safe testing."""
-    configured = settings or APISettings.from_root(PROJECT_ROOT)
+    runtime = runtime_settings or RuntimeSettings.from_environment()
+    data_root = os.environ.get('POWERFLOW_API_DATA_ROOT')
+    if settings is None and ((runtime.deployed and not data_root) or (data_root is not None and not Path(data_root).is_absolute())):
+        raise ValueError('An absolute published data root is required for the deployed API')
+    configured = settings or APISettings.from_root(Path(data_root) if data_root else PROJECT_ROOT)
+    realized_root=configured.realized_publication_root
+    if settings is None and os.environ.get('POWERFLOW_REALIZED_REPORT_ROOT'):
+        realized_root=Path(os.environ['POWERFLOW_REALIZED_REPORT_ROOT'])
+        if not realized_root.is_absolute() or '..'in realized_root.parts:raise ValueError('Invalid realized publication root')
+        if runtime.deployed and realized_root!=Path('/srv/powerflow/realized-performance'):raise ValueError('Unapproved realized publication root')
+    market_store = MarketStore(configured.market_silver)
+
+    @asynccontextmanager
+    async def lifespan(_application):
+        event('application_started', environment=runtime.environment)
+        try:
+            yield
+        finally:
+            market_store.close()
+            event('application_stopped')
+
     application = FastAPI(
         title=APPLICATION_NAME,
         description="Read-only access to persisted PowerFlow outputs.",
         version="1.0.0",
+        lifespan=lifespan,
+        docs_url=None if runtime.deployed else '/docs',
+        redoc_url=None if runtime.deployed else '/redoc',
+        openapi_url=None if runtime.deployed else '/openapi.json',
     )
+    application.state.runtime_settings = runtime
+    application.state.readiness = Readiness(configured)
+    application.add_middleware(SafeExceptionMiddleware)
+    # Safe logging wraps CORS and host rejections as well as application errors.
+    if runtime.cors_origins:
+        application.add_middleware(CORSMiddleware, allow_origins=list(runtime.cors_origins),
+                                   allow_credentials=False, allow_methods=['GET', 'POST', 'PATCH'],
+                                   allow_headers=['Authorization', 'Content-Type'], expose_headers=['X-Request-ID'])
+    application.add_middleware(TrustedHostMiddleware, allowed_hosts=list(runtime.allowed_hosts), www_redirect=False)
+    application.add_middleware(SafeRequestMiddleware)
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_error(_request: Request, _error):
+        # FastAPI's default body can echo rejected secrets or attacker strings.
+        return JSONResponse({'detail': 'Invalid request parameters.'}, status_code=422)
+
+    from .mfa_service import EnrollmentStore
+    application.state.mfa_enrollments = EnrollmentStore()
+    # Separate release gate from pool enablement: live enrollment needs its own
+    # approval. Defaults closed; no runtime IAM/DescribeUserPool permission.
+    application.state.account_totp_enabled = os.environ.get('POWERFLOW_ACCOUNT_TOTP_ENABLED') == 'true'
+    target = os.environ.get('POWERFLOW_ACCOUNT_TOTP_TEST_SUBJECT', '').strip()
+    application.state.account_totp_test_subject = target or None
+    if target and not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', target):
+        # A typo must never broaden a dedicated-account test to all local users.
+        application.state.account_totp_enabled = False
+
+    if runtime.deployed and application.state.account_totp_enabled:
+        raise ValueError('MFA enrollment is not released for deployed API runtimes')
+
+    # Missing/invalid auth configuration never opens protected routes. Market
+    # summaries stay public; legacy monitoring requires Admin. Startup uses no network.
+    try:
+        identity_settings = security_settings or SecuritySettings.from_environment()
+        application.state.cognito_verifier = CognitoVerifier(identity_settings)
+        from .account_service import AccountGateway
+        application.state.account_gateway = AccountGateway(identity_settings.issuer)
+    except ValueError:
+        if runtime.deployed:
+            raise ValueError('Valid identity configuration is required for deployed API runtimes') from None
+        application.state.cognito_verifier = None
+        application.state.account_gateway = None
+
+    @application.get("/auth/me", response_model=AccountResponse, tags=["Authenticated account"])
+    def authenticated_account(user: CurrentUser = Depends(require_authenticated_user)):
+        return AccountResponse(subject=user.subject, role=user.role, email=user.email, display_name=user.display_name)
+
+    @application.get("/admin/forecast/provenance", response_model=ForecastProvenance, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_forecast_provenance(issue_time: datetime | None = None, completed_at: datetime | None = None):
+        if configured.next24_publication_root is not None:
+            selected = select_publication(configured.next24_publication_root)
+            selected.match(issue_time, completed_at)
+            return selected.provenance()
+        report = _next24_report(configured.next24_forecast)
+        if issue_time is not None and issue_time != report.forecasts[0].issue_time:
+            raise HTTPException(409, 'The forecast changed. Refresh the forecast before requesting its evidence.')
+        result = forecast_provenance(configured.public_metadata_root, report.forecasts)
+        if completed_at is not None:
+            raise HTTPException(409, 'A legacy snapshot has no publication completion identity.')
+        return result
+
+    @application.get("/admin/monitoring/forecast-vintages", response_model=VintageDiagnostics, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_vintages():
+        return vintage_diagnostics(configured.forecast_vintage_health)
+
+    @application.get("/admin/monitoring/exogenous-readiness", response_model=ReadinessDiagnostics, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_readiness():
+        return readiness_diagnostics(configured.exogenous_readiness)
+
+    @application.get("/admin/models/linear-feature-influence", response_model=LinearInfluence, dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_linear_influence():
+        return linear_influence(configured.public_metadata_root)
+
+    @application.get('/ready', tags=['Health'])
+    def readiness():
+        result = application.state.readiness.check(application.state.cognito_verifier is not None and application.state.account_gateway is not None)
+        return JSONResponse(result, status_code=200 if result['status'] == 'ready' else 503)
 
     @application.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -309,29 +463,159 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
             timestamp_utc=datetime.now(timezone.utc),
         )
 
-    @application.get("/pipeline/status", response_model=PipelineStatusResponse)
+    @application.get("/pipeline/status", response_model=PipelineStatusResponse, summary="Historical pipeline snapshot")
     def pipeline_status() -> PipelineStatusResponse:
         return _latest_pipeline_status(configured.operational_database)
 
-    @application.get("/forecast/next24", response_model=Next24ForecastResponse)
-    def next24_forecast() -> Next24ForecastResponse:
-        return _next24_report(configured.next24_forecast)
+    @application.get("/forecast/next24", response_model=Next24ForecastResponse, response_model_exclude_none=True)
+    def next24_forecast(response: Response) -> Next24ForecastResponse:
+        response.headers["Cache-Control"] = "no-store"
+        if configured.next24_publication_root is None:
+            return _next24_report(configured.next24_forecast)
+        from shared.forecast_publication import time as publication_time, MAX_AGE
+        from shared.forecast_availability import SERVING_HORIZON, AVAILABILITY_POLICY
+        selection = select_publication(configured.next24_publication_root)
+        if selection.status in {"EXPIRED", "MISSING_PUBLICATION"} and configured.price_only_fallback_path is not None:
+            from shared.price_only_forecast import MODEL_RELEASE, load
+            fallback = load(configured.price_only_fallback_path, datetime.now(timezone.utc))
+            if fallback is not None:
+                issue, completed, expiry, values = fallback
+                return Next24ForecastResponse(
+                    row_count=24,
+                    forecasts=[
+                        Next24ForecastRow(issue_time=issue, target_time=issue + timedelta(hours=horizon),
+                                          horizon_hours=horizon, predicted_price_eur_mwh=value,
+                                          model_release=MODEL_RELEASE)
+                        for horizon, value in enumerate(values, 1)
+                    ],
+                    publication=ForecastPublication(
+                        status="VALID", issue_time=issue, completed_at=completed,
+                        expires_at=expiry, availability_policy="PRICE_ONLY_FALLBACK_V1",
+                    ),
+                )
+        bundle = selection.require_valid()
+        issue = publication_time(bundle["forecasts"][0]["issue_time"])
+        return Next24ForecastResponse(row_count=24, forecasts=bundle["forecasts"], publication=ForecastPublication(
+            status="VALID", issue_time=issue, expires_at=issue+SERVING_HORIZON,
+            refresh_due_at=issue+MAX_AGE, availability_policy=AVAILABILITY_POLICY,
+            completed_at=bundle["execution"]["completed_at"]))
 
     @application.get("/forecast/one-hour", response_model=OneHourForecastResponse)
-    def one_hour_forecast() -> OneHourForecastResponse:
-        return _one_hour_report(configured.one_hour_forecast)
+    def one_hour_forecast(limit: int = Query(default=500, ge=1, le=2000),
+                          offset: int = Query(default=0, ge=0, le=2_000_000)) -> OneHourForecastResponse:
+        return _one_hour_report(configured.one_hour_forecast, limit, offset)
 
-    @application.get("/monitoring/forecast-vintages", response_model=dict[str, Any])
+    @application.get("/monitoring/forecast-vintages", response_model=VintageDiagnostics, dependencies=[Depends(require_admin)], deprecated=True, tags=["Deprecated Admin aliases"])
     def forecast_vintage_monitoring() -> dict[str, Any]:
-        return _read_json_report(
-            configured.forecast_vintage_health, "Forecast-vintage health report"
-        )
+        return vintage_diagnostics(configured.forecast_vintage_health)
 
-    @application.get("/monitoring/exogenous-readiness", response_model=dict[str, Any])
+    @application.get("/monitoring/exogenous-readiness", response_model=ReadinessDiagnostics, dependencies=[Depends(require_admin)], deprecated=True, tags=["Deprecated Admin aliases"])
     def exogenous_readiness() -> dict[str, Any]:
-        return _read_json_report(
-            configured.exogenous_readiness, "Exogenous readiness report"
-        )
+        return readiness_diagnostics(configured.exogenous_readiness)
+
+    @application.get("/market/coverage", response_model=MarketCoverage)
+    def market_coverage() -> MarketCoverage:
+        return market_store.coverage()
+
+    @application.get("/market/history", response_model=MarketHistory)
+    def market_history(
+        start: datetime | None = None,
+        end: datetime | None = None,
+        limit: int = Query(default=1000, ge=1, le=2000),
+        offset: int = Query(default=0, ge=0, le=2_000_000),
+    ) -> MarketHistory:
+        return market_store.history(start, end, limit, offset)
+
+    @application.get("/models/summary", response_model=ModelsResponse)
+    def public_model_summaries() -> ModelsResponse:
+        return model_summaries(configured.public_metadata_root)
+
+    @application.get("/anomalies/summary", response_model=AnomalySummary)
+    def public_anomaly_summary(start: datetime | None = None, end: datetime | None = None):
+        return anomaly_summary(configured.anomaly_report, start, end)
+
+    @application.get("/anomalies/events", response_model=AnomalyEvents)
+    def public_anomaly_events(start: datetime | None = None, end: datetime | None = None,
+                              order: Literal["price_desc", "time_asc", "time_desc"] = "price_desc",
+                              limit: int = Query(default=100, ge=1, le=1000), offset: int = Query(default=0, ge=0, le=100000)):
+        return anomaly_events(configured.anomaly_report, start, end, order, limit, offset)
+
+    @application.get("/market/summary", response_model=MarketSummary)
+    def public_market_summary(start: datetime | None = None, end: datetime | None = None):
+        return market_summary(market_store, start, end)
+
+    @application.get("/market/chart", response_model=MarketChart)
+    def public_market_chart(start: datetime | None = None, end: datetime | None = None,
+                            max_points: int = Query(default=1600, ge=4, le=2000),
+                            series: Literal['price', 'load_wind'] = 'price'):
+        if series == 'load_wind' and max_points < 6:
+            raise HTTPException(422, detail='Demand charts require at least six points.')
+        return market_chart(market_store, start, end, max_points, series)
+
+    from .current_operations import current_selection
+
+    @application.get('/operations/current', tags=['Current operational evidence'])
+    @application.get('/pipeline/current', tags=['Current operational evidence'])
+    def public_current_operations(request: Request):
+        return current_selection(request, configured.operational_publication_root)
+
+    @application.get('/admin/operations/current', dependencies=[Depends(require_admin)], tags=['Admin reports'])
+    def admin_current_operations(request: Request):
+        return current_selection(request, configured.operational_publication_root, admin=True)
+
+    @application.get("/operations/summary", response_model=OperationsSummary)
+    def public_operations_summary():
+        if configured.next24_publication_root is not None:
+            selected = select_publication(configured.next24_publication_root)
+            try:
+                recorded = operations_summary(configured)
+            except HTTPException:
+                recorded = unavailable_operations()
+            return selected.operations(recorded)
+        issue, invalid = None, False
+        try:
+            issue = _next24_report(configured.next24_forecast).forecasts[0].issue_time
+        except HTTPException as error:
+            invalid = error.status_code != 404
+        result = operations_summary(configured, issue, invalid)
+        return result.model_copy(update={
+            'explanation': 'Recorded snapshot assessment, not live pipeline health. ' + result.explanation,
+            'forecast_reason_provenance': 'Historical recorded pipeline evidence; execution success is not a current forecast attestation.',
+            'completeness_note': 'Historical operational snapshot; any retained forecast is reference data, not a validated publication. ' + result.completeness_note,
+        })
+
+    from .feature_parity import MarketExploration, ForecastContext, RealizedEvaluation, PriceComparison, market_exploration, forecast_context, realized_evaluation, price_comparison
+    from .admin_operations import AdminOperations, admin_operations
+
+    @application.get("/market/exploration", response_model=MarketExploration)
+    def market_exploration_route(start: datetime | None = None, end: datetime | None = None,
+                                 max_points: int = Query(default=1000, ge=4, le=2000)):
+        return market_exploration(market_store, start, end, max_points)
+
+    @application.get("/market/price-comparison", response_model=PriceComparison)
+    def price_comparison_route():
+        return price_comparison(configured.public_metadata_root)
+
+    @application.get("/forecast/context", response_model=ForecastContext)
+    def forecast_context_route(issue_time: datetime):
+        return forecast_context(market_store, issue_time)
+
+    @application.get("/forecast/realized-evaluation", response_model=RealizedEvaluation)
+    def realized_evaluation_route():
+        if realized_root is not None:
+            from .realized_reporting import evaluation
+            return evaluation(realized_root)
+        return realized_evaluation(configured.public_metadata_root)
+
+    @application.get("/admin/operations", response_model=AdminOperations, summary="Historical administrative operations",
+                     dependencies=[Depends(require_admin)], tags=["Admin reports"])
+    def admin_operations_route():
+        return admin_operations(configured.operational_database)
+
+    from .account_routes import router as account_router
+    application.include_router(account_router)
+    from .mfa_routes import router as mfa_router
+    application.include_router(mfa_router)
 
     return application
 

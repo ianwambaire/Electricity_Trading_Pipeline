@@ -1,0 +1,14 @@
+{
+  "tools_archive": "/private/tmp/powerflow-forecast-tools-faeec014b4cde838fcffb3c285eef1995f38547d443162e529fa90ec7209a6b3.tar.gz",
+  "sha256": "faeec014b4cde838fcffb3c285eef1995f38547d443162e529fa90ec7209a6b3",
+  "bytes": 6470,
+  "files": [
+    "publish.py",
+    "prepare.py",
+    "shared/__init__.py",
+    "shared/forecast_publication.py",
+    "tools-manifest.json"
+  ],
+  "contains_production_data": false,
+  "deployed": false
+}

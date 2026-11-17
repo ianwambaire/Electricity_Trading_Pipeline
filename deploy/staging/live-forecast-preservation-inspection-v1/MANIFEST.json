@@ -1,0 +1,17 @@
+{
+  "artifacts": {
+    "deploy/staging/live-forecast-preservation-inspection-v1/REVIEW.md": "dc5e7306172d0ab2090e0f194e75f99e678d9e84dc65184f4ba46062f88cb970",
+    "deploy/staging/live-forecast-preservation-inspection-v1/build.py": "151c57d65a8581e3b2637d178b4edcf907e69ba634772705bf62867f922e2121",
+    "deploy/staging/live-forecast-preservation-inspection-v1/inspect.py": "7808ffdd4ed7ae5b9b727d89c1b20920751c999f58642dd2c581956106f79711",
+    "deploy/staging/live-forecast-preservation-inspection-v1/run.py": "879913e5c4c8a7b6acda08d15b33deb4dc40dddb1a15ad8f0c5dcf360d5608ce",
+    "src/models/inference_evidence.py": "30f314fbc9cc2927e739f8f3fb8482c768331e5e0ed0aefaefae28c31769fbbb",
+    "src/models/next24h_production.py": "65c1514e96cc32360d7af462fc990a6c0d21d41f2dad69c9330c664c9901d65c",
+    "tests/test_live_forecast_preservation_inspection.py": "5830b5ca6e4752cc7e6e033ec235ee2053a0dd5840d81567b98b3f4817a7b2dd"
+  },
+  "execution_authorized": false,
+  "parent_manifest": "80da2c6f98b41c0237919f860a270268e5e5870f0530f95d5dc2261e1acf1730",
+  "payload_sha256": "add6a32cd8046b78f697022d43f169c9b33b8f919fd07f7ae52e0fdd0517024b",
+  "release": "phase-live-forecast-preservation-inspection-20261108-v1",
+  "transaction": "565437b5103a45d3b6192ecd70498f78",
+  "version": 1
+}

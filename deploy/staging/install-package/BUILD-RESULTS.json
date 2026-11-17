@@ -1,0 +1,63 @@
+{
+  "bundle_directory": "/private/tmp/powerflow-install-bundle-y4rh7gp1",
+  "bundle_sha256": "e0d86d94984a9f2ead63e3cbe087c11ebf7e52400bbe0304f002cc13ae1c02c1",
+  "bootstrap_sha256": "39a3e19020f2b6aca5abc36537de55a274528d595b344d6de8bcfd19ea6cd303",
+  "release_id": "phase-staging-https-ready-20261026",
+  "publication_data_files": 13,
+  "publication_data_bytes": 102895192,
+  "private_transfer_bytes": 38127690,
+  "disk_budget_plus_3GiB_bytes": 3752864863,
+  "artifacts": [
+    {
+      "name": "release.tar.gz",
+      "bytes": 497556,
+      "sha256": "8a32da48575760f42b04043f249edeff7459c36212cf1d4eb09fbfb3e1479f3e"
+    },
+    {
+      "name": "wheels.tar.gz",
+      "bytes": 37533461,
+      "sha256": "d71db0518421463fa78edd1bcd8d6db8cc3bf6008ed62972be5affdfe9161e97"
+    },
+    {
+      "name": "linux-regression-unittest.py",
+      "bytes": 6126,
+      "sha256": "6c32ebfb0aa97bc5a8dd4517c5dd96fddc29ebb0d667d6394b71fb804d2a3580"
+    },
+    {
+      "name": "activate-staging-https.py",
+      "bytes": 19670,
+      "sha256": "9c9173cf3f8da0e004dd30e16ca320f19ab860fa0770fa6a87414869b3efa6d4"
+    },
+    {
+      "name": "staging-support.conf",
+      "bytes": 320,
+      "sha256": "bbfcc177625e6938aff1945e6435681cb39a83dc4b65624959af339e64b1b790"
+    }
+  ],
+  "control_hashes": {
+    "install.py": "56bfa7463593f4a070c638a02a1befd4ace4a364f9457a8445475565831cd5ae",
+    "publisher.py": "9fe702f963c85817783697a595ff7ce4cc0264e04f31e92b9eef93af1fbcab01",
+    "cgroup_bpf.py": "79282e3493e0cf447a13193ffa487ff3c3d7c7202ed9de136c7f5a2202084fb7",
+    "bootstrap.py": "39a3e19020f2b6aca5abc36537de55a274528d595b344d6de8bcfd19ea6cd303"
+  },
+  "local_validation": {
+    "targeted_pytest_passed": 103,
+    "new_package_tests": 14,
+    "warnings": 1,
+    "linux_atomic_no_replace_probe": "passed",
+    "syntax_all_package_python": "passed",
+    "bundle_inventory": "10 exact transport files; release has 68 original files plus manifest; wheels have 26 verified wheels plus manifest",
+    "remote_execution_performed": false,
+    "source_data_or_database_bytes_in_bundle": false,
+    "frontend_and_candidate_assets_rebuilt": false
+  },
+  "additional_local_hashes": {
+    "bootstrap.py": "39a3e19020f2b6aca5abc36537de55a274528d595b344d6de8bcfd19ea6cd303",
+    "build.py": "bec06f33b91839fa6c86850f1fa43018e254d80f1d62469ce4fbb438e3ac9ae4",
+    "cgroup_bpf.py": "79282e3493e0cf447a13193ffa487ff3c3d7c7202ed9de136c7f5a2202084fb7",
+    "execute-approved.py": "14ce9301baf6b79069a4c9b9b60d287309a79b10d8eb7ee3cd6e6d58b726926a",
+    "install.py": "56bfa7463593f4a070c638a02a1befd4ace4a364f9457a8445475565831cd5ae",
+    "prepare-cognito.py": "c65e1632915e806ac7c99c582df02869bac5288d43affc4a99b19d04824a1547",
+    "publisher.py": "9fe702f963c85817783697a595ff7ce4cc0264e04f31e92b9eef93af1fbcab01"
+  }
+}

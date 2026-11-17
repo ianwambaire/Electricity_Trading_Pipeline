@@ -1,0 +1,636 @@
+{
+  "read_only": true,
+  "errors": [],
+  "control_bundle_sha256": "1a716274b69348a204cbc2300400b65a4485d33505ea4518c4bf7df4d5e815d8",
+  "paths": {
+    "/var/lib/powerflow-staging-install/phase-staging-https-ready-20261026": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o700",
+      "bytes": 16384,
+      "symlink": false,
+      "directory": true
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 81,
+      "symlink": false,
+      "directory": true
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 112,
+      "symlink": false,
+      "directory": true
+    },
+    "/srv/powerflow/published": {
+      "exists": true,
+      "uid": 0,
+      "gid": 992,
+      "mode": "0o750",
+      "bytes": 76,
+      "symlink": false,
+      "directory": true
+    },
+    "/srv/powerflow": {
+      "exists": true,
+      "uid": 0,
+      "gid": 992,
+      "mode": "0o700",
+      "bytes": 23,
+      "symlink": false,
+      "directory": true
+    },
+    "/srv/powerflow/.published-phase-staging-https-ready-20261026": {
+      "exists": false
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 92,
+      "symlink": false,
+      "directory": true
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api/bin": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 16384,
+      "symlink": false,
+      "directory": true
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api/bin/python": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o777",
+      "bytes": 10,
+      "symlink": true,
+      "directory": false,
+      "link_target": "python3.14"
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api/bin/python3": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o777",
+      "bytes": 10,
+      "symlink": true,
+      "directory": false,
+      "link_target": "python3.14"
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api/bin/python3.14": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o777",
+      "bytes": 19,
+      "symlink": true,
+      "directory": false,
+      "link_target": "/usr/bin/python3.14"
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/linux-regression.py": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o644",
+      "bytes": 6222,
+      "symlink": false,
+      "directory": false
+    },
+    "/opt/powerflow/react-current": {
+      "exists": false
+    },
+    "/var/www/powerflow-staging/current": {
+      "exists": false
+    },
+    "/etc/systemd/system/powerflow-candidate-api.service": {
+      "exists": false
+    },
+    "/etc/powerflow/react-api.env": {
+      "exists": false
+    }
+  },
+  "markers": {
+    "install.started": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o600",
+      "bytes": 26,
+      "symlink": false,
+      "directory": false
+    },
+    "publication-result.json": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o600",
+      "bytes": 316,
+      "symlink": false,
+      "directory": false
+    },
+    "installed.ok": {
+      "exists": false
+    },
+    "activation.started": {
+      "exists": false
+    },
+    "activated.ok": {
+      "exists": false
+    },
+    "rollback.started": {
+      "exists": false
+    },
+    "installation-measurements.json": {
+      "exists": false
+    }
+  },
+  "retained_captures": [
+    {
+      "name": "base-interpreter-1793022167757882479.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "base-interpreter-1793022167757882479.stdout",
+      "bytes": 126
+    },
+    {
+      "name": "candidate-state-1793022167727863379.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "candidate-state-1793022167727863379.stdout",
+      "bytes": 10
+    },
+    {
+      "name": "create-group-1793022168294883855.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "create-group-1793022168294883855.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "create-isolated-venv-1793022173987844631.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "create-isolated-venv-1793022173987844631.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "create-user-1793022168351962555.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "create-user-1793022168351962555.stdout",
+      "bytes": 0
+    },
+    {
+      "name": "offline-api-install-1793022187094716197.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "offline-api-install-1793022187094716197.stdout",
+      "bytes": 6797
+    },
+    {
+      "name": "pip-check-1793022187462371383.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "pip-check-1793022187462371383.stdout",
+      "bytes": 30
+    },
+    {
+      "name": "production-identities-1793022168066649397.stderr",
+      "bytes": 0
+    },
+    {
+      "name": "production-identities-1793022168066649397.stdout",
+      "bytes": 408
+    }
+  ],
+  "sanitized_traceback_frames": [],
+  "traceback_present": false,
+  "production_services": {
+    "exit_status": 0,
+    "identities_match_before": true,
+    "states": [
+      {
+        "MainPID": "1278418",
+        "Id": "powerflow-api.service",
+        "ActiveState": "active",
+        "SubState": "running"
+      },
+      {
+        "MainPID": "1475479",
+        "Id": "powerflow-streamlit.service",
+        "ActiveState": "active",
+        "SubState": "running"
+      },
+      {
+        "MainPID": "1319862",
+        "Id": "powerflow-prefect-worker.service",
+        "ActiveState": "active",
+        "SubState": "running"
+      },
+      {
+        "MainPID": "1942",
+        "Id": "powerflow-prefect-server.service",
+        "ActiveState": "active",
+        "SubState": "running"
+      },
+      {
+        "MainPID": "1899",
+        "Id": "postgresql.service",
+        "ActiveState": "active",
+        "SubState": "running"
+      }
+    ]
+  },
+  "candidate_unit": {
+    "exit_status": 0,
+    "properties": {
+      "MainPID": "0",
+      "User": "",
+      "Group": "",
+      "LoadState": "not-found",
+      "ActiveState": "inactive",
+      "SubState": "dead"
+    }
+  },
+  "identity": {
+    "exists": true,
+    "uid": 992,
+    "gid": 992,
+    "group_gid": 992,
+    "shell": "/sbin/nologin",
+    "home": "/nonexistent",
+    "supplementary_members": []
+  },
+  "release_hashes": {
+    "api/requirements/api.lock": {
+      "exists": true,
+      "matches": true
+    },
+    "api/requirements/shared.txt": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/__init__.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/account_routes.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/account_service.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/admin_operations.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/anomalies.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/app.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/database.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/feature_parity.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/market_data.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/mfa_routes.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/mfa_service.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/model_summaries.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/operations_summary.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/readiness.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/restricted_reports.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/runtime.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/api/security.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/shared/__init__.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/shared/forecast_evaluation.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/shared/market_context.py": {
+      "exists": true,
+      "matches": true
+    },
+    "api/src/shared/operational_health.py": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/AnalyticsPage-BA-31sOz.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/AnomaliesPage-f4fxo-ye.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ApiPanel-4W0OymnB.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/BarChart-yrNLa8zV.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/CartesianChart-DC6XSMH1.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/CoefficientChart-C28jf0_R.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/DateRangeFilter-CoKVLPya.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ExplorationCharts-SlrbqlQG.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ForecastChart-CrMd7ryD.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ForecastSummary-NLcrRvap.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ForecastingPage-EEe2X3Ov.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/HistoricalChart-Bn2pQbRC.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/KpiGrid-eOgMfoBa.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/Legend-CHPs3-X5.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/Line-DFl83V32.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/LineChart-DWrPE4XG.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/MarketChart-DNO8JZPW.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/MarketOverview-CZRgcic1.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ModelsPage-DSU8PA2u.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/NotFoundPage-Ch51SsRd.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/OperationalSummary-BjntXDIq.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/PageHeading-MxfeYaE5.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/Panel-DEIxcgKV.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/PipelinePage-gldBqyMJ.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ProfilePage-WahkAQiF.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/ReferenceLine-VrEvhCYr.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/index-DCLLDsHi.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/index-DST_P3xP.css": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/jsx-runtime-Wy9s6hX0.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/tooltipContext-DDXscRaI.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/assets/useApi-Dy9YsRHP.js": {
+      "exists": true,
+      "matches": true
+    },
+    "static/build-config.json": {
+      "exists": true,
+      "matches": true
+    },
+    "static/favicon.svg": {
+      "exists": true,
+      "matches": true
+    },
+    "static/fonts/SourceSans3-LICENSE.md": {
+      "exists": true,
+      "matches": true
+    },
+    "static/fonts/SourceSans3VF-Upright.woff2": {
+      "exists": true,
+      "matches": true
+    },
+    "static/icons.svg": {
+      "exists": true,
+      "matches": true
+    },
+    "static/index.html": {
+      "exists": true,
+      "matches": true
+    }
+  },
+  "publication_hashes": {
+    "data/processed/silver_electricity_market_data.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/features/gold_model_features.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/raw/entsoe/prices.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/raw/entsoe/load.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/raw/entsoe/generation.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/raw/weather/open_meteo_weather.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/reports/actual_vs_predicted.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/reports/detected_anomalies.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/reports/final_holdout_metrics.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "data/reports/feature_importance.csv": {
+      "exists": true,
+      "matches": true
+    },
+    "artifacts/models/final_model_release_manifest.json": {
+      "exists": true,
+      "matches": true
+    },
+    "artifacts/models/releases/next24h/next24h_release_manifest.json": {
+      "exists": true,
+      "matches": true
+    },
+    "database/electricity_trading.db": {
+      "exists": true,
+      "matches": true
+    }
+  },
+  "publication_result": {
+    "data_bytes": 102895837,
+    "total_file_bytes": 102906553,
+    "files": 13,
+    "metadata_files": 1,
+    "file_mode": "0640",
+    "directory_mode": "0750",
+    "owner_uid": 0,
+    "reader_gid": 992,
+    "publication_manifest_sha256": "6b721b903d5c700dd3fc03ead21b95313721d2908e7cb5a54db09e02131df059"
+  },
+  "publication_metadata_matches": true,
+  "production_config_hashes": {
+    "/etc/nginx/conf.d/powerflow.conf": true,
+    "/etc/nginx/conf.d/powerflow-staging-acme.conf": true
+  },
+  "staging_https_placeholder_matches": true,
+  "production_certificate_baseline": true,
+  "candidate_effective_access": {
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026": {
+      "errno": 13
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api": {
+      "errno": 13
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api/bin": {
+      "errno": 13
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/.venv-api/bin/python": {
+      "errno": 13
+    },
+    "/opt/powerflow/releases/phase-staging-https-ready-20261026/linux-regression.py": {
+      "errno": 13
+    },
+    "/srv/powerflow/published": {
+      "errno": 13
+    },
+    "/var/lib/powerflow-staging-install/phase-staging-https-ready-20261026": {
+      "errno": 13
+    },
+    "/usr/bin/python3.14": {
+      "R_OK": true,
+      "X_OK": true,
+      "W_OK": false,
+      "stat": {
+        "exists": true,
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o755",
+        "bytes": 15744,
+        "symlink": false,
+        "directory": false
+      }
+    },
+    "inherited_cwd": "/home/ec2-user"
+  },
+  "status": "complete"
+}

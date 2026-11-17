@@ -1,0 +1,16 @@
+{
+  "execution_authorized": false,
+  "files": {
+    "data/backups/private-staging-releases/phase-api-body-bound-20261102-v2/release/release-manifest.json": "dc2fd9aa9cb0e961fd3859aa63b946a307c43f8a31ed6d8ac0ef4529c32f2045",
+    "deploy/staging/operational-evidence-release-v1/MANIFEST.json": "873619a9cd73d5fc676058facc1ed5daf1dc1030efbc4572b42c34653a4bf7d9",
+    "deploy/staging/operational-evidence-release-v1/run.py": "5e24905cb80632b4a4b8c83b40a1d21aa609ad313b844a318afd4df22b18c19d",
+    "deploy/staging/static-baseline-inspection-v1/LOCAL_FINDINGS.json": "8cd0fbca5dbe5934af8d2aa6affc2da13a940f293b23cae964a0e69ecc0f9ec5",
+    "deploy/staging/static-baseline-inspection-v1/REVIEW.md": "4b57da72de22c5b91d4fff62b27bf79cef6f81a95c91f9dddbdf9f250c427fdf",
+    "deploy/staging/static-baseline-inspection-v1/inspect.py": "40b42a996d23cc0d73b644f41d39a187d803924f7efec03a845983145d95fadd",
+    "deploy/staging/static-baseline-inspection-v1/run.py": "0cead68a0466cd373ef3acd6179e2c4016dafb8f21b112f1e68c77633b229e7a",
+    "tests/test_static_baseline_inspection.py": "c42243a6bcc9a52d6ef7c1b28ee4f6484b53818a1a19afbcd3e008c5988bbc4e"
+  },
+  "payload_sha256": "1d5ca05add34652fa97af97e48a6e587f0a48e557cf4a2080a248a6b514c4db4",
+  "read_only": true,
+  "version": 1
+}

@@ -1,0 +1,14 @@
+{
+  "files": {
+    "REVIEW.md": "f27edea2bb7e78215c38ce56b696d8c55449176a7631e8452c385b9c074795c0",
+    "inspect.py": "706a5eda277c91282d999b2a2df6fd89c32bfc560fa3b312a8f465f85067e90d",
+    "payload.py": "6e9f45178b3e67c1b7fe2c76bb2b52950c25a5013d3313232555e615e937a8aa",
+    "run.py": "d2fe90863f6f371daf2a3b83ad3e556497b02f606969d1987bf83a85c4dfb1bc"
+  },
+  "read_only": true,
+  "supervisor_sha256": "44937a3788a52884c6a8bacb70fb207a341152d1ebf770d460b577b8fad2e9e9",
+  "target_flow": "01a1b4fd-6f22-7738-8410-7df4e9e73e60",
+  "target_pipeline": "3dd2ddfda3b34b1c982a0d7c5342b222",
+  "v5_manifest": "cdd828defc52ea258852b88aa852d1d470ca915d098021d6ff8fd2be9b05223b",
+  "version": 1
+}

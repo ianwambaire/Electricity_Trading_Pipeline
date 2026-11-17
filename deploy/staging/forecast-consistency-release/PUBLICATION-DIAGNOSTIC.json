@@ -1,0 +1,51 @@
+{
+  "artifacts": {
+    "deploy/remediation/a3-bounded-local.py": {
+      "bytes": 1431,
+      "sha256": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
+    },
+    "deploy/staging/forecast-consistency-release/PREFLIGHT-REVIEW.json": {
+      "bytes": 1199,
+      "sha256": "9bdda4e39e02938d89073d0c208936bebdf3f20cc534bcdec13d5151afb1c117"
+    },
+    "deploy/staging/forecast-consistency-release/PREFLIGHT-REVIEW.md": {
+      "bytes": 11130,
+      "sha256": "c2d2324e157564df16a6f3618f73032c6be29037775000e8c991bba906178fb7"
+    },
+    "deploy/staging/forecast-consistency-release/PUBLICATION-DIAGNOSTIC.md": {
+      "bytes": 4477,
+      "sha256": "566ee3c40fecf5f6d73d54fc298cb165daf4fe69587a45e66a1d4b4e77042bf9"
+    },
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/publication_diagnostic.py": {
+      "bytes": 4462,
+      "sha256": "1992509c1bd90c70840dd194869d27ffeaeb5a9c4724c0c4032de554760ed4c7"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/forecast-consistency-release/run_publication_diagnostic.py": {
+      "bytes": 5165,
+      "sha256": "b8eedd1767a75785b526c4b449773492d5034db4c6007217018631524358108e"
+    },
+    "src/shared/forecast_publication.py": {
+      "bytes": 12783,
+      "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
+    },
+    "tests/test_forecast_consistency_preflight.py": {
+      "bytes": 28377,
+      "sha256": "36557a5ec0d513834b60260979866593d087cbffc4fb9ed14aac93c37e747f4e"
+    },
+    "tests/test_publication_diagnostic.py": {
+      "bytes": 4361,
+      "sha256": "b7bcced6f33d698a22e8a442b1e7693dac6df79eb461684f0bad8303095d7512"
+    }
+  },
+  "remote_payload_sha256": "e32adad6b673a117c4b4b6685a4729d3126890184f1e3829def445fb53b774b6",
+  "schema_version": 1,
+  "scope": "publication-only; local preparation, new authorization required"
+}

@@ -1,0 +1,8 @@
+{
+  "origin": "https://staging.powerflowenergy.dev",
+  "cognito_issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_NLoYFRvex",
+  "cognito_client_id": "replacewithapprovedclientid",
+  "api_port": 8010,
+  "previous_release": null,
+  "cognito_domain": "https://us-east-1nloyfrvex.auth.us-east-1.amazoncognito.com"
+}

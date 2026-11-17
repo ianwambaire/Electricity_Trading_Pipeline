@@ -1,0 +1,684 @@
+{
+  "status": "complete",
+  "read_only": true,
+  "source_count": 13,
+  "as_of_utc": "2026-10-26T13:34:50.723650+00:00",
+  "files": [
+    {
+      "relative_path": "data/processed/silver_electricity_market_data.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/processed/silver_electricity_market_data.csv",
+      "previous_sha256": "a9c925c6cb020a467d3152d441d1a181d8ec927af2ebb9cab11eb9e1ad7de3c7",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 11618469,
+        "mtime_utc": "2026-10-26T12:02:14.709497+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 11618483,
+        "mtime_utc": "2026-10-26T13:02:21.444045+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "127cb37b85ab35bd5519a12aae3ffac44d4d7ef5f9e7469f917dde972acd6330",
+      "stable_during_hash": true,
+      "bytes_hashed": 11618483,
+      "changed": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 68411,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-25T21:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 16.58,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "127cb37b85ab35bd5519a12aae3ffac44d4d7ef5f9e7469f917dde972acd6330",
+        "stable_during_hash": true,
+        "bytes_hashed": 11618483
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/features/gold_model_features.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/features/gold_model_features.csv",
+      "previous_sha256": "c12a041a1d40c47e81e434479e09a99130e8b950a1f7e3ea08d1dfed3448f53f",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 20934928,
+        "mtime_utc": "2026-10-26T12:02:19.299517+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 20934928,
+        "mtime_utc": "2026-10-26T13:02:26.764068+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "c12a041a1d40c47e81e434479e09a99130e8b950a1f7e3ea08d1dfed3448f53f",
+      "stable_during_hash": true,
+      "bytes_hashed": 20934928,
+      "changed": false,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 67965,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-08T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-23T10:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 75.58,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "c12a041a1d40c47e81e434479e09a99130e8b950a1f7e3ea08d1dfed3448f53f",
+        "stable_during_hash": true,
+        "bytes_hashed": 20934928
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/raw/entsoe/prices.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/prices.csv",
+      "previous_sha256": "776c20a0ef8135622bdb41f605eda1a0568088a5f21c7604ca96678992325cc6",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 3224893,
+        "mtime_utc": "2026-10-26T12:00:29.759048+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 3225047,
+        "mtime_utc": "2026-10-26T13:00:29.923593+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "64964fe588b2cd3a0802ab9d81ce5409c8139fa5535afb85d6d5fa420c4e8df4",
+      "stable_during_hash": true,
+      "bytes_hashed": 3225047,
+      "changed": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 96563,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-26T12:45:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 0.83,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "64964fe588b2cd3a0802ab9d81ce5409c8139fa5535afb85d6d5fa420c4e8df4",
+        "stable_during_hash": true,
+        "bytes_hashed": 3225047
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/raw/entsoe/load.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/load.csv",
+      "previous_sha256": "1d5558249ca70d7e05f05b0045c9aa711190949c1a92a0fbe2338025669871ce",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 9695097,
+        "mtime_utc": "2026-10-26T12:00:50.699141+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 9695251,
+        "mtime_utc": "2026-10-26T13:00:51.893677+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "781ce49798296d0ad58aa73a9179666bfc44a95d0a3dfbbd3b48ad59fb423859",
+      "stable_during_hash": true,
+      "bytes_hashed": 9695251,
+      "changed": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 274105,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-26T11:15:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 2.33,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "781ce49798296d0ad58aa73a9179666bfc44a95d0a3dfbbd3b48ad59fb423859",
+        "stable_during_hash": true,
+        "bytes_hashed": 9695251
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/raw/entsoe/generation.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/entsoe/generation.csv",
+      "previous_sha256": "bad847a7103c93521b0d55c34a094f0546a0cb02353e3601638aa0d2305c2271",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 41207456,
+        "mtime_utc": "2026-10-26T12:01:12.889237+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 41208037,
+        "mtime_utc": "2026-10-26T13:01:18.523780+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "da34e965703f661b45e46abf92fcfa3fef100c54695736ce3dd8f54038b915aa",
+      "stable_during_hash": true,
+      "bytes_hashed": 41208037,
+      "changed": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 274129,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-26T12:15:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 1.33,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "da34e965703f661b45e46abf92fcfa3fef100c54695736ce3dd8f54038b915aa",
+        "stable_during_hash": true,
+        "bytes_hashed": 41208037
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/raw/weather/open_meteo_weather.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/raw/weather/open_meteo_weather.csv",
+      "previous_sha256": "996b48c8085240cd505105688e75757d29f7f9e2ebd1acda7b2772724974c039",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 3170780,
+        "mtime_utc": "2026-10-26T00:00:55.545713+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 3170780,
+        "mtime_utc": "2026-10-26T00:00:55.545713+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "996b48c8085240cd505105688e75757d29f7f9e2ebd1acda7b2772724974c039",
+      "stable_during_hash": true,
+      "bytes_hashed": 3170780,
+      "changed": false,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 68520,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2019-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-25T23:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 14.58,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "996b48c8085240cd505105688e75757d29f7f9e2ebd1acda7b2772724974c039",
+        "stable_during_hash": true,
+        "bytes_hashed": 3170780
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/reports/actual_vs_predicted.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/actual_vs_predicted.csv",
+      "previous_sha256": "aa2a197537fce4fcc853093c3b8ace5e5e570ab8018f09ab1733b834883cf488",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 806734,
+        "mtime_utc": "2026-10-24T00:01:47.528594+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 806734,
+        "mtime_utc": "2026-10-24T00:01:47.528594+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "aa2a197537fce4fcc853093c3b8ace5e5e570ab8018f09ab1733b834883cf488",
+      "stable_during_hash": true,
+      "bytes_hashed": 806734,
+      "changed": false,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 15561,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2025-01-01T00:00:00+00:00",
+        "latest_aware_utc": "2026-10-23T11:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 74.58,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "aa2a197537fce4fcc853093c3b8ace5e5e570ab8018f09ab1733b834883cf488",
+        "stable_during_hash": true,
+        "bytes_hashed": 806734
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/reports/detected_anomalies.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/detected_anomalies.csv",
+      "previous_sha256": "ea5b46f8c0aef021f7e7602a5fcc9770bceb7ec93266ef54f94e46608f2db609",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 113133,
+        "mtime_utc": "2026-10-26T12:02:31.539572+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 112875,
+        "mtime_utc": "2026-10-26T13:02:39.774122+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "a765bcf21bd56078281cbfcec1087997b6f9429405fef597f38a50f0d5cb051b",
+      "stable_during_hash": true,
+      "bytes_hashed": 112875,
+      "changed": true,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 684,
+        "timestamp_column": "timestamp",
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": "2021-11-24T16:00:00+00:00",
+        "latest_aware_utc": "2026-09-22T17:00:00+00:00",
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": 812.58,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "a765bcf21bd56078281cbfcec1087997b6f9429405fef597f38a50f0d5cb051b",
+        "stable_during_hash": true,
+        "bytes_hashed": 112875
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/reports/final_holdout_metrics.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/final_holdout_metrics.csv",
+      "previous_sha256": "60c1830414df97f68c6a2de67c242305427014d5049bc2945bbd8f29e545d0ba",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 540,
+        "mtime_utc": "2026-09-20T07:01:53.884104+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 540,
+        "mtime_utc": "2026-09-20T07:01:53.884104+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "60c1830414df97f68c6a2de67c242305427014d5049bc2945bbd8f29e545d0ba",
+      "stable_during_hash": true,
+      "bytes_hashed": 540,
+      "changed": false,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 1,
+        "timestamp_column": null,
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": null,
+        "latest_aware_utc": null,
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": null,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "60c1830414df97f68c6a2de67c242305427014d5049bc2945bbd8f29e545d0ba",
+        "stable_during_hash": true,
+        "bytes_hashed": 540
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "data/reports/feature_importance.csv",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/data/reports/feature_importance.csv",
+      "previous_sha256": "935e00ee045f485e607fd0429816747757ad4885d046d8e6bc062361c70fe466",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 1671,
+        "mtime_utc": "2026-10-26T12:02:34.716923+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 1671,
+        "mtime_utc": "2026-10-26T13:02:43.795430+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "935e00ee045f485e607fd0429816747757ad4885d046d8e6bc062361c70fe466",
+      "stable_during_hash": true,
+      "bytes_hashed": 1671,
+      "changed": false,
+      "summary": {
+        "status": "aggregate_only",
+        "row_count": 31,
+        "timestamp_column": null,
+        "invalid_timestamp_rows": 0,
+        "earliest_aware_utc": null,
+        "latest_aware_utc": null,
+        "latest_naive_timestamp": null,
+        "latest_aware_age_hours": null,
+        "timezone_note": "Naive times are not assumed UTC; no freshness age derived from them",
+        "sensitive_header_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "935e00ee045f485e607fd0429816747757ad4885d046d8e6bc062361c70fe466",
+        "stable_during_hash": true,
+        "bytes_hashed": 1671
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "artifacts/models/final_model_release_manifest.json",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/artifacts/models/final_model_release_manifest.json",
+      "previous_sha256": "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 2749,
+        "mtime_utc": "2026-10-16T09:21:37.384396+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 2749,
+        "mtime_utc": "2026-10-16T09:21:37.384396+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6",
+      "stable_during_hash": true,
+      "bytes_hashed": 2749,
+      "changed": false,
+      "summary": {
+        "status": "parsed_metadata_only",
+        "sensitive_key_count": 0,
+        "internal_path_value_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "64939ce5317b5aa6cffb169e1f8b9bbc7304508c496b9bcc71d701bfeb2e7dd6",
+        "stable_during_hash": true,
+        "bytes_hashed": 2749
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "source": "/home/ec2-user/Electricity_Trading_Pipeline/artifacts/models/releases/next24h/next24h_release_manifest.json",
+      "previous_sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 2774,
+        "mtime_utc": "2026-09-21T17:14:07.799179+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o644",
+        "bytes": 2774,
+        "mtime_utc": "2026-09-21T17:14:07.799179+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650",
+      "stable_during_hash": true,
+      "bytes_hashed": 2774,
+      "changed": false,
+      "summary": {
+        "status": "parsed_metadata_only",
+        "sensitive_key_count": 0,
+        "internal_path_value_count": 0,
+        "stable_during_summary": true,
+        "sensitivity_review_required": false
+      },
+      "recheck": {
+        "sha256": "1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650",
+        "stable_during_hash": true,
+        "bytes_hashed": 2774
+      },
+      "stable_across_inspection": true
+    },
+    {
+      "relative_path": "database/electricity_trading.db",
+      "source": "/home/ec2-user/powerflow-recovery-phase5d2-operational/20261026T022230.137446Z/electricity_trading.db",
+      "previous_sha256": "21fcb0e920ffaf13f214e39720e1176e012086d6ffa7b8a7ed736b6e4ab79690",
+      "previous_metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 12115968,
+        "mtime_utc": "2026-10-26T02:22:31.500734+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "metadata": {
+        "exists": true,
+        "uid": 1000,
+        "gid": 1000,
+        "mode": "0o600",
+        "bytes": 12115968,
+        "mtime_utc": "2026-10-26T02:22:31.500734+00:00",
+        "regular": true,
+        "directory": false,
+        "symlink": false
+      },
+      "sha256": "21fcb0e920ffaf13f214e39720e1176e012086d6ffa7b8a7ed736b6e4ab79690",
+      "stable_during_hash": true,
+      "bytes_hashed": 12115968,
+      "changed": false,
+      "sqlite": {
+        "uri_mode": "ro&immutable=1",
+        "integrity_ok": true,
+        "integrity_result_count": 1,
+        "foreign_key_violation_count": 0,
+        "required_tables_present": true,
+        "counts": {
+          "pipeline_runs": 891,
+          "data_quality_results": 16525,
+          "operational_incidents": 1485,
+          "pipeline_stage_timings": 11561
+        },
+        "counts_match_A1": true,
+        "sidecars": {
+          "-wal": {
+            "exists": false
+          },
+          "-shm": {
+            "exists": false
+          },
+          "-journal": {
+            "exists": false
+          }
+        },
+        "historical_cutoff_utc": "2026-10-26T02:22:00Z"
+      },
+      "recheck": {
+        "sha256": "21fcb0e920ffaf13f214e39720e1176e012086d6ffa7b8a7ed736b6e4ab79690",
+        "stable_during_hash": true,
+        "bytes_hashed": 12115968
+      },
+      "stable_across_inspection": true
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "No old source bytes retained for bytewise diff; pipeline causality is inferred, not proven",
+    "Stable file reads do not prove simultaneous cross-file producer transaction",
+    "Only approved standalone A1 database opened; live production DB not accessed",
+    "No logs, credentials, model binaries or unapproved source paths inspected"
+  ],
+  "changed_files": [
+    "data/processed/silver_electricity_market_data.csv",
+    "data/raw/entsoe/prices.csv",
+    "data/raw/entsoe/load.csv",
+    "data/raw/entsoe/generation.csv",
+    "data/reports/detected_anomalies.csv"
+  ],
+  "completed_at_utc": "2026-10-26T13:34:55.267150+00:00"
+}

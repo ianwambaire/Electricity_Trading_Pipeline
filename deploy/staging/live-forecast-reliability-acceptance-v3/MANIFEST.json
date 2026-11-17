@@ -1,0 +1,15 @@
+{
+  "artifacts": {
+    "deploy/staging/live-forecast-reliability-acceptance-v3/REVIEW.md": "6ec921e266e32f7f462723f52efe8e1636f08598d7a2cdee63196c37995c6f49",
+    "deploy/staging/live-forecast-reliability-acceptance-v3/acceptance.py": "b05fc70560ef46b607f90a44ed1582140f4310e9ecde72d850ac2db35a675456",
+    "deploy/staging/live-forecast-reliability-acceptance-v3/build.py": "7598bdc403042cf41b51e4e953b18e128c192959f6b1f911e50619e982e3680e",
+    "deploy/staging/live-forecast-reliability-acceptance-v3/run.py": "d49a63ec3874ce32067cdf0d7076e25fd8bd8c622d71e8b5d6da477b919aefcb",
+    "tests/test_live_forecast_reliability_acceptance_v3.py": "21ee4a83d71981c76d39ce6e357fbe66ae5475ea2060ccd40e925de97b86f056"
+  },
+  "execution_authorized": false,
+  "parent_manifest": "01b98fc094595b5ec626be8a0a254d57193ba63a8b25e1cc2a729f4c2752dba7",
+  "payload_sha256": "946f4c379b8257be05e0d6fd717e3ba9984485febb08ce9fdb2fe32de94b32ea",
+  "release": "phase-live-forecast-reliability-acceptance-20261107-v3",
+  "transaction": "565437b5103a45d3b6192ecd70498f78",
+  "version": 1
+}

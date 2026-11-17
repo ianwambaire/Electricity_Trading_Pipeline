@@ -1,0 +1,26 @@
+{
+  "actual_installed_config_binding": "VERIFIED_2026-11-07T07:20:44Z",
+  "added_paths": [
+    "/api/operations/current",
+    "/api/pipeline/current",
+    "/api/admin/operations/current"
+  ],
+  "approved_release_manifest_sha256": "dc2fd9aa9cb0e961fd3859aa63b946a307c43f8a31ed6d8ac0ef4529c32f2045",
+  "execution_authorized": false,
+  "files": {
+    "deploy/staging/operational-evidence-routing/routing.py": "7179cc40ecf8662676053e8c3b41ba4016243cff59f08ce9576a8ee5371ccdd2",
+    "deploy/staging/operational-evidence-routing/staging.powerflowenergy.dev.conf": "ee2549fd1196f5691fb60627dc75d408e9dbc858225383d198945e4597f6d7b7",
+    "tests/test_operational_evidence_routing.py": "7856f67ee18e0abda5925815cebdd37fb6e380d4e46cb8093aa01d4bc1eb6754"
+  },
+  "original_http_bound_cause": "REPRODUCED_CONTENT_TYPE_MECHANISM; ORIGINAL_ENDPOINT_NOT_RECORDED",
+  "proposed_config_sha256": "ee2549fd1196f5691fb60627dc75d408e9dbc858225383d198945e4597f6d7b7",
+  "routed_result": {
+    "all_three_paths": true,
+    "body_bytes": 146,
+    "content_type": "text/html",
+    "http_status": 404
+  },
+  "source_config_sha256": "ba9cc88e8a9b8f9401a713ccc2289f1c4375aa734745a6bfdbb431ce240e96ba",
+  "status": "LOCAL_ROUTING_PROPOSAL_NOT_DEPLOYMENT_PACKAGE",
+  "version": 1
+}

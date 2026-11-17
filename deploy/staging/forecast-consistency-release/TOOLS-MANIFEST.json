@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "scope": "Local staging release preparation, acceptance tooling and proposed rollback procedure; NO remote execution",
+  "release_id": "phase-forecast-consistency-20261101-v1",
+  "release_manifest_sha256": "9dc8ce31f1b294c43239824ffa544a76f4fdf6ba334ea8fd72b9431365ed5c19",
+  "artifacts": [
+    {
+      "path": "deploy/staging/forecast-consistency-release/REVIEW.md",
+      "bytes": 15532,
+      "sha256": "e8bc13439f281102ff2ef5761fc0de08b649845b015ff551b2cb89e8a36e002d"
+    },
+    {
+      "path": "deploy/staging/forecast-consistency-release/build.py",
+      "bytes": 1453,
+      "sha256": "f9358aeaffcfc6dff0f6dd7a68e2b9cc913abe19acff2ffff3996842706a379a"
+    },
+    {
+      "path": "deploy/staging/forecast-consistency-release/prepare.py",
+      "bytes": 3201,
+      "sha256": "f80284030c9971642453c38db0eba632d0595289cb21397c340fe38b570d3643"
+    },
+    {
+      "path": "deploy/staging/forecast-consistency-release/release-settings.json",
+      "bytes": 325,
+      "sha256": "1fd1cffed4a0909bb788b567725a7ca428aa34d7506214b55bb04048e162c9dd"
+    },
+    {
+      "path": "deploy/staging/forecast-consistency-release/rollback_state.py",
+      "bytes": 2334,
+      "sha256": "02e775ee2dde1d7500784b45f2a0a30011f24f50c7cca4b656461d94f53c119e"
+    },
+    {
+      "path": "deploy/staging/forecast-consistency-release/verify_runtime.py",
+      "bytes": 4226,
+      "sha256": "7556912ba2f68f701046e6133e3675841c6f16f00d4071062621c298c21c9c8e"
+    },
+    {
+      "path": "scripts/prepare_web_release.py",
+      "bytes": 11786,
+      "sha256": "366218dce5c7af6118b9fb731c04b3e8a75ed5317bd07ecda81178757ddc5965"
+    },
+    {
+      "path": "scripts/smoke_staging.py",
+      "bytes": 8520,
+      "sha256": "930f135efade4502d216d727c69aa71a3b1abc5a56b37847824dce8e18453612"
+    },
+    {
+      "path": "scripts/smoke_web_release.py",
+      "bytes": 7352,
+      "sha256": "1984c43040f99389bf1e37fc8858040f029b7ed9c69e4fdc0f2c501fe84fe360"
+    },
+    {
+      "path": "frontend/scripts/release-build.mjs",
+      "bytes": 1346,
+      "sha256": "9258da1bfd4f00f3ee4515c51797f47835e6b47cf891a94fe9098d4b3e7e832a"
+    },
+    {
+      "path": "frontend/build/productionConfig.ts",
+      "bytes": 1435,
+      "sha256": "1dd4a359c74e375f7c74d356fd7c7581efc96688d375b1d616d9cc0f09d3df40"
+    },
+    {
+      "path": "frontend/tests/staleReleaseRecovery.test.tsx",
+      "bytes": 1287,
+      "sha256": "75923c24647c35d6739a448dabc03cd554dcfd4ae1d64e5eb11b3f9d9533c9c6"
+    },
+    {
+      "path": "tests/test_release_http_smoke.py",
+      "bytes": 2732,
+      "sha256": "ad1d472fe707a1c99e59158867157fafbb3be203d7cd9f64cd45b3179ed715ec"
+    },
+    {
+      "path": "tests/test_staging_execution.py",
+      "bytes": 5318,
+      "sha256": "10bc3bc0a3ce2443dab50cc4d80631b8f3fab159b935713e2cc0454a761a6ecf"
+    },
+    {
+      "path": "tests/test_staging_publication_acceptance.py",
+      "bytes": 6285,
+      "sha256": "9b5f47dc4bbaa7d0152c3b0340046bae22a1035710968f0a2138afa7a7f4d2f8"
+    },
+    {
+      "path": "tests/test_forecast_consistency_release.py",
+      "bytes": 6407,
+      "sha256": "379c6cad36c1f9f0a04129a8b06dd68c633a95efa5978c96c7535cff434df132"
+    }
+  ]
+}

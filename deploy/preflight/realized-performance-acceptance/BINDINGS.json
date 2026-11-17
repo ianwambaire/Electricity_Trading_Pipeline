@@ -1,0 +1,18 @@
+{
+  "artifacts": {
+    "deploy/preflight/realized-performance-acceptance/REVIEW.md": "39e4fa28bc93757e6701af8bbd370141c1427749ef1dc4654b67bf33e8e26ece",
+    "deploy/preflight/realized-performance-acceptance/context.py": "694163f782b0d0dfa16785c6d9d6f55eab16ebc8469f694e58980625da8e3313",
+    "deploy/preflight/realized-performance-acceptance/inspect.py": "36a2ca156c6c7e76c6c32c871fbdeb808713798d0e4dfb59a450f1de5c397baf",
+    "deploy/preflight/realized-performance-acceptance/run.py": "6d29f6419e3d1185490b6ae6f1f127769272a751f540106519404aad04f0daba",
+    "deploy/staging/operational-evidence-release-v5/PREFECT-REFERENCE.json": "d905d31f110dfa5b60f2ad6787a4668814714c3bfc4acfdb15df88fcea5eb176",
+    "tests/test_realized_performance_acceptance_inspection.py": "6f2b4c373ffb6725d31c9534157e214bc9bc93e2043c1a20bba4f39a069d6413"
+  },
+  "execution_authorized": false,
+  "payload_bytes": 2396009,
+  "payload_sha256": "9ea691762fe8c126f90f57961c0c15c1ff92edcd223a8af18c4f4de52f3b0af0",
+  "purpose": "FIXED_RUN_READ_ONLY_ACCEPTANCE",
+  "reporting_v4_manifest": "4b129e8b7d8790d6fbb883e5043ce9cf7f34e75c3b5c5468d13a06bf87f10f95",
+  "source_sha256": "b09af42b6d2174888f74bbac99836c83717b7ac23c351477c49572a89835cfcc",
+  "transport_manifest": "6fb6cd73259c8c6961cc954cc636603abb90a2fcae7983ade15578d7d166fcbe",
+  "version": 1
+}

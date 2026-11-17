@@ -1,0 +1,9 @@
+[Unit]
+Description=Refresh the PowerFlow price-only snapshot every five minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/5:00 UTC
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

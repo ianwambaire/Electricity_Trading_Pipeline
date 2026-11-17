@@ -1,0 +1,3 @@
+#!/bin/sh
+# Proposal only: separate guarded installation authorization required.
+exec /usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/timeout --signal=TERM --kill-after=5s 30s /usr/bin/python3 -I -S -B /opt/powerflow/operational-evidence-v1/bootstrap.py "$@"

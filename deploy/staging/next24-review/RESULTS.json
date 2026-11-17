@@ -1,0 +1,477 @@
+{
+  "as_of": "2026-10-29T07:37:13.378856+00:00",
+  "sources": {
+    "prices": {
+      "exists": true,
+      "bytes": 3235194,
+      "missing_columns": [],
+      "rows": 96825,
+      "latest": "2026-10-29T06:45:00+00:00",
+      "latest_complete_hour": "2026-10-29T06:00:00+00:00",
+      "last_finite": {
+        "price_eur_mwh": "2026-10-29T06:45:00+00:00"
+      },
+      "recent_incomplete": {},
+      "stable": true
+    },
+    "load": {
+      "exists": true,
+      "bytes": 9705252,
+      "missing_columns": [],
+      "rows": 274369,
+      "latest": "2026-10-29T05:15:00+00:00",
+      "latest_complete_hour": "2026-10-29T04:00:00+00:00",
+      "last_finite": {
+        "load_mw": "2026-10-29T05:15:00+00:00"
+      },
+      "recent_incomplete": {
+        "2026-10-29T05:00:00+00:00": {
+          "row_count": 2,
+          "expected_count": 4,
+          "missing_fields": {},
+          "missing_quarters": [
+            "2026-10-29T05:30:00+00:00",
+            "2026-10-29T05:45:00+00:00"
+          ]
+        }
+      },
+      "stable": true
+    },
+    "generation": {
+      "exists": true,
+      "bytes": 41256651,
+      "missing_columns": [],
+      "rows": 274393,
+      "latest": "2026-10-29T06:15:00+00:00",
+      "latest_complete_hour": "2026-10-29T05:00:00+00:00",
+      "last_finite": {
+        "Biomass": "2026-10-29T05:45:00+00:00",
+        "Fossil Brown coal/Lignite": "2026-10-29T06:15:00+00:00",
+        "Fossil Gas": "2026-10-29T05:45:00+00:00",
+        "Fossil Hard coal": "2026-10-29T06:15:00+00:00",
+        "Hydro Run-of-river and poundage": "2026-10-29T05:45:00+00:00",
+        "Solar": "2026-10-29T05:45:00+00:00",
+        "Wind Offshore": "2026-10-29T06:15:00+00:00",
+        "Wind Onshore": "2026-10-29T05:45:00+00:00"
+      },
+      "recent_incomplete": {
+        "2026-10-29T06:00:00+00:00": {
+          "row_count": 2,
+          "expected_count": 4,
+          "missing_fields": {
+            "Biomass": [
+              "2026-10-29T06:00:00+00:00",
+              "2026-10-29T06:15:00+00:00"
+            ],
+            "Fossil Gas": [
+              "2026-10-29T06:00:00+00:00",
+              "2026-10-29T06:15:00+00:00"
+            ],
+            "Hydro Run-of-river and poundage": [
+              "2026-10-29T06:00:00+00:00",
+              "2026-10-29T06:15:00+00:00"
+            ],
+            "Solar": [
+              "2026-10-29T06:00:00+00:00",
+              "2026-10-29T06:15:00+00:00"
+            ],
+            "Wind Onshore": [
+              "2026-10-29T06:00:00+00:00",
+              "2026-10-29T06:15:00+00:00"
+            ]
+          },
+          "missing_quarters": [
+            "2026-10-29T06:30:00+00:00",
+            "2026-10-29T06:45:00+00:00"
+          ]
+        }
+      },
+      "stable": true
+    },
+    "weather_archive": {
+      "exists": true,
+      "bytes": 3174061,
+      "missing_columns": [],
+      "rows": 68592,
+      "latest": "2026-10-28T23:00:00+00:00",
+      "latest_complete_hour": "2026-10-28T23:00:00+00:00",
+      "last_finite": {
+        "temperature_2m": "2026-10-28T23:00:00+00:00",
+        "relative_humidity_2m": "2026-10-28T23:00:00+00:00",
+        "wind_speed_10m": "2026-10-28T23:00:00+00:00",
+        "cloud_cover": "2026-10-28T23:00:00+00:00",
+        "shortwave_radiation": "2026-10-28T23:00:00+00:00"
+      },
+      "recent_incomplete": {},
+      "stable": true
+    }
+  },
+  "candidate_issue_gaps": {
+    "2026-10-29T07:00:00+00:00": {
+      "prices": {
+        "missing_lag_hours": [
+          "2026-10-29T07:00:00+00:00"
+        ],
+        "missing_rolling24_hours": [
+          "2026-10-29T07:00:00+00:00"
+        ]
+      },
+      "load": {
+        "missing_lag_hours": [
+          "2026-10-29T07:00:00+00:00",
+          "2026-10-29T06:00:00+00:00"
+        ],
+        "missing_rolling24_hours": [
+          "2026-10-29T07:00:00+00:00",
+          "2026-10-29T06:00:00+00:00",
+          "2026-10-29T05:00:00+00:00"
+        ]
+      },
+      "generation": "incomplete issue hour"
+    },
+    "2026-10-29T06:00:00+00:00": {
+      "load": {
+        "missing_lag_hours": [
+          "2026-10-29T06:00:00+00:00",
+          "2026-10-29T05:00:00+00:00"
+        ],
+        "missing_rolling24_hours": [
+          "2026-10-29T06:00:00+00:00",
+          "2026-10-29T05:00:00+00:00"
+        ]
+      },
+      "generation": "incomplete issue hour"
+    },
+    "2026-10-29T05:00:00+00:00": {
+      "load": {
+        "missing_lag_hours": [
+          "2026-10-29T05:00:00+00:00"
+        ],
+        "missing_rolling24_hours": [
+          "2026-10-29T05:00:00+00:00"
+        ]
+      }
+    },
+    "2026-10-29T04:00:00+00:00": {}
+  },
+  "reports": {
+    "data/reports/next24h_forecast.csv": {
+      "exists": true,
+      "rows": 24,
+      "latest_issue": "2026-10-23T11:00:00+00:00",
+      "target_start": "2026-10-23T12:00:00+00:00",
+      "target_end": "2026-10-24T11:00:00+00:00",
+      "horizons": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "complete_valid_24": true,
+      "future_targets": 0,
+      "stable": true
+    },
+    "data/reports/next24h_forecast_history.csv": {
+      "exists": true,
+      "rows": 9144,
+      "latest_issue": "2026-10-23T11:00:00+00:00",
+      "target_start": "2026-10-23T12:00:00+00:00",
+      "target_end": "2026-10-24T11:00:00+00:00",
+      "horizons": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "complete_valid_24": true,
+      "future_targets": 0,
+      "stable": true
+    },
+    "data/reports/next24h_forecast_provenance.json": {
+      "exists": true,
+      "keys": [
+        "forecast_issue_time",
+        "market_latest_complete_hour",
+        "weather_hour",
+        "weather_acquired_at_utc",
+        "weather_source",
+        "historical_weather_source",
+        "weather_endpoint",
+        "weather_note"
+      ],
+      "summary": {
+        "forecast_issue_time": "2026-10-23T11:00:00+00:00",
+        "market_latest_complete_hour": "2026-10-23T11:00:00+00:00",
+        "weather_acquired_at_utc": "2026-10-23T13:04:00.353250+00:00"
+      }
+    },
+    "data/reports/monitoring/forecast_vintage_health.json": {
+      "exists": true,
+      "keys": [
+        "generated_at_utc",
+        "overall_status",
+        "schema_version",
+        "sources",
+        "thresholds"
+      ],
+      "summary": {
+        "generated_at_utc": "2026-10-29T07:01:48.526910+00:00"
+      }
+    },
+    "data/reports/monitoring/next24h_exogenous_silver_quality.json": {
+      "exists": true,
+      "keys": [
+        "as_of_semantics",
+        "candidate_rows",
+        "complete_issue_cycles",
+        "dataset",
+        "dataset_status",
+        "distinct_calendar_days",
+        "distinct_issue_cycles",
+        "duplicate_key_count",
+        "entsoe_hourly_aggregation_rejections",
+        "excluded_rows",
+        "excluded_rows_by_reason",
+        "generated_at_utc",
+        "grain",
+        "horizon_coverage_count",
+        "horizons_missing_from_dataset",
+        "horizons_represented",
+        "issue_cycles",
+        "leakage_check",
+        "legacy_entsoe_rows",
+        "missing_source_counts",
+        "output_rows",
+        "readiness_reasons",
+        "readiness_thresholds",
+        "schema_version",
+        "wind_solar_process_usage"
+      ],
+      "summary": {
+        "generated_at_utc": "2026-10-19T07:52:09.164092+00:00"
+      }
+    }
+  },
+  "database": {
+    "latest_pipeline": {
+      "time": "2026-10-29T07:02:26.335242+00:00",
+      "status": "SUCCESS",
+      "metadata": {
+        "next24h_forecast_reason": "Forecast withheld because required recent market history is incomplete.",
+        "next24h_forecast_status": "WITHHELD",
+        "next24h_latest_complete_market_hours": {
+          "generation": "2026-10-29T05:00:00+00:00",
+          "load": "2026-10-29T04:00:00+00:00",
+          "price": "2026-10-29T06:00:00+00:00"
+        }
+      }
+    },
+    "incidents": [
+      {
+        "time": "2026-10-29T07:02:15.064072+00:00",
+        "component": "next24h forecast",
+        "event": "forecast_withheld",
+        "details": {
+          "forecast_freshness_status": "WITHHELD",
+          "latest_complete_hours": {
+            "generation": "2026-10-29T05:00:00+00:00",
+            "load": "2026-10-29T04:00:00+00:00",
+            "price": "2026-10-29T06:00:00+00:00"
+          },
+          "reason": "Latest complete market hour for load 2026-10-29T04:00:00+00:00 exceeds the 3-hour freshness threshold.",
+          "source": "load",
+          "timestamp": "2026-10-29T07:02:12.509257+00:00"
+        }
+      },
+      {
+        "time": "2026-10-29T07:00:46.670584+00:00",
+        "component": "ENTSO-E",
+        "event": "source_gap",
+        "details": {
+          "source": "day-ahead prices"
+        }
+      },
+      {
+        "time": "2026-10-29T06:01:59.797653+00:00",
+        "component": "next24h forecast",
+        "event": "forecast_withheld",
+        "details": {
+          "forecast_freshness_status": "WITHHELD",
+          "latest_complete_hours": {
+            "generation": "2026-10-29T04:00:00+00:00",
+            "load": "2026-10-29T03:00:00+00:00",
+            "price": "2026-10-29T05:00:00+00:00"
+          },
+          "reason": "Latest complete market hour for load 2026-10-29T03:00:00+00:00 exceeds the 3-hour freshness threshold.",
+          "source": "load",
+          "timestamp": "2026-10-29T06:01:57.251072+00:00"
+        }
+      },
+      {
+        "time": "2026-10-29T06:00:55.701316+00:00",
+        "component": "ENTSO-E",
+        "event": "source_gap",
+        "details": {
+          "source": "day-ahead prices"
+        }
+      },
+      {
+        "time": "2026-10-29T05:01:49.769379+00:00",
+        "component": "next24h forecast",
+        "event": "forecast_withheld",
+        "details": {
+          "forecast_freshness_status": "WITHHELD",
+          "latest_complete_hours": {
+            "generation": "2026-10-29T03:00:00+00:00",
+            "load": "2026-10-29T02:00:00+00:00",
+            "price": "2026-10-29T04:00:00+00:00"
+          },
+          "reason": "Latest complete market hour for load 2026-10-29T02:00:00+00:00 exceeds the 3-hour freshness threshold.",
+          "source": "load",
+          "timestamp": "2026-10-29T05:01:47.233437+00:00"
+        }
+      },
+      {
+        "time": "2026-10-29T05:00:48.657540+00:00",
+        "component": "ENTSO-E",
+        "event": "source_gap",
+        "details": {
+          "source": "day-ahead prices"
+        }
+      }
+    ],
+    "stable": true
+  },
+  "model": {
+    "release_id": "next24h-hgb-2026-09-21-v1",
+    "release_type": "next24h_production",
+    "model_type": "Histogram Gradient Boosting (24 direct outputs)",
+    "feature_count": 31,
+    "features": [
+      "hour",
+      "day_of_week",
+      "month",
+      "is_weekend",
+      "price_eur_mwh",
+      "price_lag_1h",
+      "price_lag_24h",
+      "price_lag_168h",
+      "price_rolling_mean_24h",
+      "price_rolling_std_24h",
+      "load_mw",
+      "load_lag_1h",
+      "load_lag_24h",
+      "load_rolling_mean_24h",
+      "biomass_mw",
+      "lignite_mw",
+      "gas_mw",
+      "hard_coal_mw",
+      "hydro_mw",
+      "nuclear_mw",
+      "solar_mw",
+      "wind_offshore_mw",
+      "wind_onshore_mw",
+      "wind_total_mw",
+      "renewable_generation_mw",
+      "renewable_share",
+      "temperature_2m",
+      "relative_humidity_2m",
+      "wind_speed_10m",
+      "cloud_cover",
+      "shortwave_radiation"
+    ],
+    "horizons_hours": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "known_limitations": [
+      "Weaker performance during extreme electricity-price events.",
+      "Future forecast weather is not used; inputs are observed through issue time."
+    ],
+    "model_file_hash_matches": true,
+    "feature_contract_file_hash_matches": true
+  },
+  "code_matches_local": {
+    "src/models/next24h_production.py": true,
+    "src/models/next24h.py": true,
+    "src/models/final_evaluation.py": true,
+    "src/processing/build_silver_dataset.py": true,
+    "src/ingestion/fetch_weather_data.py": true,
+    "src/scheduled_pipeline.py": true
+  },
+  "weather_provider": {
+    "http": 200,
+    "tls_verified": true,
+    "utc": true,
+    "valid_hours": 29,
+    "issue_coverage": {
+      "2026-10-29T07:00:00+00:00": true,
+      "2026-10-29T06:00:00+00:00": true,
+      "2026-10-29T05:00:00+00:00": true,
+      "2026-10-29T04:00:00+00:00": true
+    },
+    "next24_missing": []
+  }
+}

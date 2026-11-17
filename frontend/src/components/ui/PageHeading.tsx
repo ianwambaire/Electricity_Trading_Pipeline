@@ -1,0 +1,1 @@
+export function PageHeading({title,description,category='Workspace'}:{title:string;description:string;category?:string}){return <div className="page-heading"><p className="page-category">{category}</p><h1>{title}</h1><p>{description}</p></div>}

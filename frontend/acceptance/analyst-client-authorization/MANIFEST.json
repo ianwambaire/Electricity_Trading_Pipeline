@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "mode": "DIRECT_EXISTING_CLIENT",
+  "target": "https://staging.powerflowenergy.dev/api/admin/operations/current",
+  "remoteMutation": false,
+  "files": {
+    "data/backups/private-staging-releases/live-forecast-reliability-20261107-v1/frontend/assets/index-Ch74TTBm.js": "0563e79e8add18586dc9802625d253f8fc0486e8ca3b48823713f6afb2830a02",
+    "deploy/staging/live-forecast-reliability-release-v2/MANIFEST.json": "01b98fc094595b5ec626be8a0a254d57193ba63a8b25e1cc2a729f4c2752dba7",
+    "frontend/acceptance/analyst-client-authorization/BINDINGS.json": "32b01ada611e8b19ff969bfa307408d2236e1be457f5b99f9fe1c3d2660a28dc",
+    "frontend/acceptance/analyst-client-authorization/README.md": "afdce9d72e734f82393669b233e9c92b8dbc5a501c808ba28df8ee7459cd5f1e",
+    "frontend/acceptance/analyst-client-authorization/build.mjs": "022ee4686773d7a5cae19bc66264da1042d6b4b084fd40a83c1c60cf002aa0f5",
+    "frontend/acceptance/analyst-client-authorization/core.mjs": "ec7e57b1235172235950d58c4852f1c2233c08719f2bf91243c63ec89d3dd4a9",
+    "frontend/acceptance/analyst-client-authorization/core.test.mjs": "1d0019073ed08d5ed2a50ea2eccf767ecfb52f5979b3038493d6e3288adbf35b",
+    "frontend/acceptance/analyst-client-authorization/run.mjs": "54a991e9578e4b618147098cf589c71d575a002c69ddac0ab30a2ff04951b735",
+    "frontend/acceptance/analyst-client-authorization/run.test.mjs": "a2eeb2646e002215f8e4cd9218d77f7a9005ae684c4c5db2cfd1a972796c9cbb",
+    "frontend/acceptance/bindings.json": "78e8305b92e8ec338f6dc330456ca427b12c5cbeccce9eabfc7e78549ebfaccc",
+    "frontend/acceptance/browser.mjs": "3dfab45071cc2fa9c8d82ca8349c6184ab8354009b646e0007c4b10e3070d4d2",
+    "frontend/acceptance/core.mjs": "3b5e79e349307a1f1ab9132c30fd48115dd50343919da064144f5e728186821b",
+    "frontend/acceptance/environment.mjs": "0e194f0c21c18a9cd400cb8a5638a6c9b55161b74a0095470dd5f7b65a828ac6",
+    "frontend/acceptance/operations-core.mjs": "fd515e979360fbe748fb3325e0fa504c5d58e3454ed4cdd723fb29f1f52e2583",
+    "frontend/acceptance/operations.mjs": "f48b9f81120fc5b0ecdd61bd4050c132e091b1f8fa82a65c7a8b4327d207ee1d",
+    "frontend/acceptance/run.mjs": "49db8c23256c1a6174108d8c5cf280bef5842bfccff885922c03c5ce519f0653",
+    "frontend/acceptance/setup-diagnostics.mjs": "1ef8ba5d5c76c7daebf3fafc24923996a8c96046bb5ec5c23d50b572d2515bc4",
+    "frontend/acceptance/tooling.mjs": "ef63956a15569bafa1bb40760ca3b793f20b63c90698b3a0c8206057492b646c",
+    "frontend/src/api/currentOperations.ts": "4dda9ab585d7985e449b5e554c3906e54dca31520ce0f1238bc2498d3f4c3bab"
+  }
+}

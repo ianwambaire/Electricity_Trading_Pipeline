@@ -1,0 +1,96 @@
+{
+  "activation_manifest_sha256": "53fcc9323a5bacf81ffb5bf067048df3403be4eeca3b7a2dd6e4e6f770f9907a",
+  "artifacts": {
+    "database/schema.sql": {
+      "bytes": 2286,
+      "sha256": "c8b042f9978ef5b07b5fbfcc99cb02e195f52190b3dfc87123fab34efa81bf8d"
+    },
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/publication_diagnostic.py": {
+      "bytes": 4462,
+      "sha256": "1992509c1bd90c70840dd194869d27ffeaeb5a9c4724c0c4032de554760ed4c7"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance-v2/REVIEW.md": {
+      "bytes": 6830,
+      "sha256": "dacc7ae0c5ebc3a92c2f019d27273a6018014bc56a886f51caa505c94084401a"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance-v2/build.py": {
+      "bytes": 1312,
+      "sha256": "f82f882f8760eaabe34b96207f921c8dc5943b3ac4449dc3ebe19cad3f9e721f"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance-v2/inspect.py": {
+      "bytes": 28617,
+      "sha256": "dd3057cd104f1ff816a53af4039f4bb98ec4bae5c8fb34c70e666c7fa58dfe28"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance-v2/run.py": {
+      "bytes": 7687,
+      "sha256": "0a18d9b6e07ddba7202a594f4685f01db9970cdd252eb16d64e461afa5ae9eb4"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance/MANIFEST.json": {
+      "bytes": 2956,
+      "sha256": "0da25e6276f0a2589fb61ed08820dabf7163323e5e2e3801f18cd1a7277ebf11"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance/REVIEW.md": {
+      "bytes": 10300,
+      "sha256": "42602da57cdc275a6ac2e7376248ee9f564986bbec02fabbf40d720f075cde14"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance/build.py": {
+      "bytes": 957,
+      "sha256": "7a54bcc4be8cba1aa55a72b2a9f9c791012c5c0009d5853b0332270e2f06f234"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance/inspect.py": {
+      "bytes": 24216,
+      "sha256": "2a295cde42e5ef8529b486e335c324328558c098bd4f71aa8d68745560117bc3"
+    },
+    "deploy/staging/forecast-publication/automatic-acceptance/run.py": {
+      "bytes": 7021,
+      "sha256": "9ce1385b384ad841fad7dae7e8b64f5be607f22b923d2fbc720efbb3cd94a199"
+    },
+    "deploy/staging/forecast-publication/automatic.py": {
+      "bytes": 8227,
+      "sha256": "29621b1bd45ca8138ab3ae4e3f8e117a455e1dc970bd9d630c472adfd0051647"
+    },
+    "deploy/staging/forecast-publication/automation-continuation-v2/MANIFEST.json": {
+      "bytes": 120329,
+      "sha256": "53fcc9323a5bacf81ffb5bf067048df3403be4eeca3b7a2dd6e4e6f770f9907a"
+    },
+    "deploy/staging/forecast-publication/prepare.py": {
+      "bytes": 2808,
+      "sha256": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14"
+    },
+    "src/scheduled_pipeline.py": {
+      "bytes": 50391,
+      "sha256": "1eb95c4fad2d5f861ddee1ca5bee1507d7b02653ce3567bfb53b2f387a5ffb58"
+    },
+    "src/shared/forecast_delivery.py": {
+      "bytes": 3195,
+      "sha256": "cdc402f992b9e9754fdbb07d0fe35eeb9a198b88c8d8a59acdb54137f0e52a32"
+    },
+    "src/shared/forecast_publication.py": {
+      "bytes": 12783,
+      "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
+    },
+    "src/store_data.py": {
+      "bytes": 6829,
+      "sha256": "26cd948270cd35c94641dc5e0940765ffa7cd684b5ecbd591e62b74bd3d29914"
+    },
+    "tests/test_automatic_acceptance.py": {
+      "bytes": 20635,
+      "sha256": "be41918eaf1fd7278feb934f1b25e38b6bf33161f5d379a4a3964a8eaaf6d0b9"
+    },
+    "tests/test_automatic_acceptance_prefect.py": {
+      "bytes": 10795,
+      "sha256": "ab2ca72b4822851bafd60d08c779003fb174428aaadf4b9385131c4934b474de"
+    }
+  },
+  "payload_sha256": "09a171664de51ff0e72f5431c4e0b720bb0bb49c507750cb70a8d33bb72ac2ec",
+  "supersedes_manifest_sha256": "0da25e6276f0a2589fb61ed08820dabf7163323e5e2e3801f18cd1a7277ebf11",
+  "version": 2
+}

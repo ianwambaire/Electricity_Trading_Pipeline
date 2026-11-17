@@ -1,0 +1,5 @@
+import { useState } from 'react'
+export function DateRangeFilter({onApply}:{onApply:(query:string)=>void}){
+  const [error,setError]=useState('')
+  return <form className="filter-form" onSubmit={event=>{event.preventDefault();const values=new FormData(event.currentTarget);const start=String(values.get('from')||'');const end=String(values.get('through')||'');if(!!start!==!!end||start>end){setError('Choose both dates in chronological order, or leave both blank for all history.');return}setError('');const query=new URLSearchParams();if(start){query.set('start',`${start}T00:00:00Z`);query.set('end',`${end}T23:59:59.999Z`)}onApply(query.toString())}}><label>From (UTC)<input name="from" type="date" min="1970-01-01" max="2100-12-31"/></label><label>Through (UTC)<input name="through" type="date" min="1970-01-01" max="2100-12-31"/></label><button className="secondary-button" type="submit">Apply dates</button><button className="secondary-button" type="reset" onClick={()=>{setError('');onApply('')}}>All history</button>{error&&<p role="alert">{error}</p>}</form>
+}

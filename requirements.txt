@@ -1,3 +1,5 @@
+# Shared compatibility constraint; research and API deployments use separate environments.
+-c requirements/shared.txt
 aiohappyeyeballs==2.6.2
 aiohttp==3.13.5
 aiosignal==1.4.0
@@ -71,6 +73,7 @@ itsdangerous==2.2.0
 Jinja2==3.1.6
 jinja2-humanize-extension==0.4.0
 joblib==1.5.3
+joserfc==1.7.7
 jsonpatch==1.33
 jsonpointer==3.1.1
 jsonschema==4.26.0

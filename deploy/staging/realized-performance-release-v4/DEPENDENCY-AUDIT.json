@@ -1,0 +1,234 @@
+{
+  "claim": "Metadata/access only; installed content hashes and runtime imports remain mandatory fresh Linux preflight gates.",
+  "file_contents_read": false,
+  "inspection_exit_status": 0,
+  "observed_at": "2026-11-08T17:56:06.253426+00:00",
+  "private_assessment_sha256": "58164c48a1ca2d94c92824c04bdb19b971144cf2e7b2f54d90e80f65b51f5698",
+  "rows": [
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/ingestion/fetch_weather_data.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/ingestion/historical_range.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/ingestion/incremental_utils.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/artifact_metadata.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/backtesting.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/final_evaluation.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/inference_evidence.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/next24h.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/next24h_production.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/models/research_evaluation.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/processing/build_silver_dataset.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    },
+    {
+      "category": "FILE_MISSING",
+      "classification": "OPTIONAL_NAMESPACE_INITIALIZER",
+      "errno": 2,
+      "exists": false,
+      "identifier": "src/shared/__init__.py",
+      "metadata": null,
+      "readable": null,
+      "stage": "FILE_LOOKUP"
+    },
+    {
+      "category": "FILE_MISSING",
+      "classification": "REQUIRED_NEW_PAYLOAD",
+      "errno": 2,
+      "exists": false,
+      "identifier": "src/shared/forecast_evaluation.py",
+      "metadata": null,
+      "readable": null,
+      "stage": "FILE_LOOKUP"
+    },
+    {
+      "category": "FILE_MISSING",
+      "classification": "REQUIRED_NEW_PAYLOAD",
+      "errno": 2,
+      "exists": false,
+      "identifier": "src/shared/forecast_publication.py",
+      "metadata": null,
+      "readable": null,
+      "stage": "FILE_LOOKUP"
+    },
+    {
+      "category": "PASS",
+      "classification": "MANDATORY_EXISTING",
+      "errno": null,
+      "exists": true,
+      "identifier": "src/shared/operational_evidence.py",
+      "metadata": {
+        "file_type": "REGULAR",
+        "gid": 1000,
+        "links": 1,
+        "mode": "0644",
+        "uid": 1000
+      },
+      "readable": true,
+      "stage": "FILE_ACCESS"
+    }
+  ],
+  "source_binding": "7f54cdc573d8eeb3031b9f9f81eedf4d577c813d9e634aac925b37b8f2406a12",
+  "ssh_attempts": 1,
+  "version": 1
+}

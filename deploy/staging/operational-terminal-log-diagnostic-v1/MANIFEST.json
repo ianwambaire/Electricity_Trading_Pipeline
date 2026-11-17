@@ -1,0 +1,18 @@
+{
+  "files": {
+    "REVIEW.md": "e6ac1701bd247a077f8be8effa22a1b4a0e44f186555df1f931ae831581096cc",
+    "inspect.py": "7b71d2bacb104127591e32d6838f5031da5c3d5c146e08d51e91aace11c47abd",
+    "payload.py": "6c01e0d9413cb57cee0d8019b3807cfb2421947e0d788613f7b90aba9c50493c",
+    "run.py": "d2fe90863f6f371daf2a3b83ad3e556497b02f606969d1987bf83a85c4dfb1bc"
+  },
+  "read_only": true,
+  "supervisor_sha256": "44937a3788a52884c6a8bacb70fb207a341152d1ebf770d460b577b8fad2e9e9",
+  "target_flow": "01a1b4fd-6f22-7738-8410-7df4e9e73e60",
+  "target_pipeline": "3dd2ddfda3b34b1c982a0d7c5342b222",
+  "v5_manifest": "cdd828defc52ea258852b88aa852d1d470ca915d098021d6ff8fd2be9b05223b",
+  "version": 1,
+  "window_utc": [
+    "2026-11-07T08:47:30Z",
+    "2026-11-07T08:48:00Z"
+  ]
+}

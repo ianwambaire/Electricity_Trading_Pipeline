@@ -1,0 +1,168 @@
+{
+  "action": "urllib3-metadata-only",
+  "artifacts": {
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/MANIFEST.json": {
+      "bytes": 5023,
+      "sha256": "caafdcadedaa3fc899cd63e5005bd0f803990bea05ddba477c4f56815011c0e2"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/REVIEW.md": {
+      "bytes": 13031,
+      "sha256": "c4f65b569cf4a958ae25bb7d34b3974d3df577d7b3a57733e37d390042f13d2f"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/SDK-LOCK.json": {
+      "bytes": 31876,
+      "sha256": "da19f5a81c7741d19333e7bfcc25004c50fe2c83e31642c9f39c828518de35c4"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/build.py": {
+      "bytes": 1462,
+      "sha256": "dfabc8c646544c3cf70e9429753dc4a3e3c4d5500ce495be5b49e932978a246c"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/inspect.py": {
+      "bytes": 13280,
+      "sha256": "39f2ed7ab088e4338da78dc12ad03387c7e6896d930dc2f4519296f35998a531"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/lock_sdk.py": {
+      "bytes": 2023,
+      "sha256": "dfbddc79a0d9432b72fa3ed8cb6ad63b4fb7162b69491194103424f8902eedfa"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/run.py": {
+      "bytes": 12753,
+      "sha256": "55e2f00697cf937f46e3c8410f5aa5bcc74344dfc5857f5f4c1ee2740d0a2ad6"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v2/sdk.py": {
+      "bytes": 19726,
+      "sha256": "dfbeff132a4513df93fb6e9bcf33d980370681b311fe0532c929bd9f5947d247"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v3/MANIFEST.json": {
+      "bytes": 6261,
+      "sha256": "0e4b9f45318804cb3d94ac193c09bbcc3a1e042d37400b7ba4a1246b9c8172b5"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v3/REVIEW.md": {
+      "bytes": 8427,
+      "sha256": "288961aee0b7d0f90e4d6085ccb022e76e1106565c75a976ec6ea3a9f7a685a0"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v3/build.py": {
+      "bytes": 1474,
+      "sha256": "723a0ff93dfaeb9128e33a4826a3490a9080a1707227c62d2bbebe0ae81dd9c9"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v3/inspect.py": {
+      "bytes": 11073,
+      "sha256": "303abe557d016c97db4c85da0cf01b3171e372775a2016adfe14385c3bb97d6f"
+    },
+    "deploy/staging/forecast-publication/load-source-check-aws-v3/run.py": {
+      "bytes": 8516,
+      "sha256": "4295b71f1b75acd2624b9895623686f6c0fb9ed1302658e95ce2eff2b499278a"
+    },
+    "deploy/staging/forecast-publication/load-source-check/REMOTE-MANIFEST.json": {
+      "bytes": 3332,
+      "sha256": "d4fec87a1eab63c1671b1d6820db10aca0ee7618633b079dad6fc91eaf089065"
+    },
+    "deploy/staging/forecast-publication/load-source-check/REMOTE-REVIEW.md": {
+      "bytes": 10027,
+      "sha256": "739f515aee9a9911513c6b2363c7a6c9b6cade27dfd779f37865ca023e33dc38"
+    },
+    "deploy/staging/forecast-publication/load-source-check/build_remote.py": {
+      "bytes": 1309,
+      "sha256": "b18c16c96ec95f64f167a90bd5d1084879579bdc68b80368950ac4f2255c3b3f"
+    },
+    "deploy/staging/forecast-publication/load-source-check/check.py": {
+      "bytes": 9215,
+      "sha256": "2c30940d64aafafb2570ddf19c4c17ad318b983ff2c00dfbe1a32880da5a497d"
+    },
+    "deploy/staging/forecast-publication/load-source-check/inspect.py": {
+      "bytes": 11220,
+      "sha256": "360fa7f8b27eb3c277c0a3ebfc2925de1e3e0d6cd847d6f75852e492a2c9e651"
+    },
+    "deploy/staging/forecast-publication/load-source-check/run.py": {
+      "bytes": 10301,
+      "sha256": "f8736af7cc29b457cb8a17497326606128c38474f4d5768206b0ae16f7e1473a"
+    },
+    "deploy/staging/forecast-publication/load-source-check/vendor/LICENSE.python-dotenv": {
+      "bytes": 1556,
+      "sha256": "80619b7049f08c81683ad0e01f08f257a840652dd71ee83146d36658c7d2c2b9"
+    },
+    "deploy/staging/forecast-publication/load-source-check/vendor/parser.py": {
+      "bytes": 5179,
+      "sha256": "25226977de2d1a1be7ccebf83cbdc3ade5352ede6feab4caee9a7c1ba4677cbe"
+    },
+    "deploy/staging/forecast-publication/load-source-check/vendor/variables.py": {
+      "bytes": 2348,
+      "sha256": "083d2a5cebefa41deae51a4140c0fda97eaf1d7ed2c96f92ba2c063054a5b74f"
+    },
+    "deploy/staging/forecast-publication/urllib3-metadata-inspection/REVIEW.md": {
+      "bytes": 6654,
+      "sha256": "f27d631a7eea4a29acec2734d4b2a619262acaf55727d7951990191b6fd9f8ce"
+    },
+    "deploy/staging/forecast-publication/urllib3-metadata-inspection/build.py": {
+      "bytes": 1485,
+      "sha256": "0cb155a602688f59f86cb0c33085cf91ea255ecdffdb6c2cd27e9bd912ea522d"
+    },
+    "deploy/staging/forecast-publication/urllib3-metadata-inspection/inspect.py": {
+      "bytes": 10091,
+      "sha256": "214c3bdb8ea1267775ff0ecf6dde3d091a543679e751a6037f41eff329c6c05a"
+    },
+    "deploy/staging/forecast-publication/urllib3-metadata-inspection/run.py": {
+      "bytes": 7978,
+      "sha256": "b29589e2cfc0254fe7940d7e3021dcb0f7e8706ab1adccc14ca918e95a0b1932"
+    },
+    "src/ingestion/fetch_entsoe_data.py": {
+      "bytes": 42598,
+      "sha256": "8800f34a2d0e3db4056e921a7b6629847402f37c20ff9b3e81d50f3c1d77865f"
+    },
+    "src/ingestion/historical_range.py": {
+      "bytes": 3125,
+      "sha256": "00a78fc717494d8c88b99b5a1130c7a7bba58e92105b28d46e176109dc327365"
+    },
+    "src/ingestion/incremental_utils.py": {
+      "bytes": 21236,
+      "sha256": "9fb9892c67808f6e7a0e7618776afd836e28133d4ac7be37e2cddd27e03a1a33"
+    },
+    "src/powerflow_secrets.py": {
+      "bytes": 5706,
+      "sha256": "4d67eff1ea532d6c6855160018cde95b01bed3b591a78e23d455bba2885a87f0"
+    },
+    "src/scheduled_pipeline.py": {
+      "bytes": 50391,
+      "sha256": "1eb95c4fad2d5f861ddee1ca5bee1507d7b02653ce3567bfb53b2f387a5ffb58"
+    },
+    "tests/test_load_source_adapter.py": {
+      "bytes": 17375,
+      "sha256": "21bc462b94ad9588a560d24424ead7db0a6b8aea6479439dea280939491272b6"
+    },
+    "tests/test_load_source_aws_adapter.py": {
+      "bytes": 27845,
+      "sha256": "b363760611cc30ba579d075128247590738bf1a13e4d1a75a8ee3c0912237c6d"
+    },
+    "tests/test_load_source_check.py": {
+      "bytes": 7519,
+      "sha256": "425b94ff9f85d50729023f236040a364470bd1ca5856e18d208270e444f0b23a"
+    },
+    "tests/test_sdk_verification_v3.py": {
+      "bytes": 11927,
+      "sha256": "20bac24f8aafe3491ffe27adbde937bd2f2e90c47110baf9520a487578774fc2"
+    },
+    "tests/test_urllib3_metadata_inspection.py": {
+      "bytes": 12921,
+      "sha256": "f29afd8eed50f3a2ee46ffb8d81d929c6d49cd280ff7121e47bd9a48f34382dd"
+    }
+  },
+  "limits": {
+    "attempts": 1,
+    "capture_bytes": 16384,
+    "escalation_seconds": 5,
+    "local_seconds": 90,
+    "remote_seconds": 60
+  },
+  "payload_sha256": "727ed2a8405a5a9471949e2a0671c34db88aa238e9d6d40d19a12068398ad1d8",
+  "sdk_lock_sha256": "da19f5a81c7741d19333e7bfcc25004c50fe2c83e31642c9f39c828518de35c4",
+  "v2_manifest_sha256": "caafdcadedaa3fc899cd63e5005bd0f803990bea05ddba477c4f56815011c0e2",
+  "version": 1
+}

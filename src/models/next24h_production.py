@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+import uuid
 import hashlib
 import json
 import os
@@ -12,6 +14,7 @@ import numpy as np
 import pandas as pd
 import requests
 
+from models.inference_evidence import snapshot, inputs_from_sources, receipt, persist, digest
 from ingestion.fetch_weather_data import fetch_operational_weather
 from models.final_evaluation import FINAL_FEATURES
 from models.next24h import (
@@ -201,15 +204,18 @@ def assemble_operational_issue_features(
     current = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
     current = current.tz_localize("UTC") if current.tzinfo is None else current.tz_convert("UTC")
     try:
-        prices = clean_prices(prices_path)
+        raw_prices = snapshot(prices_path)
+        prices = clean_prices(io.BytesIO(raw_prices))
     except (OSError, ValueError, KeyError) as error:
         raise ForecastUnavailableError(f"Price source unavailable: {error}") from error
     try:
-        load = clean_load(load_path)
+        raw_load = snapshot(load_path)
+        load = clean_load(io.BytesIO(raw_load))
     except (OSError, ValueError, KeyError) as error:
         raise ForecastUnavailableError(f"Load source unavailable: {error}") from error
     try:
-        generation = _current_generation_features(clean_generation(generation_path))
+        raw_generation = snapshot(generation_path)
+        generation = _current_generation_features(clean_generation(io.BytesIO(raw_generation)))
     except (OSError, ValueError, KeyError) as error:
         raise ForecastUnavailableError(f"Current generation unavailable: {error}") from error
     # Raw quarter-hours within hour T are not known until T+1. Never use a
@@ -286,6 +292,9 @@ def assemble_operational_issue_features(
         "weather_endpoint": "https://api.open-meteo.com/v1/forecast",
         "weather_note": "Operational model weather; not historical observations or future weather.",
     }
+    raw_sources = {"price": raw_prices, "load": raw_load, "generation": raw_generation}
+    issue.attrs["inference_inputs"] = inputs_from_sources(raw_sources, issue_time, prices, load)
+    issue.attrs["source_sha256"] = {key: digest(raw) for key, raw in raw_sources.items()}
     return issue, provenance
 
 
@@ -356,11 +365,18 @@ def run_next24h_forecast(
     latest_path: Path = LATEST_PATH,
     history_path: Path = HISTORY_PATH,
     provenance_path: Path = PROVENANCE_PATH,
+    evidence_root: Path | None = None,
     now: pd.Timestamp | None = None,
     max_age_hours: float | None = None,
     weather_session=requests,
 ) -> tuple[pd.DataFrame, bool]:
+    started = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    started = started.tz_localize("UTC") if started.tzinfo is None else started.tz_convert("UTC")
+    run_id = str(uuid.uuid4())
+    manifest_raw = (Path(release_dir)/"next24h_release_manifest.json").read_bytes()
     model, features, manifest = load_next24h_release(release_dir)
+    if json.loads(manifest_raw) != manifest:
+        raise ValueError("Release manifest changed during inference initialization.")
     issue, provenance = assemble_operational_issue_features(
         prices_path=prices_path, load_path=load_path, generation_path=generation_path,
         now=now, weather_session=weather_session,
@@ -368,11 +384,21 @@ def run_next24h_forecast(
     )
     if tuple(features) != tuple(FINAL_FEATURES):
         raise ValueError("Next24h feature contract mismatch.")
+    captured = []
     forecast = create_next24h_forecast(
         issue, model, model_release=manifest["release_id"], features=features,
+        capture_input=captured.append,
     )
     validate_forecast(forecast)
     forecast.attrs["provenance"] = provenance
+    issued = pd.Timestamp.now(tz="UTC") if now is None else started
+    execution = {"run_id": run_id, "started_at": started.isoformat(),
+                 "issued_at": issued.isoformat(), "completed_at": issued.isoformat(), "status": "GENERATED"}
+    files = receipt(forecast, provenance, manifest_raw, captured[0],
+                    issue.attrs["inference_inputs"], issue.attrs["source_sha256"], execution)
+    # Commit the immutable set first; legacy CSV/provenance remain backward-compatible.
+    persist(evidence_root if evidence_root is not None else Path(latest_path).parent/"next24h_inference", files, run_id)
+    forecast.attrs["inference_receipt_id"] = run_id
     changed = save_forecast(forecast, latest_path, history_path, issued_at_utc=now)
     provenance_path = Path(provenance_path)
     try:

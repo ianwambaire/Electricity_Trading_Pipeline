@@ -1,0 +1,297 @@
+{
+  "as_of": "2026-10-29T08:26:06.657202+00:00",
+  "first_expected_occurrence": "2026-10-29T08:45:00+00:00",
+  "deployment": {
+    "id": "47e5ef51-26d0-44b6-b119-2c40d0e77397",
+    "name": "powerflow-entsoe-pipeline",
+    "status": "READY",
+    "paused": false,
+    "schedules": [
+      {
+        "id": "9319f665-9836-4120-9801-031e23ad2b4a",
+        "active": true,
+        "schedule": {
+          "cron": "45 * * * *",
+          "timezone": "UTC",
+          "day_or": true
+        }
+      }
+    ],
+    "global_concurrency": {
+      "id": "55df0967-7a78-41ce-a151-12f8fe3a6243",
+      "limit": 1,
+      "active": true,
+      "active_slots": 0
+    },
+    "collision_policy": null
+  },
+  "schedule_and_concurrency_verified": true,
+  "occurrences": [
+    {
+      "id": "01a186bf-9adc-782a-9802-dfb83088875d",
+      "name": "astute-uakari",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-29T08:21:06.400858Z",
+      "expected_start_time": "2026-10-29T08:45:00Z",
+      "run_count": 0,
+      "estimated_run_time": 0.0,
+      "total_run_time": 0.0,
+      "state_type": "SCHEDULED",
+      "state_name": "Scheduled",
+      "state_timestamp": "2026-10-29T08:21:06.396469Z",
+      "auto_scheduled": true
+    },
+    {
+      "id": "01a186bf-9adc-7cce-978b-254c4d83b2de",
+      "name": "hissing-vulture",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-29T08:21:06.400858Z",
+      "expected_start_time": "2026-10-29T09:45:00Z",
+      "run_count": 0,
+      "estimated_run_time": 0.0,
+      "total_run_time": 0.0,
+      "state_type": "SCHEDULED",
+      "state_name": "Scheduled",
+      "state_timestamp": "2026-10-29T08:21:06.396570Z",
+      "auto_scheduled": true
+    },
+    {
+      "id": "01a186bf-9adc-7f05-98e5-8ca434ea2823",
+      "name": "masterful-wolf",
+      "start_time": null,
+      "end_time": null,
+      "updated": "2026-10-29T08:21:06.400858Z",
+      "expected_start_time": "2026-10-29T10:45:00Z",
+      "run_count": 0,
+      "estimated_run_time": 0.0,
+      "total_run_time": 0.0,
+      "state_type": "SCHEDULED",
+      "state_name": "Scheduled",
+      "state_timestamp": "2026-10-29T08:21:06.396619Z",
+      "auto_scheduled": true
+    }
+  ],
+  "first_occurrence_count": 1,
+  "first_occurrence": {
+    "id": "01a186bf-9adc-782a-9802-dfb83088875d",
+    "name": "astute-uakari",
+    "start_time": null,
+    "end_time": null,
+    "updated": "2026-10-29T08:21:06.400858Z",
+    "expected_start_time": "2026-10-29T08:45:00Z",
+    "run_count": 0,
+    "estimated_run_time": 0.0,
+    "total_run_time": 0.0,
+    "state_type": "SCHEDULED",
+    "state_name": "Scheduled",
+    "state_timestamp": "2026-10-29T08:21:06.396469Z"
+  },
+  "duplicate_expected_times": [],
+  "active_runs": [],
+  "overlap_detected": false,
+  "ingestion_process_pids": [],
+  "first_run_latest_log": [],
+  "current_data": {
+    "as_of": "2026-10-29T08:26:06.657202+00:00",
+    "sources": {
+      "prices": {
+        "exists": true,
+        "bytes": 3235350,
+        "missing_columns": [],
+        "rows": 96829,
+        "latest": "2026-10-29T07:45:00+00:00",
+        "latest_complete_hour": "2026-10-29T07:00:00+00:00",
+        "last_finite": {
+          "price_eur_mwh": "2026-10-29T07:45:00+00:00"
+        },
+        "recent_incomplete": {},
+        "stable": true
+      },
+      "load": {
+        "exists": true,
+        "bytes": 9705405,
+        "missing_columns": [],
+        "rows": 274373,
+        "latest": "2026-10-29T06:15:00+00:00",
+        "latest_complete_hour": "2026-10-29T05:00:00+00:00",
+        "last_finite": {
+          "load_mw": "2026-10-29T06:15:00+00:00"
+        },
+        "recent_incomplete": {
+          "2026-10-29T06:00:00+00:00": {
+            "row_count": 2,
+            "expected_count": 4,
+            "missing_fields": {},
+            "missing_quarters": [
+              "2026-10-29T06:30:00+00:00",
+              "2026-10-29T06:45:00+00:00"
+            ]
+          }
+        },
+        "stable": true
+      },
+      "generation": {
+        "exists": true,
+        "bytes": 41257364,
+        "missing_columns": [],
+        "rows": 274397,
+        "latest": "2026-10-29T07:15:00+00:00",
+        "latest_complete_hour": "2026-10-29T06:00:00+00:00",
+        "last_finite": {
+          "Biomass": "2026-10-29T06:45:00+00:00",
+          "Fossil Brown coal/Lignite": "2026-10-29T07:15:00+00:00",
+          "Fossil Gas": "2026-10-29T06:45:00+00:00",
+          "Fossil Hard coal": "2026-10-29T07:15:00+00:00",
+          "Hydro Run-of-river and poundage": "2026-10-29T06:45:00+00:00",
+          "Solar": "2026-10-29T06:45:00+00:00",
+          "Wind Offshore": "2026-10-29T07:15:00+00:00",
+          "Wind Onshore": "2026-10-29T06:45:00+00:00"
+        },
+        "recent_incomplete": {
+          "2026-10-29T07:00:00+00:00": {
+            "row_count": 2,
+            "expected_count": 4,
+            "missing_fields": {
+              "Biomass": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Fossil Gas": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Hydro Run-of-river and poundage": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Solar": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ],
+              "Wind Onshore": [
+                "2026-10-29T07:00:00+00:00",
+                "2026-10-29T07:15:00+00:00"
+              ]
+            },
+            "missing_quarters": [
+              "2026-10-29T07:30:00+00:00",
+              "2026-10-29T07:45:00+00:00"
+            ]
+          }
+        },
+        "stable": true
+      }
+    },
+    "original_missing_quarters_present": {
+      "2026-10-29T05:30:00+00:00": true,
+      "2026-10-29T05:45:00+00:00": true
+    },
+    "fresh_complete_market_issues": [],
+    "database": {
+      "latest_pipeline": {
+        "time": "2026-10-29T08:02:12.751635+00:00",
+        "status": "SUCCESS",
+        "metadata": {
+          "next24h_forecast_reason": "Forecast withheld because required recent market history is incomplete.",
+          "next24h_forecast_status": "WITHHELD",
+          "next24h_latest_complete_market_hours": {
+            "generation": "2026-10-29T06:00:00+00:00",
+            "load": "2026-10-29T05:00:00+00:00",
+            "price": "2026-10-29T07:00:00+00:00"
+          }
+        }
+      },
+      "incidents": [
+        {
+          "time": "2026-10-29T08:02:00.994924+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T06:00:00+00:00",
+              "load": "2026-10-29T05:00:00+00:00",
+              "price": "2026-10-29T07:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T05:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T08:01:58.390784+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T08:00:50.733861+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        },
+        {
+          "time": "2026-10-29T07:02:15.064072+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T05:00:00+00:00",
+              "load": "2026-10-29T04:00:00+00:00",
+              "price": "2026-10-29T06:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T04:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T07:02:12.509257+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T07:00:46.670584+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        },
+        {
+          "time": "2026-10-29T06:01:59.797653+00:00",
+          "component": "next24h forecast",
+          "event": "forecast_withheld",
+          "details": {
+            "forecast_freshness_status": "WITHHELD",
+            "latest_complete_hours": {
+              "generation": "2026-10-29T04:00:00+00:00",
+              "load": "2026-10-29T03:00:00+00:00",
+              "price": "2026-10-29T05:00:00+00:00"
+            },
+            "reason": "Latest complete market hour for load 2026-10-29T03:00:00+00:00 exceeds the 3-hour freshness threshold.",
+            "source": "load",
+            "timestamp": "2026-10-29T06:01:57.251072+00:00"
+          }
+        },
+        {
+          "time": "2026-10-29T06:00:55.701316+00:00",
+          "component": "ENTSO-E",
+          "event": "source_gap",
+          "details": {
+            "source": "day-ahead prices"
+          }
+        }
+      ],
+      "stable": true
+    },
+    "forecast_report": {
+      "rows": 24,
+      "issue": "2026-10-23T11:00:00+00:00",
+      "target_start": "2026-10-23T12:00:00+00:00",
+      "target_end": "2026-10-24T11:00:00+00:00",
+      "future_targets": 0,
+      "valid24": true
+    }
+  },
+  "staging": {
+    "published_forecast_exists": false,
+    "data_root": "frozen historical publication",
+    "forecast_api_http": 404
+  },
+  "next_verification_point": "2026-10-29T08:48:00+00:00"
+}

@@ -1,0 +1,3 @@
+# Test-only tools; do not install into the deployed service venv.
+-r api.lock
+pytest==9.1.1

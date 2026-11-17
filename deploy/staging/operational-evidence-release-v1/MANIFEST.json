@@ -1,0 +1,1461 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-consistency-deployment/deploy.py": {
+      "bytes": 38703,
+      "sha256": "5472edead490afa26a05dcf86b6a5fb7982ed7df5babad3cc651896c794a76ce"
+    },
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/forecast-publication/automation-continuation-v2/MANIFEST.json": {
+      "bytes": 120329,
+      "sha256": "53fcc9323a5bacf81ffb5bf067048df3403be4eeca3b7a2dd6e4e6f770f9907a"
+    },
+    "deploy/staging/operational-evidence-release-v1/REVIEW.md": {
+      "bytes": 12417,
+      "sha256": "e8441dd01767ce3220aa13c679d01bbefc59ed818dd4d3725d6389d83018d3cf"
+    },
+    "deploy/staging/operational-evidence-release-v1/acceptance.py": {
+      "bytes": 4497,
+      "sha256": "3fb4b526aed685fde32a2eb7aa5c5f17d05dba804ee8701a1ca000c5dfdc3469"
+    },
+    "deploy/staging/operational-evidence-release-v1/build.py": {
+      "bytes": 14208,
+      "sha256": "40f0aeed5ff922b58bf46a815fd19240872d8d97101e0e1239263dd255edde80"
+    },
+    "deploy/staging/operational-evidence-release-v1/plan.py": {
+      "bytes": 3882,
+      "sha256": "297353d3612e3d592f80dd608ba0c65c9e68e574a1aa88379c10ff94327d0eb7"
+    },
+    "deploy/staging/operational-evidence-release-v1/preflight.py": {
+      "bytes": 17526,
+      "sha256": "94a596afafca57ef22c87d90caa8ba86a5a13a00b33613e29e97aea0dff073b3"
+    },
+    "deploy/staging/operational-evidence-release-v1/run.py": {
+      "bytes": 5625,
+      "sha256": "5e24905cb80632b4a4b8c83b40a1d21aa609ad313b844a318afd4df22b18c19d"
+    },
+    "deploy/staging/operational-evidence-release-v1/transaction.py": {
+      "bytes": 15306,
+      "sha256": "9ff944a93c8f778dc89441a5fdbf9b22a8a14e8cad6add79bd503bb177d456a7"
+    },
+    "deploy/staging/operational-evidence/TOOLS.json": {
+      "bytes": 715,
+      "sha256": "0f1c16bb3acb0ef0fdfc6d5b5309b640b5f101dcedd3eaf32f29d12524005c4e"
+    },
+    "deploy/staging/operational-evidence/bootstrap.py": {
+      "bytes": 2328,
+      "sha256": "fc062219206415c5394fe2817b99e49f62cfe106943e5094f5bc80d100735545"
+    },
+    "deploy/staging/operational-evidence/powerflow-publish-operations": {
+      "bytes": 255,
+      "sha256": "45f78307a60a988b111a67a5d27bad80c1ad5df6c073cd47daa6b8f69d71261a"
+    },
+    "deploy/staging/operational-evidence/sudoers.rule": {
+      "bytes": 363,
+      "sha256": "30f5aed1c33c22fac43293a4ded8637423f6c49a635119f1a99df266748a1a37"
+    },
+    "src/shared/forecast_publication.py": {
+      "bytes": 12783,
+      "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
+    },
+    "src/shared/operational_capture.py": {
+      "bytes": 11526,
+      "sha256": "b2e59812b56ec42e58b374a73f5c9ad14d0e0ae6a5bbfa515777a8b73e024910"
+    },
+    "src/shared/operational_evidence.py": {
+      "bytes": 10119,
+      "sha256": "9338a4e5062362d5ab1c754a994e5b56b31b6ed96e398f1b40ee9df650b53b29"
+    },
+    "src/shared/operational_evidence_producer.py": {
+      "bytes": 17700,
+      "sha256": "c4969093ad6b8361c11d96b194c00098cb42f87ef78ebba5c0cdeed82dab582c"
+    },
+    "tests/test_operational_release.py": {
+      "bytes": 21379,
+      "sha256": "fcabc735678ce9aaa74193540f879109c0897914f9243ff6358705b353e39f9c"
+    }
+  },
+  "config": {
+    "env_after": "36cb643dd9b983121aab8bb86518bca039255df653efce814f7f78bc7f471a52",
+    "env_before": "688ec4fe56a59252f629a671c9adf17011762001b33f19a703b63eb346aaa926",
+    "existing_forecast_entrypoints": {
+      "/etc/sudoers.d/powerflow-publish-next24": "d8fce78fb44a655a058e572cd7dc3c5a635e9adfa22654368c1aa1a5786b8250",
+      "/usr/local/sbin/powerflow-publish-next24": "b27f0f7603df15ef0d6babec1aca7779c6db49447f68027589db3c9c6bee83b9"
+    },
+    "existing_forecast_tools": {
+      "automatic.py": "29621b1bd45ca8138ab3ae4e3f8e117a455e1dc970bd9d630c472adfd0051647",
+      "prepare.py": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14",
+      "publish.py": "7a989a0845599430713541a454378829bed96e160d2f2a13704eece9737d052c",
+      "shared/__init__.py": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
+      "shared/forecast_publication.py": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902"
+    },
+    "files": {
+      "api/requirements/api.lock": {
+        "bytes": 601,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/requirements/api.lock",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "b1d8bbbec84a08b651b7bdc0b96e5bb94bf6c527297e037357702de00bcc84e3",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/requirements/api.lock",
+        "uid": 0
+      },
+      "api/requirements/shared.txt": {
+        "bytes": 152,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/requirements/shared.txt",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "d221f4eec4e7e97c44d523ee8f55939aceb229c12bbf4a27d9823676d618360c",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/requirements/shared.txt",
+        "uid": 0
+      },
+      "api/src/api/__init__.py": {
+        "bytes": 70,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/__init__.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "d7842be76c9c978de666675161f35a3bd24c24e732682cb7d76e9401c5d36a85",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/__init__.py",
+        "uid": 0
+      },
+      "api/src/api/account_routes.py": {
+        "bytes": 8247,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/account_routes.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4f74ca84be298f4848059cd8e15900cbd2c22bd7341594fc9bfefbdb4786a88c",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/account_routes.py",
+        "uid": 0
+      },
+      "api/src/api/account_service.py": {
+        "bytes": 9320,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/account_service.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "7aae6f7cb2397570bf0daa778f33af5bc19a95fc0b1f23053a8167a1e3da5343",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/account_service.py",
+        "uid": 0
+      },
+      "api/src/api/admin_operations.py": {
+        "bytes": 7837,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/admin_operations.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "37c7f5dc1794d680580ff69165a3e64035c9282b202cdda141b67bbe106ee2f4",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/admin_operations.py",
+        "uid": 0
+      },
+      "api/src/api/anomalies.py": {
+        "bytes": 4766,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/anomalies.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9f2957cbc733d61f80b36444033174e69cfe078cafa5d3b721b0f53eb809c7e3",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/anomalies.py",
+        "uid": 0
+      },
+      "api/src/api/app.py": {
+        "bytes": 27169,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/app.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "10bd19b022e792801dd3c144f35671b57404b033c16799d6ecc50e8bf5e2e7b5",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/app.py",
+        "uid": 0
+      },
+      "api/src/api/current_operations.py": {
+        "bytes": 1088,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/current_operations.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "ddeb0e3910adaf1993293c27994972bc383763bc0ce167743588bd05c7dab500",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/current_operations.py",
+        "uid": 0
+      },
+      "api/src/api/database.py": {
+        "bytes": 631,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/database.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "962e07dd654cfb06017866a2c98bc553077239f98de9a0698f1eb83db4c6e906",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/database.py",
+        "uid": 0
+      },
+      "api/src/api/feature_parity.py": {
+        "bytes": 13572,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/feature_parity.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "3a0f3c7c027229e4313f0a25e0fe46fde63834b24f712f49fc232892ab107699",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/feature_parity.py",
+        "uid": 0
+      },
+      "api/src/api/forecast_source.py": {
+        "bytes": 4584,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/forecast_source.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5816973ca0ad867f2931411934dc80b404b504254b87f85a19968df3bec6c807",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/forecast_source.py",
+        "uid": 0
+      },
+      "api/src/api/market_data.py": {
+        "bytes": 15891,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/market_data.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "8b0f042f94ec290723cef714ff550859581ee7d63945034542862270f85c99fd",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/market_data.py",
+        "uid": 0
+      },
+      "api/src/api/mfa_routes.py": {
+        "bytes": 5109,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/mfa_routes.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "858b229be48baa668e5f816136db07c94c52310e01cdeac2803ccca4a8785470",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/mfa_routes.py",
+        "uid": 0
+      },
+      "api/src/api/mfa_service.py": {
+        "bytes": 3253,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/mfa_service.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "8ea67f55d36e4cd6e97fff1c5907ae83f3c48bbb74c948bd82fc424686942715",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/mfa_service.py",
+        "uid": 0
+      },
+      "api/src/api/model_summaries.py": {
+        "bytes": 10064,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/model_summaries.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9e57ce3de689f76e1036a901663c7cc7b7a49fe0f6188f113f203627e7bf2fd4",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/model_summaries.py",
+        "uid": 0
+      },
+      "api/src/api/operations_summary.py": {
+        "bytes": 11806,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/operations_summary.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "a65ed455b4327b270505320a3f858544147d1781f24082d3b8f980896eac68bb",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/operations_summary.py",
+        "uid": 0
+      },
+      "api/src/api/readiness.py": {
+        "bytes": 1785,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/readiness.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "dd3bb8dda2bb3561212915aabdbc55e0a96430331e43e1f0ba0e277842167ff7",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/readiness.py",
+        "uid": 0
+      },
+      "api/src/api/restricted_reports.py": {
+        "bytes": 11112,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/restricted_reports.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "69ae92e3b888cde893946b49ec8acb6e5c117ce7987e27d7ac5cb1e33293c1b0",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/restricted_reports.py",
+        "uid": 0
+      },
+      "api/src/api/runtime.py": {
+        "bytes": 5945,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/runtime.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "8ef6206a373705bcccd06acf25de8cbc31e4e35a05bdb59a3366b630a617b030",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/runtime.py",
+        "uid": 0
+      },
+      "api/src/api/security.py": {
+        "bytes": 10507,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/api/security.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "7e4d05cb476555fd18884212ecfd88357669f8cd9515edf6bcd17152a6175b61",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/api/security.py",
+        "uid": 0
+      },
+      "api/src/shared/__init__.py": {
+        "bytes": 70,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/__init__.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/__init__.py",
+        "uid": 0
+      },
+      "api/src/shared/forecast_evaluation.py": {
+        "bytes": 3344,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/forecast_evaluation.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "f185ccf0c7b503eb529eb25fb95026937e4a8ddd9206bf6890b1d64ca010e28b",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/forecast_evaluation.py",
+        "uid": 0
+      },
+      "api/src/shared/forecast_publication.py": {
+        "bytes": 12783,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/forecast_publication.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/forecast_publication.py",
+        "uid": 0
+      },
+      "api/src/shared/market_context.py": {
+        "bytes": 5602,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/market_context.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "15e9746be365efabd4c3329d73553b7879c03c382e5b570349f757f19b968656",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/market_context.py",
+        "uid": 0
+      },
+      "api/src/shared/operational_evidence.py": {
+        "bytes": 10119,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/operational_evidence.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9338a4e5062362d5ab1c754a994e5b56b31b6ed96e398f1b40ee9df650b53b29",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/operational_evidence.py",
+        "uid": 0
+      },
+      "api/src/shared/operational_evidence_store.py": {
+        "bytes": 10634,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/operational_evidence_store.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "d7df9672d83794df1f0d2bc5ef3b435025ddcbc7af2b5907f443ddc327aa7a47",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/operational_evidence_store.py",
+        "uid": 0
+      },
+      "api/src/shared/operational_health.py": {
+        "bytes": 8582,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/operational_health.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4db26232cab02591c4d8bdd4adbe80694dffb44da7b57346cc17c50930c89108",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/operational_health.py",
+        "uid": 0
+      },
+      "api/src/shared/price_aggregation.py": {
+        "bytes": 3245,
+        "destination": "/opt/powerflow/releases/phase-operational-evidence-20261105-v1/src/shared/price_aggregation.py",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "cdb29ea521506babf568d9e8cdc656565b120d52b8b502cc48003550af172fbb",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/api/src/shared/price_aggregation.py",
+        "uid": 0
+      },
+      "helper/TOOLS.json": {
+        "bytes": 715,
+        "destination": "/opt/powerflow/operational-evidence-v1/TOOLS.json",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "0f1c16bb3acb0ef0fdfc6d5b5309b640b5f101dcedd3eaf32f29d12524005c4e",
+        "source": "deploy/staging/operational-evidence/TOOLS.json",
+        "uid": 0
+      },
+      "helper/bootstrap.py": {
+        "bytes": 2328,
+        "destination": "/opt/powerflow/operational-evidence-v1/bootstrap.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "fc062219206415c5394fe2817b99e49f62cfe106943e5094f5bc80d100735545",
+        "source": "deploy/staging/operational-evidence/bootstrap.py",
+        "uid": 0
+      },
+      "helper/shared/__init__.py": {
+        "bytes": 70,
+        "destination": "/opt/powerflow/operational-evidence-v1/shared/__init__.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
+        "source": "src/shared/__init__.py",
+        "uid": 0
+      },
+      "helper/shared/forecast_publication.py": {
+        "bytes": 12783,
+        "destination": "/opt/powerflow/operational-evidence-v1/shared/forecast_publication.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902",
+        "source": "src/shared/forecast_publication.py",
+        "uid": 0
+      },
+      "helper/shared/operational_capture.py": {
+        "bytes": 11526,
+        "destination": "/opt/powerflow/operational-evidence-v1/shared/operational_capture.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "b2e59812b56ec42e58b374a73f5c9ad14d0e0ae6a5bbfa515777a8b73e024910",
+        "source": "src/shared/operational_capture.py",
+        "uid": 0
+      },
+      "helper/shared/operational_evidence.py": {
+        "bytes": 10119,
+        "destination": "/opt/powerflow/operational-evidence-v1/shared/operational_evidence.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "9338a4e5062362d5ab1c754a994e5b56b31b6ed96e398f1b40ee9df650b53b29",
+        "source": "src/shared/operational_evidence.py",
+        "uid": 0
+      },
+      "helper/shared/operational_evidence_producer.py": {
+        "bytes": 17700,
+        "destination": "/opt/powerflow/operational-evidence-v1/shared/operational_evidence_producer.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "c4969093ad6b8361c11d96b194c00098cb42f87ef78ebba5c0cdeed82dab582c",
+        "source": "src/shared/operational_evidence_producer.py",
+        "uid": 0
+      },
+      "helper/shared/operational_evidence_store.py": {
+        "bytes": 10634,
+        "destination": "/opt/powerflow/operational-evidence-v1/shared/operational_evidence_store.py",
+        "gid": 0,
+        "mode": 384,
+        "sha256": "d7df9672d83794df1f0d2bc5ef3b435025ddcbc7af2b5907f443ddc327aa7a47",
+        "source": "src/shared/operational_evidence_store.py",
+        "uid": 0
+      },
+      "launcher": {
+        "bytes": 255,
+        "destination": "/usr/local/sbin/powerflow-publish-operations",
+        "gid": 0,
+        "mode": 493,
+        "sha256": "45f78307a60a988b111a67a5d27bad80c1ad5df6c073cd47daa6b8f69d71261a",
+        "source": "deploy/staging/operational-evidence/powerflow-publish-operations",
+        "uid": 0
+      },
+      "static/assets/AnalyticsPage-B3tPL-ov.js": {
+        "bytes": 10553,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/AnalyticsPage-B3tPL-ov.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "a5f30d49da75afbd3e82083d0c1d746a4f83d925e684546e766edf4628c97f4f",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/AnalyticsPage-B3tPL-ov.js",
+        "uid": 0
+      },
+      "static/assets/AnalyticsPage-BEsyAjJf.js": {
+        "bytes": 10587,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/AnalyticsPage-BEsyAjJf.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/AnalyticsPage-BEsyAjJf.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "23f7d22be0848593897d7cf902bd575b38a310930f09b06b76c1b2d5f787b899",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/AnalyticsPage-BEsyAjJf.js",
+        "uid": 0
+      },
+      "static/assets/AnalyticsPage-DvT_McWV.js": {
+        "bytes": 10587,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/AnalyticsPage-DvT_McWV.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/AnalyticsPage-DvT_McWV.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "56a51250f9d804a15edb60e9ca11166e9f8ca559e96621c6e2ed307dccf089c6",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/AnalyticsPage-DvT_McWV.js",
+        "uid": 0
+      },
+      "static/assets/AnomaliesPage-5ZjODUkt.js": {
+        "bytes": 5564,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/AnomaliesPage-5ZjODUkt.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/AnomaliesPage-5ZjODUkt.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "be52bfc660db4bde6d8a0080c3e01984dd148a69c38520b243ff6e74a90d5204",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/AnomaliesPage-5ZjODUkt.js",
+        "uid": 0
+      },
+      "static/assets/AnomaliesPage-CavIkXVp.js": {
+        "bytes": 5461,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/AnomaliesPage-CavIkXVp.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "007a752962b0d7e6f091c301d2b5840427b146531401b9cb86e84ed8ea05d9db",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/AnomaliesPage-CavIkXVp.js",
+        "uid": 0
+      },
+      "static/assets/AnomaliesPage-zPzO5Z_s.js": {
+        "bytes": 5564,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/AnomaliesPage-zPzO5Z_s.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/AnomaliesPage-zPzO5Z_s.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "e2e1ab6b4e2adfa1ee3235975ebb413c7e128cbb09fb69cf6e05b3f42c8cd837",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/AnomaliesPage-zPzO5Z_s.js",
+        "uid": 0
+      },
+      "static/assets/ApiPanel-BEa6puss.js": {
+        "bytes": 3276,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ApiPanel-BEa6puss.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ApiPanel-BEa6puss.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4b8d04c0683413e88d20db81f732d2a918f4afb40c116618e74d48f2224cfa08",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ApiPanel-BEa6puss.js",
+        "uid": 0
+      },
+      "static/assets/ApiPanel-DSx3H9sF.js": {
+        "bytes": 3259,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ApiPanel-DSx3H9sF.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "3bebe2bb7804e93f766322b488687fa876f77443b93256d0e7ecac974a7d6354",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ApiPanel-DSx3H9sF.js",
+        "uid": 0
+      },
+      "static/assets/ApiPanel-xtjEHQ4L.js": {
+        "bytes": 3276,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ApiPanel-xtjEHQ4L.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ApiPanel-xtjEHQ4L.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "3cf9eda336f3b7bf430da04a03a67c9fb6425041e2d8ac5eb7cb5724e20250c2",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ApiPanel-xtjEHQ4L.js",
+        "uid": 0
+      },
+      "static/assets/BarChart-B7Xrh3gU.js": {
+        "bytes": 20069,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/BarChart-B7Xrh3gU.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/BarChart-B7Xrh3gU.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "6b91d83c05770319194eb4b5c5b9bb66df3e44d0c66e08b2bdee4c2dde5e204e",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/BarChart-B7Xrh3gU.js",
+        "uid": 0
+      },
+      "static/assets/BarChart-D78h9GFT.js": {
+        "bytes": 20069,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/BarChart-D78h9GFT.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/BarChart-D78h9GFT.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4a3e9bac0240a46c777d2f3c123ce418884f627e74dae45ffc555f9759e326aa",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/BarChart-D78h9GFT.js",
+        "uid": 0
+      },
+      "static/assets/BarChart-e28seLe8.js": {
+        "bytes": 20069,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/BarChart-e28seLe8.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "52ffc9df39e4cf0c34f14bac36bec9550d2bb24c6e975cbd444df715a369643b",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/BarChart-e28seLe8.js",
+        "uid": 0
+      },
+      "static/assets/CartesianChart-BWz_0eVI.js": {
+        "bytes": 338530,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/CartesianChart-BWz_0eVI.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4647f027db64d2a8a7d1571ac79e3bc3b09196b23c73dd72c6d7449867d08305",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/CartesianChart-BWz_0eVI.js",
+        "uid": 0
+      },
+      "static/assets/CartesianChart-J1F7-aFU.js": {
+        "bytes": 338530,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/CartesianChart-J1F7-aFU.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/CartesianChart-J1F7-aFU.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "de32e301c944a2b53e21ee1abf4fbca56ddbac559eea84bac8c1b53a00436fd4",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/CartesianChart-J1F7-aFU.js",
+        "uid": 0
+      },
+      "static/assets/CartesianChart-jY9x4W9X.js": {
+        "bytes": 338530,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/CartesianChart-jY9x4W9X.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/CartesianChart-jY9x4W9X.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "caad87e97b29fde5e4136d3d60518a9e3a9d0e6684771665e3abeaa6b2308163",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/CartesianChart-jY9x4W9X.js",
+        "uid": 0
+      },
+      "static/assets/CoefficientChart-BYRWtgVv.js": {
+        "bytes": 1194,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/CoefficientChart-BYRWtgVv.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/CoefficientChart-BYRWtgVv.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9f0d8023fe269fd48adea859c032e283af4b2aa88c72420ab2f5259ed9954fb5",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/CoefficientChart-BYRWtgVv.js",
+        "uid": 0
+      },
+      "static/assets/CoefficientChart-C2F3j8yT.js": {
+        "bytes": 1194,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/CoefficientChart-C2F3j8yT.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/CoefficientChart-C2F3j8yT.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "25b82a8b21e6928651730243468a40e09a3a7aa56e48adac4e7915a302ae2a74",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/CoefficientChart-C2F3j8yT.js",
+        "uid": 0
+      },
+      "static/assets/CoefficientChart-UmG5NnJJ.js": {
+        "bytes": 1194,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/CoefficientChart-UmG5NnJJ.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "b2fc9650b878e67b49139a8df499f39d03a3ec2a38f2e2f2a4b3965f7dde9c70",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/CoefficientChart-UmG5NnJJ.js",
+        "uid": 0
+      },
+      "static/assets/DateRangeFilter-CoKVLPya.js": {
+        "bytes": 1067,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/DateRangeFilter-CoKVLPya.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/DateRangeFilter-CoKVLPya.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "6a1b666dd714217ae6fd8471cea0a75f24ad81c5611f7d711225a4f544353943",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/DateRangeFilter-CoKVLPya.js",
+        "uid": 0
+      },
+      "static/assets/ExplorationCharts-D0_0nfo-.js": {
+        "bytes": 2047,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ExplorationCharts-D0_0nfo-.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "56f1c7da98de9dd5262e70a8136e49ae7f47924a71df0b6c51ca6ca03159baa1",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ExplorationCharts-D0_0nfo-.js",
+        "uid": 0
+      },
+      "static/assets/ExplorationCharts-D4wMGxSr.js": {
+        "bytes": 2047,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ExplorationCharts-D4wMGxSr.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ExplorationCharts-D4wMGxSr.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "72ef7b1c9638ab9ca90143da84e452704c4e4062d3757c55c4dda1eb2ec67d74",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ExplorationCharts-D4wMGxSr.js",
+        "uid": 0
+      },
+      "static/assets/ExplorationCharts-DkkFXyyl.js": {
+        "bytes": 2047,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ExplorationCharts-DkkFXyyl.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ExplorationCharts-DkkFXyyl.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4dd59393f00a6fefb1fc219ebc86610d2d04ac79e7d6644293000742232bf169",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ExplorationCharts-DkkFXyyl.js",
+        "uid": 0
+      },
+      "static/assets/ForecastChart-9OdHBhbY.js": {
+        "bytes": 4085,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ForecastChart-9OdHBhbY.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastChart-9OdHBhbY.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "ee17145044d0fe11521dc8c11746754d312f12f3878a1810afc8f0880520ba02",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastChart-9OdHBhbY.js",
+        "uid": 0
+      },
+      "static/assets/ForecastChart-DogZzHeX.js": {
+        "bytes": 4085,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ForecastChart-DogZzHeX.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastChart-DogZzHeX.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "1132f320b73a853eb860403f63341bed0be573d9932e360c78b803b855006fcb",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastChart-DogZzHeX.js",
+        "uid": 0
+      },
+      "static/assets/ForecastChart-_SEzCudY.js": {
+        "bytes": 4085,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastChart-_SEzCudY.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "b9bd83838a8699c972cdf3a50f59ab8946ed2aeec2d9a95212c54780240b80d5",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastChart-_SEzCudY.js",
+        "uid": 0
+      },
+      "static/assets/ForecastSummary-CYQJL797.js": {
+        "bytes": 3655,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastSummary-CYQJL797.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "8d7c61e21e0727f2b79660b2d5999ef1216099462eebb973113f1786036c8338",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastSummary-CYQJL797.js",
+        "uid": 0
+      },
+      "static/assets/ForecastSummary-CZdthC-o.js": {
+        "bytes": 3655,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ForecastSummary-CZdthC-o.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastSummary-CZdthC-o.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "23bc69a7de9d117a089b7726aa373e84f77b9f6a9a7189f912e84061c27f2eb1",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastSummary-CZdthC-o.js",
+        "uid": 0
+      },
+      "static/assets/ForecastSummary-UvobhHs3.js": {
+        "bytes": 3603,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ForecastSummary-UvobhHs3.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastSummary-UvobhHs3.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5262cc5e7f1865043ffce95267de16d90e468a29292fcf01032fcdecf2cfd168",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastSummary-UvobhHs3.js",
+        "uid": 0
+      },
+      "static/assets/ForecastingPage-3HXF_j0k.js": {
+        "bytes": 11783,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ForecastingPage-3HXF_j0k.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastingPage-3HXF_j0k.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "96c3e74ae652d0bc235078318ec17e3a028213b6c0c9a2bbe30197a8d4d7eb43",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastingPage-3HXF_j0k.js",
+        "uid": 0
+      },
+      "static/assets/ForecastingPage-BHR3VqdX.js": {
+        "bytes": 11733,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastingPage-BHR3VqdX.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "2022f9fd447ac2c9d2fd7fdbdeb98d6f34e022dcadade1aa97e809c54d79529a",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastingPage-BHR3VqdX.js",
+        "uid": 0
+      },
+      "static/assets/ForecastingPage-ClzsJH5z.js": {
+        "bytes": 11803,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ForecastingPage-ClzsJH5z.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ForecastingPage-ClzsJH5z.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9f201c9f5a3d42f9b3de69b7001327ec34ba603bc6cbce4222d3da40e497fa4d",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ForecastingPage-ClzsJH5z.js",
+        "uid": 0
+      },
+      "static/assets/HistoricalChart-CJ-tF3n0.js": {
+        "bytes": 14610,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/HistoricalChart-CJ-tF3n0.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/HistoricalChart-CJ-tF3n0.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5587447ea5f6a4b2f63c99d0dd0e3ffa4194a58439d354e24e6e2bc75f33fe23",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/HistoricalChart-CJ-tF3n0.js",
+        "uid": 0
+      },
+      "static/assets/HistoricalChart-DBLTqpTE.js": {
+        "bytes": 14610,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/HistoricalChart-DBLTqpTE.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "001a03d15cdba7d0b28578c2b4aff576cbec4f4a928d261a33e3f539c6d8df6b",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/HistoricalChart-DBLTqpTE.js",
+        "uid": 0
+      },
+      "static/assets/HistoricalChart-N3Nhu4jq.js": {
+        "bytes": 14610,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/HistoricalChart-N3Nhu4jq.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/HistoricalChart-N3Nhu4jq.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9e1601aa5849aa3e828cb82707b546c57e5fd9a35bea9efcbc57130ebabea0da",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/HistoricalChart-N3Nhu4jq.js",
+        "uid": 0
+      },
+      "static/assets/KpiGrid-eOgMfoBa.js": {
+        "bytes": 481,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/KpiGrid-eOgMfoBa.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/KpiGrid-eOgMfoBa.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "6b003db98a2f4ebd601807428b5181c7fe9cc0ddc9afe1678ac277fb56eee17f",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/KpiGrid-eOgMfoBa.js",
+        "uid": 0
+      },
+      "static/assets/Legend-C1Brm5cP.js": {
+        "bytes": 14277,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/Legend-C1Brm5cP.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Legend-C1Brm5cP.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "81ded88adbe3dbf7a1e07d90ceefd24bc7563a7e6fb19ab85ff8540ddb214885",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Legend-C1Brm5cP.js",
+        "uid": 0
+      },
+      "static/assets/Legend-CjPaNtbT.js": {
+        "bytes": 14277,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Legend-CjPaNtbT.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "323557cb225fc978bd713cf1d23a07b66e173478a0553a3a8b84c7c51e9f537d",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Legend-CjPaNtbT.js",
+        "uid": 0
+      },
+      "static/assets/Legend-FwyFVA7D.js": {
+        "bytes": 14277,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/Legend-FwyFVA7D.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Legend-FwyFVA7D.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5e9c00a487f0fd64686b8509ab609f22d802a2836a9af8a53e634a387d58c375",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Legend-FwyFVA7D.js",
+        "uid": 0
+      },
+      "static/assets/Line-DMwXqqko.js": {
+        "bytes": 16574,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/Line-DMwXqqko.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Line-DMwXqqko.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "061e2757aaf58b4ca1c2aaa93e3ba66ae5338075d6e9890829e1acf9957daa40",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Line-DMwXqqko.js",
+        "uid": 0
+      },
+      "static/assets/Line-DiSCmFmk.js": {
+        "bytes": 16574,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Line-DiSCmFmk.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "fb39cb33a2d1898b054d216eaac900317abfdfd7d5da2a349200cefddda47960",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Line-DiSCmFmk.js",
+        "uid": 0
+      },
+      "static/assets/Line-p4W3H_vu.js": {
+        "bytes": 16574,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/Line-p4W3H_vu.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Line-p4W3H_vu.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "80d0322f9d3ee6111077f1b6c7a2509098d1cc54db4f511e61ac1a8a77201aee",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Line-p4W3H_vu.js",
+        "uid": 0
+      },
+      "static/assets/LineChart-BtzgvU7G.js": {
+        "bytes": 332,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/LineChart-BtzgvU7G.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "b93a9d97a434fcea6ccc793da92f6864ce45c83c6ad6248b14c5252168c80810",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/LineChart-BtzgvU7G.js",
+        "uid": 0
+      },
+      "static/assets/LineChart-CinOd5RE.js": {
+        "bytes": 332,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/LineChart-CinOd5RE.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/LineChart-CinOd5RE.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "c1f414c415bda7792307d7231fb69211545105011fe7487bcd28132e0dfb9db9",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/LineChart-CinOd5RE.js",
+        "uid": 0
+      },
+      "static/assets/LineChart-D7mcjVVp.js": {
+        "bytes": 332,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/LineChart-D7mcjVVp.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/LineChart-D7mcjVVp.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5cfe9d2fba59832c3ce4d0a88e6232479eb1efe21a8daec87c2d2a0bf01fb5fb",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/LineChart-D7mcjVVp.js",
+        "uid": 0
+      },
+      "static/assets/MarketChart-BLgTaDAW.js": {
+        "bytes": 1823,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/MarketChart-BLgTaDAW.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "fa7d1c18198fe905eb868d67f1abdd2d2f2d6d6b4fb89b9f76200c8afb957453",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/MarketChart-BLgTaDAW.js",
+        "uid": 0
+      },
+      "static/assets/MarketChart-CIfI3Qet.js": {
+        "bytes": 1823,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/MarketChart-CIfI3Qet.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/MarketChart-CIfI3Qet.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "92cdc216d97706a113a0d41a30e88352f5b34f1f372864f2e299f718f296e197",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/MarketChart-CIfI3Qet.js",
+        "uid": 0
+      },
+      "static/assets/MarketChart-DG0sX_hY.js": {
+        "bytes": 1823,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/MarketChart-DG0sX_hY.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/MarketChart-DG0sX_hY.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "2bb17b41b4018e78ff5684697036f6b6f24ba000cc446e745d3c599097972133",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/MarketChart-DG0sX_hY.js",
+        "uid": 0
+      },
+      "static/assets/MarketOverview-2lVNhPMb.js": {
+        "bytes": 4595,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/MarketOverview-2lVNhPMb.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/MarketOverview-2lVNhPMb.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "0e25dbd36ad0e05da5cb5665522ce6c8f070238baf58dc7fa3b77493ad9bf010",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/MarketOverview-2lVNhPMb.js",
+        "uid": 0
+      },
+      "static/assets/MarketOverview-C6CeFw21.js": {
+        "bytes": 4619,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/MarketOverview-C6CeFw21.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/MarketOverview-C6CeFw21.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "b18f3d7d524cac947244ce6ff46a2f1e3d89f07d51e1ae8c38bf55c44d1c7ffd",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/MarketOverview-C6CeFw21.js",
+        "uid": 0
+      },
+      "static/assets/MarketOverview-CK0K_Xoo.js": {
+        "bytes": 4854,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/MarketOverview-CK0K_Xoo.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5514b2905cf3d9e4ca3fe49d5eac728945acc8a245e6b01003d23a9af980be38",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/MarketOverview-CK0K_Xoo.js",
+        "uid": 0
+      },
+      "static/assets/ModelsPage-2BTR2RY4.js": {
+        "bytes": 6822,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ModelsPage-2BTR2RY4.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ModelsPage-2BTR2RY4.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "31abb6e2a277249f203d6e0d55a5c774dca274f3ac9c7ed1706e0b3a10ef3a2e",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ModelsPage-2BTR2RY4.js",
+        "uid": 0
+      },
+      "static/assets/ModelsPage-BZeElT75.js": {
+        "bytes": 6628,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ModelsPage-BZeElT75.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "006340d47c01986e074043e48d28511c80f74f98aa2515258b90675c00488016",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ModelsPage-BZeElT75.js",
+        "uid": 0
+      },
+      "static/assets/ModelsPage-DVg3Yi6l.js": {
+        "bytes": 6822,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ModelsPage-DVg3Yi6l.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ModelsPage-DVg3Yi6l.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "97b1bdf413fe1b438e654f413fc0a3262c7cf4e896d6dd10d6d07d4b97fc97c1",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ModelsPage-DVg3Yi6l.js",
+        "uid": 0
+      },
+      "static/assets/NotFoundPage-B2exC6D2.js": {
+        "bytes": 744,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/NotFoundPage-B2exC6D2.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/NotFoundPage-B2exC6D2.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "c5795f3e43837cd96d8c95acd8feb047a23ad5eed65706e3428345deef3fbf34",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/NotFoundPage-B2exC6D2.js",
+        "uid": 0
+      },
+      "static/assets/NotFoundPage-C3wz98Sp.js": {
+        "bytes": 744,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/NotFoundPage-C3wz98Sp.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/NotFoundPage-C3wz98Sp.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "7482d253090c11d81d19fe074d63374757c2f63d6344a392d005e7af9a442579",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/NotFoundPage-C3wz98Sp.js",
+        "uid": 0
+      },
+      "static/assets/NotFoundPage-D5EtR0Un.js": {
+        "bytes": 744,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/NotFoundPage-D5EtR0Un.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "f6f4c7afe9515c2d1b35193869ecc547ab1be0639427b4aa0c4887f042a928c5",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/NotFoundPage-D5EtR0Un.js",
+        "uid": 0
+      },
+      "static/assets/OperationalSummary-B576JzCq.js": {
+        "bytes": 4473,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/OperationalSummary-B576JzCq.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "3657f18ae5c02af5f142a51928f02f90fc1d4617a8668f77b9d6a0e219a1191c",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/OperationalSummary-B576JzCq.js",
+        "uid": 0
+      },
+      "static/assets/OperationalSummary-DjxgU4Fu.js": {
+        "bytes": 1667,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/OperationalSummary-DjxgU4Fu.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/OperationalSummary-DjxgU4Fu.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "7b6ad9113379e1eb32707dd57524262dce324b9c8ee26b1f7998324627ebd904",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/OperationalSummary-DjxgU4Fu.js",
+        "uid": 0
+      },
+      "static/assets/OperationalSummary-XSBXwGcT.js": {
+        "bytes": 1667,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/OperationalSummary-XSBXwGcT.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/OperationalSummary-XSBXwGcT.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "4728f3945909b3210244a56eac0df06cce69da658554f9661cebafaadcb34d8d",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/OperationalSummary-XSBXwGcT.js",
+        "uid": 0
+      },
+      "static/assets/PageHeading-MxfeYaE5.js": {
+        "bytes": 303,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/PageHeading-MxfeYaE5.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/PageHeading-MxfeYaE5.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "04a0c0a89492d4fc404608902c7374361287cb00993e42de01c62b231fc04974",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/PageHeading-MxfeYaE5.js",
+        "uid": 0
+      },
+      "static/assets/Panel-DEIxcgKV.js": {
+        "bytes": 316,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/Panel-DEIxcgKV.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/Panel-DEIxcgKV.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "d044f2db5f4b09b68f2e428d75b2ae9ecada85c25114157ecf19e32115c1fef0",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/Panel-DEIxcgKV.js",
+        "uid": 0
+      },
+      "static/assets/PipelinePage-BHXErcVG.js": {
+        "bytes": 13828,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/PipelinePage-BHXErcVG.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/PipelinePage-BHXErcVG.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "c0944f03949d9b5e40cfbb0634ce20598eda6f495f6a2650ed9b04747afa81d0",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/PipelinePage-BHXErcVG.js",
+        "uid": 0
+      },
+      "static/assets/PipelinePage-DKEXo9pC.js": {
+        "bytes": 13828,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/PipelinePage-DKEXo9pC.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/PipelinePage-DKEXo9pC.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "3193a6ae1a27c9912ed23619611cc730280927c986c5d29150b3043dfb0a0d05",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/PipelinePage-DKEXo9pC.js",
+        "uid": 0
+      },
+      "static/assets/PipelinePage-DqaQ02iI.js": {
+        "bytes": 13846,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/PipelinePage-DqaQ02iI.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "c5f95ffdfa829ce3bf6e62d4d8a725b77f360cf4cd593d4af9ad20fa8241384c",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/PipelinePage-DqaQ02iI.js",
+        "uid": 0
+      },
+      "static/assets/ProfilePage-CdD_Sl_l.js": {
+        "bytes": 18449,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ProfilePage-CdD_Sl_l.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ProfilePage-CdD_Sl_l.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "db68ad1d245063bc02b88897c015d8f798db0f596f96a6c65c1a4d989c3b7da4",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ProfilePage-CdD_Sl_l.js",
+        "uid": 0
+      },
+      "static/assets/ProfilePage-D4mlpp4o.js": {
+        "bytes": 18449,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ProfilePage-D4mlpp4o.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ProfilePage-D4mlpp4o.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "c14f7ec5af1bab13c4651840b4f8122d85ea56c84f7f28c9e1d4a858c90cc60c",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ProfilePage-D4mlpp4o.js",
+        "uid": 0
+      },
+      "static/assets/ProfilePage-R6r62J2e.js": {
+        "bytes": 18410,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ProfilePage-R6r62J2e.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "75c571d70147463d786a26ac080d26169285649167fc4ce5f8909a0b39f3cd2c",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ProfilePage-R6r62J2e.js",
+        "uid": 0
+      },
+      "static/assets/ReferenceLine-2NkFc84B.js": {
+        "bytes": 4293,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ReferenceLine-2NkFc84B.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ReferenceLine-2NkFc84B.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "966b08081fe4146dcd02de03e119efa436bf670305bfc9dc457c552fc08fb207",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ReferenceLine-2NkFc84B.js",
+        "uid": 0
+      },
+      "static/assets/ReferenceLine-C5kAWh7K.js": {
+        "bytes": 4293,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ReferenceLine-C5kAWh7K.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "bdd4369fb90c5347231c207ffda2d84dc5a9b2c006b190e1e0d4aeba88d71129",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ReferenceLine-C5kAWh7K.js",
+        "uid": 0
+      },
+      "static/assets/ReferenceLine-D-5Dc0ug.js": {
+        "bytes": 4293,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/ReferenceLine-D-5Dc0ug.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/ReferenceLine-D-5Dc0ug.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "8a2234a8933fd57f5e36b14d8cf5130fe2b3a68448a1d6b49035682104fb2934",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/ReferenceLine-D-5Dc0ug.js",
+        "uid": 0
+      },
+      "static/assets/index-B_Ifb4TY.js": {
+        "bytes": 383151,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/index-B_Ifb4TY.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "e5c1053921f36b834a80bd7b73b3fb61f9a77c76de02922a1af877243c736e71",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/index-B_Ifb4TY.js",
+        "uid": 0
+      },
+      "static/assets/index-ChhlyEqz.js": {
+        "bytes": 377493,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/index-ChhlyEqz.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/index-ChhlyEqz.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "1170ba0186e66140bf28b96c3d9414bb184bfc4418cc1ad598b4c13c8a5fa730",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/index-ChhlyEqz.js",
+        "uid": 0
+      },
+      "static/assets/index-DST_P3xP.css": {
+        "bytes": 33162,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/index-DST_P3xP.css",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/index-DST_P3xP.css",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "c72f1b5e81a3305f4af934c7b42916032f969b6eb2320a647cbf033351328fea",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/index-DST_P3xP.css",
+        "uid": 0
+      },
+      "static/assets/index-UhWTNC5L.js": {
+        "bytes": 377512,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/index-UhWTNC5L.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/index-UhWTNC5L.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "801b0e28d055d417df83fb1eeaa08ea9ee45e375ef3169b88fe69426781b2284",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/index-UhWTNC5L.js",
+        "uid": 0
+      },
+      "static/assets/jsx-runtime-Wy9s6hX0.js": {
+        "bytes": 8911,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/jsx-runtime-Wy9s6hX0.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/jsx-runtime-Wy9s6hX0.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "bcb9f6586cd973c2fb2faa4a2d38d4b06660e2fe2806aaa0de1c39306ff0f69a",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/jsx-runtime-Wy9s6hX0.js",
+        "uid": 0
+      },
+      "static/assets/tooltipContext-8gKQgTCt.js": {
+        "bytes": 508,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/tooltipContext-8gKQgTCt.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/tooltipContext-8gKQgTCt.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "63e06f504a408889648c8332fda13cf2d3e67a4dd560e8a795154d8016ac2e3a",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/tooltipContext-8gKQgTCt.js",
+        "uid": 0
+      },
+      "static/assets/tooltipContext-C_2CTXC5.js": {
+        "bytes": 508,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/tooltipContext-C_2CTXC5.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "e393b32ca30801aea4c07dc0863c53713153d40deb93c49e5199d6bbf1d622dc",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/tooltipContext-C_2CTXC5.js",
+        "uid": 0
+      },
+      "static/assets/tooltipContext-DXllbldp.js": {
+        "bytes": 508,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/tooltipContext-DXllbldp.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/tooltipContext-DXllbldp.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "467ea3c3153c490c6c21c9c83889794a6f5cb49aa4b1ba8e3b6e49b67695d40b",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/tooltipContext-DXllbldp.js",
+        "uid": 0
+      },
+      "static/assets/useApi-BMOzz8LU.js": {
+        "bytes": 830,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/useApi-BMOzz8LU.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/useApi-BMOzz8LU.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "d0ff029de8b64e290ba0b0cfb8dddce9ddebd918a168b6061fc15683d6df31a3",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/useApi-BMOzz8LU.js",
+        "uid": 0
+      },
+      "static/assets/useApi-f6qy5zuI.js": {
+        "bytes": 830,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/assets/useApi-f6qy5zuI.js",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/assets/useApi-f6qy5zuI.js",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "369ac32074f50d8411a6d478ce2066b90c9a42d6a3c85fedd19c232f39d0e840",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/assets/useApi-f6qy5zuI.js",
+        "uid": 0
+      },
+      "static/build-config.json": {
+        "bytes": 216,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/build-config.json",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/build-config.json",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "af11eff0593cace4ca27bd836ea3eeddaf6a012ba9f58ceea191e96055891476",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/build-config.json",
+        "uid": 0
+      },
+      "static/favicon.svg": {
+        "bytes": 176,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/favicon.svg",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/favicon.svg",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "1e61c65d94661362653f84017ea81b24123cb5c52812846ff3737c55a78e3a9b",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/favicon.svg",
+        "uid": 0
+      },
+      "static/fonts/SourceSans3-LICENSE.md": {
+        "bytes": 4486,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/fonts/SourceSans3-LICENSE.md",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/fonts/SourceSans3-LICENSE.md",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "56af9b9c6715597e458284a474dc118a50a4150e9d547c70f7b4a33c3e6a9328",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/fonts/SourceSans3-LICENSE.md",
+        "uid": 0
+      },
+      "static/fonts/SourceSans3VF-Upright.woff2": {
+        "bytes": 170188,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/fonts/SourceSans3VF-Upright.woff2",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/fonts/SourceSans3VF-Upright.woff2",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/fonts/SourceSans3VF-Upright.woff2",
+        "uid": 0
+      },
+      "static/icons.svg": {
+        "bytes": 5031,
+        "copy_from": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2/icons.svg",
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/icons.svg",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/icons.svg",
+        "uid": 0
+      },
+      "static/index.html": {
+        "bytes": 748,
+        "destination": "/var/www/powerflow-staging/releases/phase-operational-evidence-20261105-v1/index.html",
+        "gid": 0,
+        "mode": 420,
+        "sha256": "9d0eb4903d4b4c169761b06dfa73f6524f3ce7c2c59880461b49eecd4c60eb76",
+        "source": "data/backups/private-staging-releases/phase-operational-evidence-20261105-v1/release/static/index.html",
+        "uid": 0
+      },
+      "sudoers": {
+        "bytes": 363,
+        "destination": "/etc/sudoers.d/powerflow-publish-operations",
+        "gid": 0,
+        "mode": 288,
+        "sha256": "30f5aed1c33c22fac43293a4ded8637423f6c49a635119f1a99df266748a1a37",
+        "source": "deploy/staging/operational-evidence/sudoers.rule",
+        "uid": 0
+      },
+      "worker/src/scheduled_pipeline.py": {
+        "bytes": 52050,
+        "destination": "/home/ec2-user/Electricity_Trading_Pipeline/src/scheduled_pipeline.py",
+        "gid": 1000,
+        "mode": 420,
+        "sha256": "f275e1c3f98b39f7aa499dc50f682969d2e13c5aecf2b5f9a85d950c6e20c01a",
+        "source": "src/scheduled_pipeline.py",
+        "uid": 1000
+      },
+      "worker/src/shared/operational_evidence.py": {
+        "bytes": 10119,
+        "destination": "/home/ec2-user/Electricity_Trading_Pipeline/src/shared/operational_evidence.py",
+        "gid": 1000,
+        "mode": 420,
+        "sha256": "9338a4e5062362d5ab1c754a994e5b56b31b6ed96e398f1b40ee9df650b53b29",
+        "source": "src/shared/operational_evidence.py",
+        "uid": 1000
+      },
+      "worker/src/shared/operational_terminal.py": {
+        "bytes": 4184,
+        "destination": "/home/ec2-user/Electricity_Trading_Pipeline/src/shared/operational_terminal.py",
+        "gid": 1000,
+        "mode": 420,
+        "sha256": "7aca557833b66fab8543b95467d46ed192fdd7fa22d74636da3c88681584d086",
+        "source": "src/shared/operational_terminal.py",
+        "uid": 1000
+      }
+    },
+    "first_packet": "faeec014b4cde838fcffb3c285eef1995f38547d443162e529fa90ec7209a6b3",
+    "first_tools": {
+      "prepare.py": "1f24db3f7ea3069a70b71939fd9e90984c4d2a63f8347c44e8a7a17c9c877d14",
+      "publish.py": "cacc6116944269bed260af5034c8e1bd4066ea126850a2a94c45c465f94a053a",
+      "shared/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "shared/forecast_publication.py": "264f3e33be1b2887174899473b7f955cc6fa8206ce1e0d7b0961da958eea5395",
+      "tools-manifest.json": "f0a4b3a72ebe4a6b637ecc88438b149e645f2a873cb593c156cb837e67c3a16f"
+    },
+    "frozen": {
+      "next24h_feature_contract.joblib": "1d6554e469a869613dd91d820b0537b4562321ea69e8827ecb83137950078a88",
+      "next24h_model.joblib": "69a3fa10f45c18c4733b3f8e12792e36ec9b209b7afd5e94a9932315e4dde0ed"
+    },
+    "old_api": {
+      "requirements/api.lock": "b1d8bbbec84a08b651b7bdc0b96e5bb94bf6c527297e037357702de00bcc84e3",
+      "requirements/shared.txt": "d221f4eec4e7e97c44d523ee8f55939aceb229c12bbf4a27d9823676d618360c",
+      "src/api/__init__.py": "d7842be76c9c978de666675161f35a3bd24c24e732682cb7d76e9401c5d36a85",
+      "src/api/account_routes.py": "4f74ca84be298f4848059cd8e15900cbd2c22bd7341594fc9bfefbdb4786a88c",
+      "src/api/account_service.py": "7aae6f7cb2397570bf0daa778f33af5bc19a95fc0b1f23053a8167a1e3da5343",
+      "src/api/admin_operations.py": "37c7f5dc1794d680580ff69165a3e64035c9282b202cdda141b67bbe106ee2f4",
+      "src/api/anomalies.py": "9f2957cbc733d61f80b36444033174e69cfe078cafa5d3b721b0f53eb809c7e3",
+      "src/api/app.py": "73dbba25e011b11cfeae040e70cef624ad617006e1f86493d7235d6f5612b387",
+      "src/api/database.py": "962e07dd654cfb06017866a2c98bc553077239f98de9a0698f1eb83db4c6e906",
+      "src/api/feature_parity.py": "3a0f3c7c027229e4313f0a25e0fe46fde63834b24f712f49fc232892ab107699",
+      "src/api/forecast_source.py": "5816973ca0ad867f2931411934dc80b404b504254b87f85a19968df3bec6c807",
+      "src/api/market_data.py": "4c9b135d5f97b6e8381688c41fcd4e41047ea36423713c70a655ffa0b503752a",
+      "src/api/mfa_routes.py": "858b229be48baa668e5f816136db07c94c52310e01cdeac2803ccca4a8785470",
+      "src/api/mfa_service.py": "8ea67f55d36e4cd6e97fff1c5907ae83f3c48bbb74c948bd82fc424686942715",
+      "src/api/model_summaries.py": "9e57ce3de689f76e1036a901663c7cc7b7a49fe0f6188f113f203627e7bf2fd4",
+      "src/api/operations_summary.py": "a65ed455b4327b270505320a3f858544147d1781f24082d3b8f980896eac68bb",
+      "src/api/readiness.py": "dd3bb8dda2bb3561212915aabdbc55e0a96430331e43e1f0ba0e277842167ff7",
+      "src/api/restricted_reports.py": "69ae92e3b888cde893946b49ec8acb6e5c117ce7987e27d7ac5cb1e33293c1b0",
+      "src/api/runtime.py": "8ef6206a373705bcccd06acf25de8cbc31e4e35a05bdb59a3366b630a617b030",
+      "src/api/security.py": "7e4d05cb476555fd18884212ecfd88357669f8cd9515edf6bcd17152a6175b61",
+      "src/shared/__init__.py": "4dacb653b07451745e1a3fede7a6901f964c82d90a130aff0d6f95d60994f110",
+      "src/shared/forecast_evaluation.py": "f185ccf0c7b503eb529eb25fb95026937e4a8ddd9206bf6890b1d64ca010e28b",
+      "src/shared/forecast_publication.py": "a88906ef45688dbee98171376a53ff64a6b88e68a800a0a422a1a7375e452902",
+      "src/shared/market_context.py": "15e9746be365efabd4c3329d73553b7879c03c382e5b570349f757f19b968656",
+      "src/shared/operational_health.py": "4db26232cab02591c4d8bdd4adbe80694dffb44da7b57346cc17c50930c89108",
+      "src/shared/price_aggregation.py": "cdb29ea521506babf568d9e8cdc656565b120d52b8b502cc48003550af172fbb"
+    },
+    "old_backend": "/opt/powerflow/releases/phase-api-body-bound-20261102-v2",
+    "old_static": "/var/www/powerflow-staging/releases/phase-api-body-bound-20261102-v2",
+    "old_static_inventory": {
+      "assets/AnalyticsPage-BEsyAjJf.js": "23f7d22be0848593897d7cf902bd575b38a310930f09b06b76c1b2d5f787b899",
+      "assets/AnalyticsPage-DvT_McWV.js": "56a51250f9d804a15edb60e9ca11166e9f8ca559e96621c6e2ed307dccf089c6",
+      "assets/AnomaliesPage-5ZjODUkt.js": "be52bfc660db4bde6d8a0080c3e01984dd148a69c38520b243ff6e74a90d5204",
+      "assets/AnomaliesPage-zPzO5Z_s.js": "e2e1ab6b4e2adfa1ee3235975ebb413c7e128cbb09fb69cf6e05b3f42c8cd837",
+      "assets/ApiPanel-BEa6puss.js": "4b8d04c0683413e88d20db81f732d2a918f4afb40c116618e74d48f2224cfa08",
+      "assets/ApiPanel-xtjEHQ4L.js": "3cf9eda336f3b7bf430da04a03a67c9fb6425041e2d8ac5eb7cb5724e20250c2",
+      "assets/BarChart-B7Xrh3gU.js": "6b91d83c05770319194eb4b5c5b9bb66df3e44d0c66e08b2bdee4c2dde5e204e",
+      "assets/BarChart-D78h9GFT.js": "4a3e9bac0240a46c777d2f3c123ce418884f627e74dae45ffc555f9759e326aa",
+      "assets/CartesianChart-J1F7-aFU.js": "de32e301c944a2b53e21ee1abf4fbca56ddbac559eea84bac8c1b53a00436fd4",
+      "assets/CartesianChart-jY9x4W9X.js": "caad87e97b29fde5e4136d3d60518a9e3a9d0e6684771665e3abeaa6b2308163",
+      "assets/CoefficientChart-BYRWtgVv.js": "9f0d8023fe269fd48adea859c032e283af4b2aa88c72420ab2f5259ed9954fb5",
+      "assets/CoefficientChart-C2F3j8yT.js": "25b82a8b21e6928651730243468a40e09a3a7aa56e48adac4e7915a302ae2a74",
+      "assets/DateRangeFilter-CoKVLPya.js": "6a1b666dd714217ae6fd8471cea0a75f24ad81c5611f7d711225a4f544353943",
+      "assets/ExplorationCharts-D4wMGxSr.js": "72ef7b1c9638ab9ca90143da84e452704c4e4062d3757c55c4dda1eb2ec67d74",
+      "assets/ExplorationCharts-DkkFXyyl.js": "4dd59393f00a6fefb1fc219ebc86610d2d04ac79e7d6644293000742232bf169",
+      "assets/ForecastChart-9OdHBhbY.js": "ee17145044d0fe11521dc8c11746754d312f12f3878a1810afc8f0880520ba02",
+      "assets/ForecastChart-DogZzHeX.js": "1132f320b73a853eb860403f63341bed0be573d9932e360c78b803b855006fcb",
+      "assets/ForecastSummary-CZdthC-o.js": "23bc69a7de9d117a089b7726aa373e84f77b9f6a9a7189f912e84061c27f2eb1",
+      "assets/ForecastSummary-UvobhHs3.js": "5262cc5e7f1865043ffce95267de16d90e468a29292fcf01032fcdecf2cfd168",
+      "assets/ForecastingPage-3HXF_j0k.js": "96c3e74ae652d0bc235078318ec17e3a028213b6c0c9a2bbe30197a8d4d7eb43",
+      "assets/ForecastingPage-ClzsJH5z.js": "9f201c9f5a3d42f9b3de69b7001327ec34ba603bc6cbce4222d3da40e497fa4d",
+      "assets/HistoricalChart-CJ-tF3n0.js": "5587447ea5f6a4b2f63c99d0dd0e3ffa4194a58439d354e24e6e2bc75f33fe23",
+      "assets/HistoricalChart-N3Nhu4jq.js": "9e1601aa5849aa3e828cb82707b546c57e5fd9a35bea9efcbc57130ebabea0da",
+      "assets/KpiGrid-eOgMfoBa.js": "6b003db98a2f4ebd601807428b5181c7fe9cc0ddc9afe1678ac277fb56eee17f",
+      "assets/Legend-C1Brm5cP.js": "81ded88adbe3dbf7a1e07d90ceefd24bc7563a7e6fb19ab85ff8540ddb214885",
+      "assets/Legend-FwyFVA7D.js": "5e9c00a487f0fd64686b8509ab609f22d802a2836a9af8a53e634a387d58c375",
+      "assets/Line-DMwXqqko.js": "061e2757aaf58b4ca1c2aaa93e3ba66ae5338075d6e9890829e1acf9957daa40",
+      "assets/Line-p4W3H_vu.js": "80d0322f9d3ee6111077f1b6c7a2509098d1cc54db4f511e61ac1a8a77201aee",
+      "assets/LineChart-CinOd5RE.js": "c1f414c415bda7792307d7231fb69211545105011fe7487bcd28132e0dfb9db9",
+      "assets/LineChart-D7mcjVVp.js": "5cfe9d2fba59832c3ce4d0a88e6232479eb1efe21a8daec87c2d2a0bf01fb5fb",
+      "assets/MarketChart-CIfI3Qet.js": "92cdc216d97706a113a0d41a30e88352f5b34f1f372864f2e299f718f296e197",
+      "assets/MarketChart-DG0sX_hY.js": "2bb17b41b4018e78ff5684697036f6b6f24ba000cc446e745d3c599097972133",
+      "assets/MarketOverview-2lVNhPMb.js": "0e25dbd36ad0e05da5cb5665522ce6c8f070238baf58dc7fa3b77493ad9bf010",
+      "assets/MarketOverview-C6CeFw21.js": "b18f3d7d524cac947244ce6ff46a2f1e3d89f07d51e1ae8c38bf55c44d1c7ffd",
+      "assets/ModelsPage-2BTR2RY4.js": "31abb6e2a277249f203d6e0d55a5c774dca274f3ac9c7ed1706e0b3a10ef3a2e",
+      "assets/ModelsPage-DVg3Yi6l.js": "97b1bdf413fe1b438e654f413fc0a3262c7cf4e896d6dd10d6d07d4b97fc97c1",
+      "assets/NotFoundPage-B2exC6D2.js": "c5795f3e43837cd96d8c95acd8feb047a23ad5eed65706e3428345deef3fbf34",
+      "assets/NotFoundPage-C3wz98Sp.js": "7482d253090c11d81d19fe074d63374757c2f63d6344a392d005e7af9a442579",
+      "assets/OperationalSummary-DjxgU4Fu.js": "7b6ad9113379e1eb32707dd57524262dce324b9c8ee26b1f7998324627ebd904",
+      "assets/OperationalSummary-XSBXwGcT.js": "4728f3945909b3210244a56eac0df06cce69da658554f9661cebafaadcb34d8d",
+      "assets/PageHeading-MxfeYaE5.js": "04a0c0a89492d4fc404608902c7374361287cb00993e42de01c62b231fc04974",
+      "assets/Panel-DEIxcgKV.js": "d044f2db5f4b09b68f2e428d75b2ae9ecada85c25114157ecf19e32115c1fef0",
+      "assets/PipelinePage-BHXErcVG.js": "c0944f03949d9b5e40cfbb0634ce20598eda6f495f6a2650ed9b04747afa81d0",
+      "assets/PipelinePage-DKEXo9pC.js": "3193a6ae1a27c9912ed23619611cc730280927c986c5d29150b3043dfb0a0d05",
+      "assets/ProfilePage-CdD_Sl_l.js": "db68ad1d245063bc02b88897c015d8f798db0f596f96a6c65c1a4d989c3b7da4",
+      "assets/ProfilePage-D4mlpp4o.js": "c14f7ec5af1bab13c4651840b4f8122d85ea56c84f7f28c9e1d4a858c90cc60c",
+      "assets/ReferenceLine-2NkFc84B.js": "966b08081fe4146dcd02de03e119efa436bf670305bfc9dc457c552fc08fb207",
+      "assets/ReferenceLine-D-5Dc0ug.js": "8a2234a8933fd57f5e36b14d8cf5130fe2b3a68448a1d6b49035682104fb2934",
+      "assets/index-ChhlyEqz.js": "1170ba0186e66140bf28b96c3d9414bb184bfc4418cc1ad598b4c13c8a5fa730",
+      "assets/index-DST_P3xP.css": "c72f1b5e81a3305f4af934c7b42916032f969b6eb2320a647cbf033351328fea",
+      "assets/index-UhWTNC5L.js": "801b0e28d055d417df83fb1eeaa08ea9ee45e375ef3169b88fe69426781b2284",
+      "assets/jsx-runtime-Wy9s6hX0.js": "bcb9f6586cd973c2fb2faa4a2d38d4b06660e2fe2806aaa0de1c39306ff0f69a",
+      "assets/tooltipContext-8gKQgTCt.js": "63e06f504a408889648c8332fda13cf2d3e67a4dd560e8a795154d8016ac2e3a",
+      "assets/tooltipContext-DXllbldp.js": "467ea3c3153c490c6c21c9c83889794a6f5cb49aa4b1ba8e3b6e49b67695d40b",
+      "assets/useApi-BMOzz8LU.js": "d0ff029de8b64e290ba0b0cfb8dddce9ddebd918a168b6061fc15683d6df31a3",
+      "assets/useApi-f6qy5zuI.js": "369ac32074f50d8411a6d478ce2066b90c9a42d6a3c85fedd19c232f39d0e840",
+      "build-config.json": "af11eff0593cace4ca27bd836ea3eeddaf6a012ba9f58ceea191e96055891476",
+      "favicon.svg": "1e61c65d94661362653f84017ea81b24123cb5c52812846ff3737c55a78e3a9b",
+      "fonts/SourceSans3-LICENSE.md": "56af9b9c6715597e458284a474dc118a50a4150e9d547c70f7b4a33c3e6a9328",
+      "fonts/SourceSans3VF-Upright.woff2": "5f16566f7a40d39b339ad26be151fa5a1ab1f0c2574c7a2e619765584a1acbd8",
+      "icons.svg": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "index.html": "7a5714dee9cfd84d9259ddfdb7370bf7acd6c1397d1409cdd5fc45278255d5ec"
+    },
+    "release": "phase-operational-evidence-20261105-v1",
+    "sudoers_hex": "232050726f706f73616c206f6e6c793b206e6f20696e7374616c6c6174696f6e206f72206e65772070726976696c6567657320617574686f72697a65642e0a6563322d7573657220414c4c3d28726f6f7429204e4f5041535357443a204e4f534554454e563a207368613235363a34356637383330376136306139383862313131613637613564323762616438306331616435646636633037336364343764616136623866363964373132363161202f7573722f6c6f63616c2f7362696e2f706f776572666c6f772d7075626c6973682d6f7065726174696f6e73205e2d2d666c6f772d72756e205b302d39612d665d7b387d2d5b302d39612d665d7b347d2d5b302d39612d665d7b347d2d5b302d39612d665d7b347d2d5b302d39612d665d7b31327d202d2d7374617465205b302d39612d665d7b387d2d5b302d39612d665d7b347d2d5b302d39612d665d7b347d2d5b302d39612d665d7b347d2d5b302d39612d665d7b31327d240a",
+    "total_bytes": 3206209,
+    "transaction": "9cab77d42df245c197e317a61906417f",
+    "worker": {
+      "src/scheduled_pipeline.py": {
+        "before": "1eb95c4fad2d5f861ddee1ca5bee1507d7b02653ce3567bfb53b2f387a5ffb58"
+      },
+      "src/shared/operational_evidence.py": {
+        "before": null
+      },
+      "src/shared/operational_terminal.py": {
+        "before": null
+      }
+    },
+    "worker_sdk": {
+      "flow_engine.py": "bf8fa8953752b9cbb16297db92f8de51a94e0c57c6d2df7a9d0d2a9039fc1548",
+      "workers/base.py": "703c596378c2679b26ef107f117a71bb17ba5c851d32a4343ab712362c04b1c6"
+    }
+  },
+  "execution_authorized": false,
+  "payloads": {
+    "accept": {
+      "bytes": 195290,
+      "sha256": "ebdf0c59ab3d01cae1880a284980f47279ab96320897ba53a9d0da895d367004"
+    },
+    "apply": {
+      "bytes": 1790325,
+      "sha256": "19c71eff3858df560b3db70a63fd9ca4c462aaa06fb061be95589aeafc612d12"
+    },
+    "preflight": {
+      "bytes": 137677,
+      "sha256": "1932b9633b4d76f8d53a35abe6ef5c12c0b4cedf59cd3db7a884a0bd76694d07"
+    },
+    "rollback": {
+      "bytes": 153854,
+      "sha256": "dc30e290f081bb5bbd2e3b2f434fd38f129f62f2c3b26ad464c5b0cbf4b604cd"
+    }
+  },
+  "release": "phase-operational-evidence-20261105-v1",
+  "transaction": "9cab77d42df245c197e317a61906417f",
+  "version": 1
+}

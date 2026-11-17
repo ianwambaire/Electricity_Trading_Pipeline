@@ -1,0 +1,5 @@
+{
+  "deploy/preflight/inspect-production-readonly.py": "7ecda8e5e9a94231f377af73c6a629236e8b4491e4683bbe5efdbcaf1b6d766b",
+  "deploy/preflight/INSPECTION-BATCH.md": "aefab5ee73eac527d8013007ff01180c05813ce6522ea54bd8978a17bd8f51c1",
+  "deploy/remediation/a3-bounded-local.py": "9651828740e242181ef9cd3409ff266f14391f966290eccdb591611faf500f40"
+}

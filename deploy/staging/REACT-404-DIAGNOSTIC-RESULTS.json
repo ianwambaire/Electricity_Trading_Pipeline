@@ -1,0 +1,383 @@
+{
+  "read_only": true,
+  "errors": [],
+  "reviewed_server_blocks": [
+    {
+      "source": "/etc/nginx/conf.d/powerflow-staging-acme.conf",
+      "listen": [
+        "80"
+      ],
+      "known_names": [
+        "staging.powerflowenergy.dev"
+      ],
+      "other_name_count": 0
+    },
+    {
+      "source": "/etc/nginx/conf.d/powerflow-staging-https.conf",
+      "listen": [
+        "443"
+      ],
+      "known_names": [
+        "staging.powerflowenergy.dev"
+      ],
+      "other_name_count": 0
+    },
+    {
+      "source": "/etc/nginx/conf.d/powerflow.conf",
+      "listen": [
+        "443"
+      ],
+      "known_names": [
+        "powerflowenergy.dev",
+        "www.powerflowenergy.dev"
+      ],
+      "other_name_count": 0
+    },
+    {
+      "source": "/etc/nginx/conf.d/powerflow.conf",
+      "listen": [
+        "80"
+      ],
+      "known_names": [
+        "powerflowenergy.dev",
+        "www.powerflowenergy.dev"
+      ],
+      "other_name_count": 0
+    },
+    {
+      "source": "/etc/nginx/nginx.conf",
+      "listen": [
+        "80",
+        "[::]:80"
+      ],
+      "known_names": [],
+      "other_name_count": 1
+    }
+  ],
+  "strict_review": "passed",
+  "staging_config_hash_matches": true,
+  "staging_routing_directives": [
+    {
+      "line": 3,
+      "directive": "listen 443 ssl;"
+    },
+    {
+      "line": 4,
+      "directive": "server_name staging.powerflowenergy.dev;"
+    },
+    {
+      "line": 9,
+      "directive": "root /var/www/powerflow-staging/current;"
+    },
+    {
+      "line": 10,
+      "directive": "index index.html;"
+    },
+    {
+      "line": 21,
+      "directive": "location ^~ /.well-known/acme-challenge/ {"
+    },
+    {
+      "line": 22,
+      "directive": "root /var/www/powerflow-staging-acme;"
+    },
+    {
+      "line": 24,
+      "directive": "try_files $uri =404;"
+    },
+    {
+      "line": 27,
+      "directive": "location = /api { return 404; }"
+    },
+    {
+      "line": 28,
+      "directive": "location ~* ^/api/(ready|docs|redoc|openapi\\.json)(/|$) { return 404; }"
+    },
+    {
+      "line": 29,
+      "directive": "location /api/ {"
+    },
+    {
+      "line": 35,
+      "directive": "proxy_pass http://127.0.0.1:8010/;"
+    },
+    {
+      "line": 55,
+      "directive": "location ~ (^|/)\\. { return 404; }"
+    },
+    {
+      "line": 56,
+      "directive": "location ~* ^/(src|tests|node_modules|deploy|database|data|artifacts)(/|$) { return 404; }"
+    },
+    {
+      "line": 57,
+      "directive": "location = /index.html {"
+    },
+    {
+      "line": 61,
+      "directive": "location /assets/ {"
+    },
+    {
+      "line": 62,
+      "directive": "try_files $uri =404;"
+    },
+    {
+      "line": 66,
+      "directive": "location / {"
+    },
+    {
+      "line": 67,
+      "directive": "try_files $uri $uri/ /index.html;"
+    }
+  ],
+  "static_path_metadata": {
+    "/var": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 277,
+      "symlink": false
+    },
+    "/var/www": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 61,
+      "symlink": false
+    },
+    "/var/www/powerflow-staging": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 37,
+      "symlink": false
+    },
+    "/var/www/powerflow-staging/releases": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 48,
+      "symlink": false
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o755",
+      "bytes": 112,
+      "symlink": false
+    },
+    "/var/www/powerflow-staging/current": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o777",
+      "bytes": 70,
+      "symlink": true,
+      "target": "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026"
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026/index.html": {
+      "exists": true,
+      "uid": 0,
+      "gid": 0,
+      "mode": "0o644",
+      "bytes": 748,
+      "symlink": false
+    }
+  },
+  "index_hash_matches": true,
+  "referenced_assets": {
+    "/assets/index-DCLLDsHi.js": {
+      "metadata": {
+        "exists": true,
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o644",
+        "bytes": 376387,
+        "symlink": false
+      },
+      "hash_matches": true
+    },
+    "/assets/index-DST_P3xP.css": {
+      "metadata": {
+        "exists": true,
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o644",
+        "bytes": 33162,
+        "symlink": false
+      },
+      "hash_matches": true
+    },
+    "/assets/jsx-runtime-Wy9s6hX0.js": {
+      "metadata": {
+        "exists": true,
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o644",
+        "bytes": 8911,
+        "symlink": false
+      },
+      "hash_matches": true
+    }
+  },
+  "nginx_state": {
+    "MainPID": "273274",
+    "ActiveState": "active",
+    "SubState": "running",
+    "ExecMainStartTimestamp": "Fri 2026-09-25 06:11:42 UTC"
+  },
+  "nginx_children": [
+    {
+      "pid": 1955300,
+      "uid": 993,
+      "gid": 993,
+      "groups": [
+        993
+      ]
+    },
+    {
+      "pid": 1955301,
+      "uid": 993,
+      "gid": 993,
+      "groups": [
+        993
+      ]
+    }
+  ],
+  "worker_effective_file_access": {
+    "/var/www/powerflow-staging": {
+      "readable": true,
+      "traversable": true
+    },
+    "/var/www/powerflow-staging/releases": {
+      "readable": true,
+      "traversable": true
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026": {
+      "readable": true,
+      "traversable": true
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026/index.html": {
+      "readable": true,
+      "traversable": null
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026/assets/index-DST_P3xP.css": {
+      "readable": true,
+      "traversable": null
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026/assets/jsx-runtime-Wy9s6hX0.js": {
+      "readable": true,
+      "traversable": null
+    },
+    "/var/www/powerflow-staging/releases/phase-staging-https-ready-20261026/assets/index-DCLLDsHi.js": {
+      "readable": true,
+      "traversable": null
+    }
+  },
+  "HTTP": {
+    "loopback_HTTPS_root": {
+      "status": 200,
+      "body_bytes": 748,
+      "body_sha256": "0f279d5d2e94de494ff56050c46034822aba1bb03a46bec915c7ac3bdecafad9",
+      "safe_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    },
+    "public_HTTPS_root": {
+      "status": 200,
+      "body_bytes": 748,
+      "body_sha256": "0f279d5d2e94de494ff56050c46034822aba1bb03a46bec915c7ac3bdecafad9",
+      "safe_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    },
+    "loopback_HTTP_root": {
+      "status": 404,
+      "body_bytes": 153,
+      "body_sha256": "151e314f66e8c4cbdda04804a57f9bead5cc2f048767aacbf816d8d1f9563e64",
+      "safe_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": null,
+        "Server": "nginx/1.30.4"
+      },
+      "CSP_report_only_present": false
+    },
+    "loopback_HTTPS_index": {
+      "status": 200,
+      "body_bytes": 748,
+      "body_sha256": "0f279d5d2e94de494ff56050c46034822aba1bb03a46bec915c7ac3bdecafad9",
+      "safe_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    },
+    "loopback_HTTPS_API": {
+      "status": 200,
+      "body_bytes": 91,
+      "body_sha256": "2a76789af0f123f389138691a12ee8796849eff3b4ba3a594aff1d2ebf0339f2",
+      "safe_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    },
+    "asset /assets/index-DCLLDsHi.js": {
+      "status": 200,
+      "body_bytes": 376387,
+      "body_sha256": "b9285b179ce20b273c2f91035344e8b57199bf9a05a2f31dae774c709e1d78b2",
+      "safe_headers": {
+        "Content-Type": "application/javascript",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    },
+    "asset /assets/index-DST_P3xP.css": {
+      "status": 200,
+      "body_bytes": 33162,
+      "body_sha256": "c72f1b5e81a3305f4af934c7b42916032f969b6eb2320a647cbf033351328fea",
+      "safe_headers": {
+        "Content-Type": "text/css",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    },
+    "asset /assets/jsx-runtime-Wy9s6hX0.js": {
+      "status": 200,
+      "body_bytes": 8911,
+      "body_sha256": "bcb9f6586cd973c2fb2faa4a2d38d4b06660e2fe2806aaa0de1c39306ff0f69a",
+      "safe_headers": {
+        "Content-Type": "application/javascript",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Server": "nginx"
+      },
+      "CSP_report_only_present": true
+    }
+  },
+  "candidate_HTTP": {
+    "/health": 200,
+    "/ready": 200
+  },
+  "production_services_match": true,
+  "production_config_ACME_match": {
+    "/etc/nginx/conf.d/powerflow.conf": true,
+    "/etc/nginx/conf.d/powerflow-staging-acme.conf": true
+  },
+  "production_certificate_match": true,
+  "status": "complete"
+}

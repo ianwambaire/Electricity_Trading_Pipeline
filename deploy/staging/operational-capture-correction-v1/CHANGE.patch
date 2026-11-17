@@ -1,0 +1,31 @@
+--- V5/shared/operational_evidence_producer.py
++++ candidate/shared/operational_evidence_producer.py
+@@ -28,6 +28,17 @@
+     'No complete operational weather hour is available.': ('INPUTS_UNAVAILABLE', 'WEATHER'),
+     'Operational weather unavailable at fresh market issue hours.': ('INPUTS_UNAVAILABLE', 'WEATHER'),
+ }
++
++
++def persisted_issue_timestamp(value):
++    """Adapt the existing pandas UTC issue serialization at this boundary only.
++
++    The contract parser stays strict. Receipt bytes/bundle digest are unchanged.
++    Only the date/time separator differs from the canonical contract spelling.
++    """
++    if isinstance(value, str) and len(value) > 10 and value[10] == ' ':
++        value = value[:10] + 'T' + value[11:]
++    return timestamp(value)
+ 
+ 
+ def bounded_json(raw):
+@@ -191,8 +202,8 @@
+         execution = bundle['execution']; receipt_id = execution['run_id']; identifier(receipt_id)
+         require(timestamp(ft['start_time']) <= timestamp(execution['started_at']) <= timestamp(execution['completed_at']) <= timestamp(ft['end_time']), 'RECEIPT_TASK')
+         if stable:require(summary.get('next24h_inference_receipt_id') == receipt_id, 'RECEIPT_IDENTITY')
+-        issue = bundle['forecasts'][0]['issue_time']
+-        require(timestamp(summary['next24h_forecast_issue_time']) == timestamp(issue), 'ISSUE_ASSOCIATION')
++        issue = persisted_issue_timestamp(bundle['forecasts'][0]['issue_time']).isoformat()
++        require(persisted_issue_timestamp(summary['next24h_forecast_issue_time']) == timestamp(issue), 'ISSUE_ASSOCIATION')
+         if delivery == 'PUBLISHED':bundle_hash = digest
+     else:
+         require(not receipts, 'UNEXPECTED_RECEIPT')

@@ -1,0 +1,3 @@
+# API/research compatibility constraint. Not for the Prefect 3.7.5 runtime.
+# FastAPI >=0.46 accepts this; MLflow-skinny requires <1.
+starlette==0.52.1

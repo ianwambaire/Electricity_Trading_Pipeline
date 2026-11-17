@@ -1,0 +1,99 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "A3DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    },
+    {
+      "Sid": "A3DenyDeletion",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ]
+    },
+    {
+      "Sid": "A3DenyUnexpectedWriter",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ],
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::870755688674:role/PowerFlowA3Uploader"
+        }
+      }
+    },
+    {
+      "Sid": "A3DenyUnexpectedReader",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ],
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::870755688674:role/PowerFlowA3Uploader",
+            "arn:aws:iam::870755688674:role/PowerFlowA3Reader"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "A3RequireAES256",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ],
+      "Condition": {
+        "StringNotEquals": {
+          "s3:x-amz-server-side-encryption": "AES256"
+        }
+      }
+    },
+    {
+      "Sid": "A3RequireCreateOnly",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/electricity_trading.db",
+        "arn:aws:s3:::powerflow-data-ian-2026-870755688674-us-east-1-an/recovery/phase5d2-a3/20261026T022230.137446Z/manifest.json"
+      ],
+      "Condition": {
+        "StringNotEquals": {
+          "s3:if-none-match": "*"
+        }
+      }
+    }
+  ]
+}

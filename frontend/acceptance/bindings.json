@@ -1,0 +1,1750 @@
+{
+  "browser": {
+    "executable": "Contents/MacOS/Google Chrome for Testing",
+    "files": {
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Google Chrome for Testing Framework": {
+        "bytes": 230463104,
+        "sha256": "d7ac3235426f4754182fc0446329c96a5ee11cbb3895698949e8e06eec4fbe62"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Alerts).app/Contents/Info.plist": {
+        "bytes": 1907,
+        "sha256": "bd1f74c970b40286be674f8db57c7160fc6f50c5c0e61a4999195e68cc760f97"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Alerts).app/Contents/MacOS/Google Chrome for Testing Helper (Alerts)": {
+        "bytes": 69792,
+        "sha256": "eab669c622e50c6c6b2553e0542bc00dd01330cf8c47d706c8fa5ccee0600442"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Alerts).app/Contents/PkgInfo": {
+        "bytes": 8,
+        "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Alerts).app/Contents/Resources/Assets.car": {
+        "bytes": 1362712,
+        "sha256": "e70466610b4bdbb61098baf07d342e8e21a67c34cfd2c53e400d3e588ed2cc4c"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Alerts).app/Contents/Resources/app.icns": {
+        "bytes": 94689,
+        "sha256": "3be5d5276c19c48925acc2c6a7896ce238d73b1ca8b74c30724799e2d28223ae"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Alerts).app/Contents/Resources/base.lproj/InfoPlist.strings": {
+        "bytes": 96,
+        "sha256": "b978a9cb5bd3109d3198f4f8387517511326986f2549b2a5bb968816f61ebda0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (GPU).app/Contents/Info.plist": {
+        "bytes": 1580,
+        "sha256": "9d63d846bfc2d268bd276b235d379919e24c8398bcfbb36064ee14d8005faed0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (GPU).app/Contents/MacOS/Google Chrome for Testing Helper (GPU)": {
+        "bytes": 69792,
+        "sha256": "c21772597f1ce3bc7feceef5acdd7dd7fb8c17b151853119ed0316586bb47982"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (GPU).app/Contents/PkgInfo": {
+        "bytes": 8,
+        "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Renderer).app/Contents/Info.plist": {
+        "bytes": 1604,
+        "sha256": "b1d9ba3c0982788a45aaf5456e11d774aa97801312d8804054cdcfa93b030efe"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Renderer).app/Contents/MacOS/Google Chrome for Testing Helper (Renderer)": {
+        "bytes": 69792,
+        "sha256": "8930feac35807bc24f7b4277360be459b05cebab7a721328405781d0263bbc6b"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper (Renderer).app/Contents/PkgInfo": {
+        "bytes": 8,
+        "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper.app/Contents/Info.plist": {
+        "bytes": 1562,
+        "sha256": "67f27b82a3ddd5610b78bb5c471286c8a450578b686a03e2b7d239bcea45c21d"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper.app/Contents/MacOS/Google Chrome for Testing Helper": {
+        "bytes": 69792,
+        "sha256": "a89f5f5b2c2d21446e168dbb53d0a6d3df8fae2f39034e8a48e3d5c3da06961f"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/Google Chrome for Testing Helper.app/Contents/PkgInfo": {
+        "bytes": 8,
+        "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/app_mode_loader": {
+        "bytes": 1025120,
+        "sha256": "57e5720c815bda82b451af552e8ac00d4dc1f00294e48ddc542866a14f5a61da"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/chrome_crashpad_handler": {
+        "bytes": 1558352,
+        "sha256": "06b33fdff342ae2e01c716b393ffa4d47df7d9f64d7b4f488ee5a4adb29555e1"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Helpers/web_app_shortcut_copier": {
+        "bytes": 33488,
+        "sha256": "165098b5a55e5fe533aab80f805df4d454b3c1af7453197ecefdd18025c6c9f7"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/IwaKeyDistribution/iwa-key-distribution.pb": {
+        "bytes": 3014,
+        "sha256": "683df233261ac7f711c1da97d709c11b601d23a99db5cdaa90bb354e4168c4a3"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/IwaKeyDistribution/manifest.json": {
+        "bytes": 114,
+        "sha256": "fde38b0ff178b7245e1979e0d158cd3c1fa973b5b8f7c33ccf8b46da90e93864"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/MEIPreload/manifest.json": {
+        "bytes": 238,
+        "sha256": "44844cf3dde6e80087ae0e6bf0d9326d7ef7d23326d24ac83af0850be26923d2"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/MEIPreload/preloaded_data.pb": {
+        "bytes": 8254,
+        "sha256": "c6070a157b4e28d16fbccbd233e93846ddb070c85e1a1bc64469b7a5f1424fad"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/PrivacySandboxAttestationsPreloaded/manifest.json": {
+        "bytes": 122,
+        "sha256": "51c311a4ba03140bcd1c827f8d93dba50cadda736925903b26e95609275dbffd"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/PrivacySandboxAttestationsPreloaded/privacy-sandbox-attestations.dat": {
+        "bytes": 7624,
+        "sha256": "59e345dc13aedee9ea46b92e58300ecaca944aaea9384c7af885400ac2ae8806"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/WidevineCdm/LICENSE": {
+        "bytes": 473,
+        "sha256": "20de375707692099b3132084695377ce5fec0aec05813dedcce094b8eda44386"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/WidevineCdm/_platform_specific/mac_arm64/libwidevinecdm.dylib": {
+        "bytes": 20183440,
+        "sha256": "724b44e882938a7b9c9acd8454002ea21e9190ec2c72419f01859b2dbedf3c6d"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/WidevineCdm/manifest.json": {
+        "bytes": 830,
+        "sha256": "e9352994ffa438f2ee5fcbf4eab7cf1578b79422a8005d38aff8db440f1b7ac0"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/libEGL.dylib": {
+        "bytes": 91952,
+        "sha256": "65deb3410894d2a8dbc2a8aa2070d9e25a39090c674f10e4a56cd935e2f5998e"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/libGLESv2.dylib": {
+        "bytes": 6856320,
+        "sha256": "9c91f896b46d5e0352cd99b007798508f08322d3bb570b6787a4b1b50a8ece5b"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/libvk_swiftshader.dylib": {
+        "bytes": 16491696,
+        "sha256": "fe7eff2206a4fbf51b9cc55155370579330371e9619e2013fba7e3ca281463dc"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Libraries/vk_swiftshader_icd.json": {
+        "bytes": 110,
+        "sha256": "d717d915e31e7c27948b80b36ab34e2d897888114c5c7d0af835f93eb53e58f5"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/Info.plist": {
+        "bytes": 1100,
+        "sha256": "9a49974a5f5fda6e5a03e77b0f6e38dac2249376d9bd317ae1bbc003db301b17"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/af.lproj/locale.pak": {
+        "bytes": 645108,
+        "sha256": "60f3073b9088c470915470319391184993d9c900d75aa35eadc310ea827072c9"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/af_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/af_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/af_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/am.lproj/locale.pak": {
+        "bytes": 1046688,
+        "sha256": "91b2eb0ba34e130079306f12ef56cbb1d3ffcf13dd4447b60705f1ac15c3cdfd"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/am_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/am_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/am_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/app_mode-Info.plist": {
+        "bytes": 1600,
+        "sha256": "055c5940250ebf2f7299d6d3f95440037669ef5e11ebd30af8fbe63bbd71a52e"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ar.lproj/locale.pak": {
+        "bytes": 1157085,
+        "sha256": "1af34a930d4a818e25ba79181fb1ff0a8656719548212acd1d6a24e84dd54b9b"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ar_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ar_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ar_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bg.lproj/locale.pak": {
+        "bytes": 1194822,
+        "sha256": "db5b984659bf94cefa0a3439d91d8244e9ff18bdd3022e7641f915c62ce12009"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bg_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bg_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bg_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bn.lproj/locale.pak": {
+        "bytes": 1532551,
+        "sha256": "2297c855fdf0a0de15bdb9f1b6842573ba7d31f8fa49552042391dfd91dce72c"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bn_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bn_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/bn_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ca.lproj/locale.pak": {
+        "bytes": 735363,
+        "sha256": "980abb5d102d2968c0f7127d919b7b896cfd7c155e5d4d86cced2908b6495e22"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ca_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ca_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ca_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/chrome_100_percent.pak": {
+        "bytes": 670544,
+        "sha256": "9f5e61f530b7aeb41917bafe1264206cc4bb8bbdc39b3602928c1f316685e534"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/chrome_200_percent.pak": {
+        "bytes": 1288244,
+        "sha256": "f0fce17a6c4f174efe97e1349aafa8512ff2705e89fdf70cdf85d73570a15d3e"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/cs.lproj/locale.pak": {
+        "bytes": 754172,
+        "sha256": "c706afb9511e60afc899dd4eb774d203205030c17ce5c766a076169711bee841"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/cs_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/cs_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/cs_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/da.lproj/locale.pak": {
+        "bytes": 681818,
+        "sha256": "807366e5e81c5f0e2e030ae64f392cc80187dbd24d2afaaa3f197d8105513ac4"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/da_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/da_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/da_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/de.lproj/locale.pak": {
+        "bytes": 736722,
+        "sha256": "d50b7d9251e610e37a305b3bee19e6623ac4c67f6fa1b7ca4ad538f8bea7f0a5"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/de_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/de_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/de_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/el.lproj/locale.pak": {
+        "bytes": 1310431,
+        "sha256": "827aaecbd218c8d342bfa3a82d9a73061d00848ffb05159acd3ef5dd347dc02b"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/el_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/el_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/el_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en.lproj/locale.pak": {
+        "bytes": 597136,
+        "sha256": "f5588c488a2f6f0e579fe7fdfd703c647f86c16bf8257d142a6ae1c7a30f8c7c"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_GB.lproj/locale.pak": {
+        "bytes": 589494,
+        "sha256": "2237ca1e3d5da6542f5c4c00f2973501f641cde7bca91d0c0ce039159723c134"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_GB_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_GB_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_GB_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/en_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es.lproj/locale.pak": {
+        "bytes": 715699,
+        "sha256": "1eaec8c03dedb400eea0c76d298fb1185f8a2274d650dca081c680fd33691d30"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_419.lproj/locale.pak": {
+        "bytes": 721422,
+        "sha256": "c72b7aab92ddd9f5e60e96e71358d0b02d7dc989466a7eb2fe80132be8564c5e"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_419_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_419_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_419_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/es_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/et.lproj/locale.pak": {
+        "bytes": 655994,
+        "sha256": "98a2a39168647bbd84fc2518385b82ab063791bc1c89951df31144dbd2976e7b"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/et_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/et_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/et_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fa.lproj/locale.pak": {
+        "bytes": 1076896,
+        "sha256": "b5736ee24287f7b91291adf417175a7321002878e6e69e1bf5c928fcc14cfe50"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fa_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fa_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fa_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fi.lproj/locale.pak": {
+        "bytes": 665276,
+        "sha256": "534d7ccd0eccfc11368b130d0cc932e8ad323b31014081a338483399304141dd"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fi_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fi_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fi_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fil.lproj/locale.pak": {
+        "bytes": 754884,
+        "sha256": "a4d90c6f73f5bd4e4c54eb102deb338269b0a3c9df197e0aa1573d13688f7fe6"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fil_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fil_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fil_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fr.lproj/locale.pak": {
+        "bytes": 780524,
+        "sha256": "c44e49fd6a74e7385223f8867ca992cfc419722bc1e6d629455e8cb883de9035"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fr_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fr_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/fr_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/gpu_shader_cache.bin": {
+        "bytes": 968826,
+        "sha256": "d3fc3a27c1d9a651f5d470e0f6ef2e06094ec5ad58c68b497b22b312442fdb8d"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/gu.lproj/locale.pak": {
+        "bytes": 1518406,
+        "sha256": "47b012ed2e630dae89b4862da796c20ee4c6aa0c29c720b7044c640cd3f51396"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/gu_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/gu_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/gu_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/he.lproj/locale.pak": {
+        "bytes": 946527,
+        "sha256": "7136fc2bdd2432bbc613efa3435b108151f1659c9d768dec7c38df9cfa9466f9"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/he_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/he_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/he_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hi.lproj/locale.pak": {
+        "bytes": 1617922,
+        "sha256": "cd77832f3b9fa7acd7b7d122ccc435159292d2b641ef0bdf7d7923de183ff3e3"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hi_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hi_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hi_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hr.lproj/locale.pak": {
+        "bytes": 726484,
+        "sha256": "f49c0b979fdbaf7b067152e74bf6e3fae8038dfaa6054859b915f3f1dff67e9a"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hr_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hr_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hr_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hu.lproj/locale.pak": {
+        "bytes": 778337,
+        "sha256": "0139f3eeaff18d381cae81e0a0605ce9f026b2ffe11f46552a3e5b7a79144230"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hu_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hu_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/hu_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/icudtl.dat": {
+        "bytes": 10876560,
+        "sha256": "bd8c145abdf3f8383276ce01dfa4ae48709bef9fef1c0711eb7c3fab4f6eb7c2"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/id.lproj/locale.pak": {
+        "bytes": 646582,
+        "sha256": "6d6902137b46ad2db510f4245adc7629a3b69745dcb19b049908560f8829cf25"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/id_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/id_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/id_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/install.sh": {
+        "bytes": 6377,
+        "sha256": "1b541faca17a7a1a124d9e288fd27bf66785f3667d788243383ab17700489b69"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/it.lproj/locale.pak": {
+        "bytes": 710986,
+        "sha256": "a9a7be93817ee30e542031e24fd21f987f94e55966d21f992381ee184051c07f"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/it_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/it_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/it_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ja.lproj/locale.pak": {
+        "bytes": 860990,
+        "sha256": "f0cbc1433816e2cc90deaf95b579b667390ea21fb859878c0db6151e716d5ddd"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ja_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ja_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ja_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/kn.lproj/locale.pak": {
+        "bytes": 1738431,
+        "sha256": "cc48f238bef8714c07939f28d99b2b7ef7c5b7b2d92135eff38b5b49400fed4b"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/kn_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/kn_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/kn_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ko.lproj/locale.pak": {
+        "bytes": 729559,
+        "sha256": "6c4d9da611392891d85aa13e2c4c7e42bb80b66585d1f41379b25612e9983a18"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ko_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ko_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ko_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lt.lproj/locale.pak": {
+        "bytes": 791477,
+        "sha256": "5a2c416e88005c1d3a81eb8fe4ecf0e4c86754d8c2af369e3a6cd4500fe27ea7"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lt_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lt_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lt_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lv.lproj/locale.pak": {
+        "bytes": 788299,
+        "sha256": "6ee2103a1d26ee2b8cbeae511265afb3412a13b882cd4d1195d5c9aac6d6c16f"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lv_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lv_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/lv_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ml.lproj/locale.pak": {
+        "bytes": 1789669,
+        "sha256": "cce135d54ed5b6e99338bf892f8e9e901d87dddb593ad62489c4c1aab6b56064"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ml_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ml_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ml_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/mr.lproj/locale.pak": {
+        "bytes": 1483314,
+        "sha256": "9ae33d7e602932d1f6d17dcf59e583616aa969f6d03922bb5ddf9cd68d01d373"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/mr_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/mr_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/mr_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ms.lproj/locale.pak": {
+        "bytes": 678808,
+        "sha256": "18c028a0cd19776cbe71ef3a1eeea515a4d357525b6979bd0e0fc31c4c15d1a8"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ms_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ms_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ms_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nb.lproj/locale.pak": {
+        "bytes": 648295,
+        "sha256": "16c29ba3fb87ef53c078cd768130908f2466e01f3117de0dcc24e940dd85c629"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nb_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nb_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nb_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nl.lproj/locale.pak": {
+        "bytes": 675873,
+        "sha256": "6b620b446a8d83dd5e35a1c90714c1f92c686dac34c1e003033c74d380d6a4f9"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nl_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nl_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/nl_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pl.lproj/locale.pak": {
+        "bytes": 756046,
+        "sha256": "7e0784b7542d7b346f8849b23d5fb4c2cb5b5d4db811f9c48c7b83cbac468010"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pl_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pl_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pl_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/product_logo_32.png": {
+        "bytes": 2018,
+        "sha256": "ae841ee4a539c13ac00e29c6e0f85369f2e280b22659a876093bd61cd34be172"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_BR.lproj/locale.pak": {
+        "bytes": 707529,
+        "sha256": "d19d30f14b964ff56dd972b4733a9b9018cc398dc3f1e845ecaedc470113869a"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_BR_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_BR_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_BR_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_PT.lproj/locale.pak": {
+        "bytes": 712820,
+        "sha256": "f87b9fc6ac048e5b0e2964ffae7ba5bd4f4ef521d959b3c7f7568d34eb6898e9"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_PT_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_PT_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/pt_PT_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/resources.pak": {
+        "bytes": 12775371,
+        "sha256": "4330da3483a2f78a3ff453e2219cfaa82dcebdee77be74372ae17592e4daee63"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ro.lproj/locale.pak": {
+        "bytes": 738875,
+        "sha256": "e091a51e444a135d3e8bec6d35c11db8feb5b8e3faff0570645133a1be683510"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ro_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ro_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ro_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ru.lproj/locale.pak": {
+        "bytes": 1221522,
+        "sha256": "a2a1125f9bfd1739421c1391ba2fed1cecc2a9851f5916505c90a814416a0b32"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ru_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ru_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ru_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sk.lproj/locale.pak": {
+        "bytes": 766434,
+        "sha256": "52cc25c3c729120c1e9a913c82e9cc8f9905730bcd05ca39d19bd4ac8de706f3"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sk_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sk_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sk_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sl.lproj/locale.pak": {
+        "bytes": 734446,
+        "sha256": "8b6f21070bcadf46240608a0c5ef947e22d323be640c85046dae2e57d3d389dd"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sl_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sl_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sl_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sr.lproj/locale.pak": {
+        "bytes": 1127834,
+        "sha256": "a1bc269dffeedab2ac11fa79736c3a91b5ce127be197f44fb19581ee64214309"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sr_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sr_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sr_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sv.lproj/locale.pak": {
+        "bytes": 657146,
+        "sha256": "b7bec401b8871daf8b07906784ff44d9546b1d8e84360035c6a2bf12f4ba5c3c"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sv_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sv_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sv_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sw.lproj/locale.pak": {
+        "bytes": 696937,
+        "sha256": "e813b39926e5917acb11281b954866a032f9aad7a854d8b5e4f8d23a4d6ea7d1"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sw_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sw_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/sw_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ta.lproj/locale.pak": {
+        "bytes": 1785679,
+        "sha256": "51eb5cf08619ecb54b4225a8f676148b3d870f55de8d92ca470cc17f948701c4"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ta_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ta_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ta_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/te.lproj/locale.pak": {
+        "bytes": 1648641,
+        "sha256": "88dc43e0d5287541f55b030abd973396fc4aa2b34104434bd571fd29246c8bfc"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/te_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/te_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/te_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/th.lproj/locale.pak": {
+        "bytes": 1384809,
+        "sha256": "36707b96efb9ec70e3af499ddd48777bc54358f781b65e93fd4327b809396bd3"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/th_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/th_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/th_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/tr.lproj/locale.pak": {
+        "bytes": 709353,
+        "sha256": "64e6144d4907c08ccd3ded41929a6b22623116c413b590a5cfe8314737ba5c89"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/tr_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/tr_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/tr_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/uk.lproj/locale.pak": {
+        "bytes": 1227103,
+        "sha256": "09b41181b4ec136dd730026d07cfb15aa620aad330080d010c9b955dfc0e259a"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/uk_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/uk_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/uk_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ur.lproj/locale.pak": {
+        "bytes": 1056533,
+        "sha256": "6d47fa568b66fa3b6296859ca5d97426899aad50329d61a90f018ce7dc43fccf"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ur_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ur_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/ur_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/v8_context_snapshot.arm64.bin": {
+        "bytes": 740912,
+        "sha256": "8d0a6f9130ac740d4a20fd50c0fd8712f642095100b35f0b9f62022743097849"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/vi.lproj/locale.pak": {
+        "bytes": 842299,
+        "sha256": "519621f1b87561db2e95a6ca8212a793ebcfb197125d3536644e0cb9d16ce824"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/vi_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/vi_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/vi_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_CN.lproj/locale.pak": {
+        "bytes": 602962,
+        "sha256": "adb71c90b506964b6d644c35d300d1d47f2f3731fd671c2bc1126c17f5c0eb3d"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_CN_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_CN_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_CN_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_TW.lproj/locale.pak": {
+        "bytes": 596651,
+        "sha256": "49b07d638213ecd058a54e8bcf3be04bb642d88a2b110a55fc48ec4a18cdf977"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_TW_FEMININE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_TW_MASCULINE.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/149.0.7827.55/Resources/zh_TW_NEUTER.lproj/locale.pak": {
+        "bytes": 18,
+        "sha256": "ca73097bd968b363b7145e86b64f3c595e533808b0763dc8863a27fc363cfa51"
+      },
+      "Contents/Info.plist": {
+        "bytes": 18241,
+        "sha256": "940a9b3055b8fa1cc66d75fe7b5420e72d3cc987c30b4837c8c764be0319a52f"
+      },
+      "Contents/MacOS/Google Chrome for Testing": {
+        "bytes": 52112,
+        "sha256": "b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7"
+      },
+      "Contents/PkgInfo": {
+        "bytes": 8,
+        "sha256": "2e923178639849f5232473c3ae9fa451a9df4bc41751b2bf2d40045bc13ddcff"
+      },
+      "Contents/Resources/Assets.car": {
+        "bytes": 1362712,
+        "sha256": "e70466610b4bdbb61098baf07d342e8e21a67c34cfd2c53e400d3e588ed2cc4c"
+      },
+      "Contents/Resources/af.lproj/InfoPlist.strings": {
+        "bytes": 1076,
+        "sha256": "c61ca37c5439d22815930c1facf1cd16909aa22414017e7a2a5c6775198a336a"
+      },
+      "Contents/Resources/am.lproj/InfoPlist.strings": {
+        "bytes": 1726,
+        "sha256": "3208e7d02b5bc7a4c91d0738c38983329612e08055a1c8e229855a50a69cdf7c"
+      },
+      "Contents/Resources/app.icns": {
+        "bytes": 94689,
+        "sha256": "3be5d5276c19c48925acc2c6a7896ce238d73b1ca8b74c30724799e2d28223ae"
+      },
+      "Contents/Resources/ar.lproj/InfoPlist.strings": {
+        "bytes": 1971,
+        "sha256": "aced5acf66083a3ae79d46c84572deaa64d7f0ee311c49f49e43383d74f51cfe"
+      },
+      "Contents/Resources/bg.lproj/InfoPlist.strings": {
+        "bytes": 1776,
+        "sha256": "a8dd99bd261e280c320e821833c19b653c23d2eacacf0db4d9d21eabccae4a21"
+      },
+      "Contents/Resources/bn.lproj/InfoPlist.strings": {
+        "bytes": 2299,
+        "sha256": "c3240c375a9a1dcbf111c947dac50e17cc473962116632e7786ca0a07db744ab"
+      },
+      "Contents/Resources/ca.lproj/InfoPlist.strings": {
+        "bytes": 1138,
+        "sha256": "a3b4ce21b937ae3d866d125c4ebcd57699865fa877b6d45d17965e6e64f3fa35"
+      },
+      "Contents/Resources/com.google.chrome.for.testing.manifest/Contents/Resources/com.google.chrome.for.testing.manifest": {
+        "bytes": 170871,
+        "sha256": "a7fbc46ed868a0e8e49f92f1fde1c8fc55de4395827adeeb91abab87519d4d84"
+      },
+      "Contents/Resources/com.google.chrome.for.testing.manifest/Contents/Resources/en.lproj/Localizable.strings": {
+        "bytes": 372766,
+        "sha256": "660b920106bc3c43d57eda9b890770dc6268f207c652deb11ff733f5b2b1bd98"
+      },
+      "Contents/Resources/cs.lproj/InfoPlist.strings": {
+        "bytes": 1195,
+        "sha256": "b6e0c9ad105f478ce15c07cea4709f491f2d7c7e636f7340d364dade6eba15ef"
+      },
+      "Contents/Resources/da.lproj/InfoPlist.strings": {
+        "bytes": 1062,
+        "sha256": "76ee7659838c01f2c985161debdf68f064c8c83150dbf28a298ebd50975a2bc7"
+      },
+      "Contents/Resources/de.lproj/InfoPlist.strings": {
+        "bytes": 1128,
+        "sha256": "2d6275861f2529d24d88c06c7d0aaa0c913465e9cb6596d5726252c32dab729e"
+      },
+      "Contents/Resources/el.lproj/InfoPlist.strings": {
+        "bytes": 1963,
+        "sha256": "0f5e7c01f042c40f9b31569b7dc8b3e2fa3f1039294fcf5d3ea0738ff08e2ac5"
+      },
+      "Contents/Resources/en.lproj/InfoPlist.strings": {
+        "bytes": 1119,
+        "sha256": "cce764c11e0dd6e4fb7da08bfebbb5808c96e6eb9479308dd562d4a8ef6c1f05"
+      },
+      "Contents/Resources/en_GB.lproj/InfoPlist.strings": {
+        "bytes": 1119,
+        "sha256": "3219622b073d16daa7f32b630feee3d56f025d7a73bee3f289d92a8b162587cb"
+      },
+      "Contents/Resources/es.lproj/InfoPlist.strings": {
+        "bytes": 1219,
+        "sha256": "f0fccc10eded265a21fb1152455ff6e2a730aa1823b67fc56d83a3083fd29664"
+      },
+      "Contents/Resources/es_419.lproj/InfoPlist.strings": {
+        "bytes": 1203,
+        "sha256": "b90a48a49602b1ac11e9de7bee905ef83589b9afbc941fe0bfca37eff841cc41"
+      },
+      "Contents/Resources/et.lproj/InfoPlist.strings": {
+        "bytes": 1268,
+        "sha256": "86bbf38647a405de8543bfad800da70cd2270800165873f277179a5c27d1afa8"
+      },
+      "Contents/Resources/fa.lproj/InfoPlist.strings": {
+        "bytes": 1799,
+        "sha256": "14ce4fecc2495a6e0e06ee3d34be90b683d2e03a30c1cea46d10b32c1bcec0c3"
+      },
+      "Contents/Resources/fi.lproj/InfoPlist.strings": {
+        "bytes": 1187,
+        "sha256": "a88ed965bee20a448d31904f609454283fb21559426b4a1dfe1701f6189bc436"
+      },
+      "Contents/Resources/fil.lproj/InfoPlist.strings": {
+        "bytes": 1294,
+        "sha256": "beb722a533a68127c6b0dd7b8ba1ea7dbbaecfc2ac47a7d929091f22df660654"
+      },
+      "Contents/Resources/fr.lproj/InfoPlist.strings": {
+        "bytes": 1496,
+        "sha256": "a049a0fedaf25982d2b27b92d867f2dffc8cdf80e3c8a70f23fbdeb28d2abe21"
+      },
+      "Contents/Resources/gu.lproj/InfoPlist.strings": {
+        "bytes": 2098,
+        "sha256": "af9c3ad63394166203e720dedc4e7bef6f6743c8c71ffdfa11418c0876711ec8"
+      },
+      "Contents/Resources/he.lproj/InfoPlist.strings": {
+        "bytes": 1330,
+        "sha256": "f7670cf29856fe7ef2e38bfcae7bbff6a5a65128107dd20d2914a77e7cc2ddab"
+      },
+      "Contents/Resources/hi.lproj/InfoPlist.strings": {
+        "bytes": 2138,
+        "sha256": "b588a5ea1d86447b6c9fac563b3c7b6e0eb3b090c938a06edce9c29bac59e4f1"
+      },
+      "Contents/Resources/hr.lproj/InfoPlist.strings": {
+        "bytes": 1164,
+        "sha256": "275edf1aca69712b8ab6401da707a390aaf7093035239e1123a1ccfcbff0da76"
+      },
+      "Contents/Resources/hu.lproj/InfoPlist.strings": {
+        "bytes": 1319,
+        "sha256": "e71590f3c046af0e92bdebb62422c9b84bd5006c8cd53c83dd438a126f525798"
+      },
+      "Contents/Resources/id.lproj/InfoPlist.strings": {
+        "bytes": 1179,
+        "sha256": "52b8826e404537684220240f4deceed940e45f10280a2606c2c40d26f0ee3983"
+      },
+      "Contents/Resources/it.lproj/InfoPlist.strings": {
+        "bytes": 1243,
+        "sha256": "88c7443b4c7f2b3faa279d137b97b46ba57441602d0c1ff872136692eb8225b1"
+      },
+      "Contents/Resources/ja.lproj/InfoPlist.strings": {
+        "bytes": 1608,
+        "sha256": "d1d21270f9b48c9f44798816c13d2af2c9315853c4ea1327fe432d843c33ad09"
+      },
+      "Contents/Resources/kn.lproj/InfoPlist.strings": {
+        "bytes": 2829,
+        "sha256": "a4e5b5c00278320f4909d347e5aea6f43cf6abb3f32a6d2db64be570aab4424b"
+      },
+      "Contents/Resources/ko.lproj/InfoPlist.strings": {
+        "bytes": 1478,
+        "sha256": "6dd5409e554cfac7e43eeb595896071a3a6a11ca9004f7421940f2e9c7a6966c"
+      },
+      "Contents/Resources/lt.lproj/InfoPlist.strings": {
+        "bytes": 1471,
+        "sha256": "2a5ff1396ed5f7bfbcb585373fd15c198ddf7d002b9f356cd005dd9ac9cfecb3"
+      },
+      "Contents/Resources/lv.lproj/InfoPlist.strings": {
+        "bytes": 1283,
+        "sha256": "6b488d58984b42157ab783fb0ed65c2e84ea6855a19744062e77b470c700fa28"
+      },
+      "Contents/Resources/ml.lproj/InfoPlist.strings": {
+        "bytes": 2711,
+        "sha256": "1538a4a74f4b0aa4dcfd6af670edec1147f96d4c132bcef8b91674a153ab640b"
+      },
+      "Contents/Resources/mr.lproj/InfoPlist.strings": {
+        "bytes": 2184,
+        "sha256": "dd6ac56740308dcf933d2207cae5d6071e7050d9bfe82c5352747dd88bff6791"
+      },
+      "Contents/Resources/ms.lproj/InfoPlist.strings": {
+        "bytes": 1276,
+        "sha256": "bb8213ffeec398b258564e79273acf92e65de23d6acae2820a9b1d70221e9f89"
+      },
+      "Contents/Resources/nb.lproj/InfoPlist.strings": {
+        "bytes": 1108,
+        "sha256": "a4c5ed70b4d08c70e8eda8a0ec3a7498c26c9c6dd2bd6f361816acdabc9ca730"
+      },
+      "Contents/Resources/nl.lproj/InfoPlist.strings": {
+        "bytes": 1111,
+        "sha256": "4bc11fc445c4e0bc4dd6686fb098447ccfea95f78eccc23d2cef2906f99f427f"
+      },
+      "Contents/Resources/pl.lproj/InfoPlist.strings": {
+        "bytes": 1213,
+        "sha256": "705eb36fb569f84a5de99dafdd49f4ebecb30fd44e15aa5ebd114ca18e31b11f"
+      },
+      "Contents/Resources/pt_BR.lproj/InfoPlist.strings": {
+        "bytes": 1141,
+        "sha256": "24d02727d237abcaece25f35879c9e523b2c63fad750351f51b933a49076ca57"
+      },
+      "Contents/Resources/pt_PT.lproj/InfoPlist.strings": {
+        "bytes": 1213,
+        "sha256": "b14c910668dc674769bab336e2e6516dbfe5c7570a3cd865e2acfecce8cfcb23"
+      },
+      "Contents/Resources/ro.lproj/InfoPlist.strings": {
+        "bytes": 1236,
+        "sha256": "9df8e8c5661abf996d65b5f5140dac265f143cb6f7675995cfb91ab4e3d03add"
+      },
+      "Contents/Resources/ru.lproj/InfoPlist.strings": {
+        "bytes": 1774,
+        "sha256": "86da1e4ab46cd1a590c61faa1dec76ee97a698b540414b91d3b0397cb524e5d5"
+      },
+      "Contents/Resources/scripting.sdef": {
+        "bytes": 16777,
+        "sha256": "cd0453c2e166a0b664f8ea1d1ac04b53a54eed14835569b6104a7823dbb950f2"
+      },
+      "Contents/Resources/sk.lproj/InfoPlist.strings": {
+        "bytes": 1163,
+        "sha256": "3832dfd46dd257c007ea5d8199a80ab27f9604718e7b1b86d8011e5809a176d3"
+      },
+      "Contents/Resources/sl.lproj/InfoPlist.strings": {
+        "bytes": 1253,
+        "sha256": "c1d5ac787d0efa65d5b0ae6f68474bc5beb1afca9a3353a08d1c3a7f2c333fe0"
+      },
+      "Contents/Resources/sr.lproj/InfoPlist.strings": {
+        "bytes": 1601,
+        "sha256": "0a8ebc4b809824a9b47bff994b8c75d5f35cc3eec5de7199a35b44bbb099e112"
+      },
+      "Contents/Resources/sv.lproj/InfoPlist.strings": {
+        "bytes": 1153,
+        "sha256": "1b4d5b272972f228897c61cbd99c72a493e8c4cd0bfe42e1eab9c1cf70ec202b"
+      },
+      "Contents/Resources/sw.lproj/InfoPlist.strings": {
+        "bytes": 1164,
+        "sha256": "1d8adf0c24286a216cd7dc398a204d42bf01d785967a0a4d3808342aae1fdcd9"
+      },
+      "Contents/Resources/ta.lproj/InfoPlist.strings": {
+        "bytes": 2522,
+        "sha256": "c5ae5b7d9036a98ea686057351734a21ca9d6f78a6f9f7d284954785231b32cb"
+      },
+      "Contents/Resources/te.lproj/InfoPlist.strings": {
+        "bytes": 2862,
+        "sha256": "9c3e5b647f11470896d8228cfef412bc206292ef630e315d81a4935322992e70"
+      },
+      "Contents/Resources/th.lproj/InfoPlist.strings": {
+        "bytes": 2324,
+        "sha256": "19b906cf9d1ffca84f256cc17f2305844e34d625509974e13d0792a6a89a65fe"
+      },
+      "Contents/Resources/tr.lproj/InfoPlist.strings": {
+        "bytes": 1346,
+        "sha256": "e69eb400105e7e63f7960d42baf9f5ec370a50e43cf07b2dced78538fd65d409"
+      },
+      "Contents/Resources/uk.lproj/InfoPlist.strings": {
+        "bytes": 1647,
+        "sha256": "11df15d0ce2ac3f73dfaa2729905c302c5bb64bfb9e9e92823b4ae5b47d17c6a"
+      },
+      "Contents/Resources/ur.lproj/InfoPlist.strings": {
+        "bytes": 1613,
+        "sha256": "aa887435195d869a718f25662088dbd81c125bd0ebf69e0e1235419200c35ce5"
+      },
+      "Contents/Resources/vi.lproj/InfoPlist.strings": {
+        "bytes": 1523,
+        "sha256": "400d94751704b7dbd3db97d65582793edb38366d3bd7fd74b4c71db58fca4e97"
+      },
+      "Contents/Resources/zh_CN.lproj/InfoPlist.strings": {
+        "bytes": 1257,
+        "sha256": "385034f70c38c3b20cd307bf9354cff866f59b1930b1919f4b34629899e494ea"
+      },
+      "Contents/Resources/zh_TW.lproj/InfoPlist.strings": {
+        "bytes": 1103,
+        "sha256": "760b7272a75f7ebebb718d4805bb1fada0457f69aaa143873a262205bd86bf4c"
+      }
+    },
+    "links": {
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Google Chrome for Testing Framework": "Versions/Current/Google Chrome for Testing Framework",
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Helpers": "Versions/Current/Helpers",
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Libraries": "Versions/Current/Libraries",
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Resources": "Versions/Current/Resources",
+      "Contents/Frameworks/Google Chrome for Testing Framework.framework/Versions/Current": "149.0.7827.55"
+    },
+    "revision": "1228",
+    "root": "/Users/iannganga/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app",
+    "version": "149.0.7827.55"
+  },
+  "node": "22.22.0",
+  "playwright": {
+    "files": {
+      "LICENSE": {
+        "bytes": 11601,
+        "sha256": "45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb"
+      },
+      "NOTICE": {
+        "bytes": 254,
+        "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+      },
+      "README.md": {
+        "bytes": 120,
+        "sha256": "d16ff7f8e38fa1fc954f695ad551cdc118d9c9bdd5f3d83203901f4c317d7d7e"
+      },
+      "ThirdPartyNotices.txt": {
+        "bytes": 676,
+        "sha256": "a549d329bad8806fe279f0ecae0fc0270dec7e7c2dc8ec10f90e394f7c32b144"
+      },
+      "bin/install_media_pack.ps1": {
+        "bytes": 174,
+        "sha256": "bc20f049badf021e3a53bdb4156603caa5ef482c9a9a251f927605e676a44171"
+      },
+      "bin/install_webkit_wsl.ps1": {
+        "bytes": 1464,
+        "sha256": "bc61beda37a808eef27d39ce684baa792f6d17737a25a432b1a84d3b591ab815"
+      },
+      "bin/reinstall_chrome_beta_linux.sh": {
+        "bytes": 1217,
+        "sha256": "dc8c22b9dde76583cece2857575b88094299615f3136a3c598149710c45dee3a"
+      },
+      "bin/reinstall_chrome_beta_mac.sh": {
+        "bytes": 563,
+        "sha256": "a92eaeb4ebcf5633a4e9c981481e14c80764fc81b6fcbc0565398e50ff319433"
+      },
+      "bin/reinstall_chrome_beta_win.ps1": {
+        "bytes": 957,
+        "sha256": "b6d9e44742feafb98d5edc56fa20042949973cf30d141a1c5b4fb384096967c5"
+      },
+      "bin/reinstall_chrome_stable_linux.sh": {
+        "bytes": 1212,
+        "sha256": "dc72ab3567a4ce43bd8353d4ecf41f1d9c03e870169367cd3ed9043aabf67dd1"
+      },
+      "bin/reinstall_chrome_stable_mac.sh": {
+        "bytes": 519,
+        "sha256": "bb43a96c192a6cc81524ade0264686fff7809c019a89f7db0a9849635879c3be"
+      },
+      "bin/reinstall_chrome_stable_win.ps1": {
+        "bytes": 923,
+        "sha256": "3d96c4e2f4ebbb3fad44cf3ba58d9cf90af1c9fb3073e3b27d45a74cf005515b"
+      },
+      "bin/reinstall_msedge_beta_linux.sh": {
+        "bytes": 1494,
+        "sha256": "10b26f35dbc2000b94edf1172d803a29c5873a4eb8d523afbc687997b642767e"
+      },
+      "bin/reinstall_msedge_beta_mac.sh": {
+        "bytes": 377,
+        "sha256": "0036d738bc90d686100d81f328ba0003bf07863f5500b792c8da391d149750fa"
+      },
+      "bin/reinstall_msedge_beta_win.ps1": {
+        "bytes": 874,
+        "sha256": "b173c378a59f0cc38033cee702de1f44f09276c9b2270d1a650ebe66ee312433"
+      },
+      "bin/reinstall_msedge_dev_linux.sh": {
+        "bytes": 1489,
+        "sha256": "00e4947e7a4f8339c6db09c87976d808583c07f9179e4aa7694d88614b82fe95"
+      },
+      "bin/reinstall_msedge_dev_mac.sh": {
+        "bytes": 372,
+        "sha256": "6f899e3b311f742c24ca37ff9e32298e8290514ffc14bf588cc51556a29da4c0"
+      },
+      "bin/reinstall_msedge_dev_win.ps1": {
+        "bytes": 869,
+        "sha256": "46f7f98c81cb0abe687d7f4a5afea9b897a38d2a6dd6f6662fbd847f7a22bd51"
+      },
+      "bin/reinstall_msedge_stable_linux.sh": {
+        "bytes": 1507,
+        "sha256": "ec0a31a5f09c565e108473a1850895a4458ab00c713ac1de3aa2001912e4668f"
+      },
+      "bin/reinstall_msedge_stable_mac.sh": {
+        "bytes": 371,
+        "sha256": "3af1e893527ff2257aa2dbc3b259a053b92f45c3eadb13e38eba46e87902655d"
+      },
+      "bin/reinstall_msedge_stable_win.ps1": {
+        "bytes": 856,
+        "sha256": "40bb5fcbfcebbbe2ce43c6e736e7c5deefc5be03b6e9c6914423c06ec1f591be"
+      },
+      "browsers.json": {
+        "bytes": 1939,
+        "sha256": "ee39bc924bc3d1bd895626c2910f1292d109bbfeeb5abd113acb45e1951cc942"
+      },
+      "cli.js": {
+        "bytes": 839,
+        "sha256": "f1c4075aef116c766092250d7f37b3249a7cee6465d953207fc38c8f6145becd"
+      },
+      "index.d.ts": {
+        "bytes": 634,
+        "sha256": "7a8ec10b0834eb7183e4bfcd929838ac77583828e343211bb73676d1e47f6f01"
+      },
+      "index.js": {
+        "bytes": 697,
+        "sha256": "a58fb2cec4293e7dcf73c58a179898a4f3986666451a19da4e731fa3af63265b"
+      },
+      "index.mjs": {
+        "bytes": 1063,
+        "sha256": "3d36e2132d3c8b62397d23f0bb4177336aaee503203ae2a2c90fbeb5bf3317dd"
+      },
+      "lib/bootstrap.js": {
+        "bytes": 3481,
+        "sha256": "97ffe165e8e45f1b51a713b3f380d383e4e183727135fe9a5e045ec62e9310ab"
+      },
+      "lib/coreBundle.js": {
+        "bytes": 3352341,
+        "sha256": "6be5c2ea035554e9b184b1dbc7aa5e7f1fb428dd1b5c202022858dcfae9bee27"
+      },
+      "lib/entry/cliDaemon.js": {
+        "bytes": 197,
+        "sha256": "062f256fb29a7bf91793a014b9c3f1f9cf2dc6b12e40a8a2ebba88a630ae16a0"
+      },
+      "lib/entry/dashboardApp.js": {
+        "bytes": 108,
+        "sha256": "209962c6eaeef11629f226d6a2ab33ec7a2480754242b6e19590a9e6eb71d126"
+      },
+      "lib/entry/mcp.js": {
+        "bytes": 442,
+        "sha256": "cc87dc0020cb41caebbf04f50e42bc7835b033a6d80e9c3f0a3d0b3dbdf341c7"
+      },
+      "lib/entry/oopBrowserDownload.js": {
+        "bytes": 120,
+        "sha256": "87567cdbd67dd2f50bb232d47d3784701ece7c81e39c0287bb7d1b466b68cf06"
+      },
+      "lib/package.js": {
+        "bytes": 2112,
+        "sha256": "9f938e1d44a0dd231b1660ca62f7dae964859b79cbdc370b8542c5d375ca3c05"
+      },
+      "lib/server/chromium/appIcon.png": {
+        "bytes": 16565,
+        "sha256": "6ba994f05c5cf18e22d9b6bef9898fbdec6ad4d4d77f5187d0609cb42d72d01e"
+      },
+      "lib/server/deviceDescriptorsSource.json": {
+        "bytes": 80785,
+        "sha256": "796ff93bfd5e38b84541a1e8745a7abcbccba54d440fb3b7a1acec0655d056cc"
+      },
+      "lib/server/electron/loader.js": {
+        "bytes": 4821,
+        "sha256": "8c99c632a9fcef9d691160954d01acdf374ba15566e153bef7fb61b0d3796e6d"
+      },
+      "lib/serverRegistry.js": {
+        "bytes": 247050,
+        "sha256": "85f63dbf8dc73fa651dcf046a732d78a86dbda401084b1d144d5a1ef1a59730d"
+      },
+      "lib/serverRegistry.js.LICENSE": {
+        "bytes": 18617,
+        "sha256": "5cf540fe55a2ba9bcf0eb76e739b454faa8581e2f1a0f777602ef0855534302e"
+      },
+      "lib/tools/cli-client/channelSessions.js": {
+        "bytes": 7087,
+        "sha256": "6b9c613e87340f48ad7182addd7495a8ff3fbe55feb1bbd0ce04f59f1552e126"
+      },
+      "lib/tools/cli-client/cli.js": {
+        "bytes": 153,
+        "sha256": "dfde8e9dfde30c4b3914eb25ba1c5a8524ec64651d866171d75cd7b41a827180"
+      },
+      "lib/tools/cli-client/help.json": {
+        "bytes": 36596,
+        "sha256": "961a8792b8b4e43f6d28d8d3029f6b3b7fa2e04d04d84fb0590bd0d759d2c456"
+      },
+      "lib/tools/cli-client/minimist.js": {
+        "bytes": 4106,
+        "sha256": "1d200627373a367e0097f1abeaaa4d67cde2c33f2e5efca5cb55222c7667adc3"
+      },
+      "lib/tools/cli-client/output.js": {
+        "bytes": 11703,
+        "sha256": "2eace914547a487b2aa1dc34af787fe92168f0b7b3dde24f2b127e817cc9b2b4"
+      },
+      "lib/tools/cli-client/program.js": {
+        "bytes": 16054,
+        "sha256": "722f00475112d4a3b569af51172e0bd88d1e4627a65ed8a2245031e08e7cc1ec"
+      },
+      "lib/tools/cli-client/registry.js": {
+        "bytes": 6662,
+        "sha256": "c11d278e05542808ba37bdb032018eccf9dc78377f8025bd74fa906ae009ca30"
+      },
+      "lib/tools/cli-client/session.js": {
+        "bytes": 9395,
+        "sha256": "c47202e7886ddd17ad2ce3e7f4b893f751e0e074cb1111a8bbc20fd33ecec800"
+      },
+      "lib/tools/cli-client/skill/SKILL.md": {
+        "bytes": 11869,
+        "sha256": "b4c81c39e39f30e4790607e57b12283878f3751daca9c0e44f301899f2108b13"
+      },
+      "lib/tools/cli-client/skill/references/element-attributes.md": {
+        "bytes": 665,
+        "sha256": "bf19aa4671e0a50a0fefa9c790f39124e803060eefe395042b723c29fcb7faa2"
+      },
+      "lib/tools/cli-client/skill/references/playwright-tests.md": {
+        "bytes": 1690,
+        "sha256": "c5b0719fef2cfdff50bd744051b2f9afc119775db4b48e9b2882c1cf3886797c"
+      },
+      "lib/tools/cli-client/skill/references/request-mocking.md": {
+        "bytes": 2182,
+        "sha256": "54e801c9663fc2b6d68ceb058cb1c360724c2499f42acc7852a68e83e5b5f37c"
+      },
+      "lib/tools/cli-client/skill/references/running-code.md": {
+        "bytes": 5642,
+        "sha256": "d95c539a5990b71d02d8bdf1d9414df16191eb6cff95b0063820518b7a13dcb2"
+      },
+      "lib/tools/cli-client/skill/references/session-management.md": {
+        "bytes": 5671,
+        "sha256": "cd3e261b8763bf952f1e371b876cb78d054379afec85482f9250633e1b7e6c44"
+      },
+      "lib/tools/cli-client/skill/references/spec-driven-testing.md": {
+        "bytes": 11578,
+        "sha256": "3326b3af65ed6e05180aa394a7fd578f29822e67bde9f22f7c7f94e6c8e3a594"
+      },
+      "lib/tools/cli-client/skill/references/storage-state.md": {
+        "bytes": 5198,
+        "sha256": "9ac47f9ae4a1aedcd2077f8ac9ab1ba6bee1962cb83ff51adcd36fb6d83b5ec6"
+      },
+      "lib/tools/cli-client/skill/references/test-generation.md": {
+        "bytes": 4585,
+        "sha256": "2a9c4d94effa31b05cf367dfa8bbace8874a3bc9799987ad2b03269af224d299"
+      },
+      "lib/tools/cli-client/skill/references/tracing.md": {
+        "bytes": 3440,
+        "sha256": "792e0ac7705e56ac48df84c0f5400221ce86107897c671590a64a4ea6a82508e"
+      },
+      "lib/tools/cli-client/skill/references/video-recording.md": {
+        "bytes": 5387,
+        "sha256": "8555ab5400df0d90e66318aacc0a8a4418fbf872e7463824d55d5c41615abd83"
+      },
+      "lib/tools/dashboard/appIcon.png": {
+        "bytes": 18945,
+        "sha256": "38037bcf18c7f9b950da2e1a2d8800d38fb27637ccda293d38368a3704b67f18"
+      },
+      "lib/tools/trace/SKILL.md": {
+        "bytes": 4712,
+        "sha256": "df85506bfa8a445c961efa1ac244cca733667b717711bcc99c1f93994c29d5dc"
+      },
+      "lib/tools/utils/extension.js": {
+        "bytes": 3132,
+        "sha256": "c07d365ccff8c7fab3d65848bc01616c74e422f3be7b1c0e7b587b84ef866ada"
+      },
+      "lib/tools/utils/socketConnection.js": {
+        "bytes": 3317,
+        "sha256": "973c2bea70a1f1445f4673f99e9fa351e50a2ec9fd93d7381b2c41bb4de764dd"
+      },
+      "lib/utilsBundle.js": {
+        "bytes": 3143574,
+        "sha256": "1295945f0054d2504c9b751945b15aa3c672530ad5a340f3f9636e5e238f304a"
+      },
+      "lib/utilsBundle.js.LICENSE": {
+        "bytes": 110417,
+        "sha256": "e3f91eea8ba98019d8e65ec61756af34a67e170070005a09d1fc6f49a64b544b"
+      },
+      "lib/vite/dashboard/assets/codicon-DCmgc-ay.ttf": {
+        "bytes": 80340,
+        "sha256": "0f1d5219934e96e83b8db162d60b4d8c09b5de1e7d38031cbafe4a3c0f2889c9"
+      },
+      "lib/vite/dashboard/assets/firefox-1bWoP6pv.svg": {
+        "bytes": 7488,
+        "sha256": "3f3742d1e78c0db6c2d3531250f70c30675ee5310de32fa89befaf738c54efd0"
+      },
+      "lib/vite/dashboard/assets/firefox-beta-k3eOH_eK.svg": {
+        "bytes": 9280,
+        "sha256": "7eab5ffdc25903ba33a7202f7fffa1999f119c7be45a39e9e703c118904f917a"
+      },
+      "lib/vite/dashboard/assets/firefox-nightly-Cp5nfeDT.svg": {
+        "bytes": 9143,
+        "sha256": "f311c074b0fa999fcd6b73441301fb54ee87a48ff3bf05f318647928110476da"
+      },
+      "lib/vite/dashboard/assets/index-BY2S1tHT.css": {
+        "bytes": 142433,
+        "sha256": "4e741ba6be0fb15305f6dfd907e245e68554f6dbd5282a58dcc1e9d2493eb917"
+      },
+      "lib/vite/dashboard/assets/index-C_5TMfeg.js": {
+        "bytes": 331501,
+        "sha256": "cf991b92763fb3b3759e9c5b9839e3625b351041db4199501a53c3c82bd2e28c"
+      },
+      "lib/vite/dashboard/assets/safari-na3_-uQk.svg": {
+        "bytes": 5254,
+        "sha256": "80fd72ca5eb8545f1981277b31f4f92951d469d4efebd078e4086b676fe517dc"
+      },
+      "lib/vite/dashboard/index.html": {
+        "bytes": 1078,
+        "sha256": "1025839f364c006a0a3b6f94196a630fdbec355cfe15de3777d975e725c915c7"
+      },
+      "lib/vite/dashboard/playwright-logo.svg": {
+        "bytes": 5645,
+        "sha256": "511524a1c145819303a18fb71870a4307c3e740f9e9722f7686a2b42b0995b6c"
+      },
+      "lib/vite/htmlReport/index.html": {
+        "bytes": 464,
+        "sha256": "ce7c098020a0eb9ce10edd416245ea6da50dfeaab18dfd0a2176979d22643be6"
+      },
+      "lib/vite/htmlReport/report.css": {
+        "bytes": 108330,
+        "sha256": "3298f11062d5112516c8b3fa2368c6138b4700aa9fa215bb5fc0a1f0efe94e3f"
+      },
+      "lib/vite/htmlReport/report.js": {
+        "bytes": 416009,
+        "sha256": "9e7baad230ee5aec5af605ac4687687cf0e079f3299423811aa9768543d8947b"
+      },
+      "lib/vite/recorder/assets/codeMirrorModule-DYBRYzYX.css": {
+        "bytes": 6421,
+        "sha256": "70bf421a13e87857ca684bfa2cc55f06d7c5a50f71253a3ff1d74769b14a957e"
+      },
+      "lib/vite/recorder/assets/codeMirrorModule-DeBYQozu.js": {
+        "bytes": 313009,
+        "sha256": "f4ad79265956fe5186af9d2b8ebcf4c0e40ec8d0405ab623471a6cecb22bc1d7"
+      },
+      "lib/vite/recorder/assets/codicon-DCmgc-ay.ttf": {
+        "bytes": 80340,
+        "sha256": "0f1d5219934e96e83b8db162d60b4d8c09b5de1e7d38031cbafe4a3c0f2889c9"
+      },
+      "lib/vite/recorder/assets/index-4ZiSSCmn.css": {
+        "bytes": 92234,
+        "sha256": "4278e600a533667369328e9eb52a212693d52e46072ec37228e0ef8621a48ead"
+      },
+      "lib/vite/recorder/assets/index-Bq-mQf8S.js": {
+        "bytes": 365888,
+        "sha256": "b9215ab0e84dba105788f7ae82559892b4ebab1e9c7cde479d00a381e8375c40"
+      },
+      "lib/vite/recorder/index.html": {
+        "bytes": 1078,
+        "sha256": "a02e5446589dc2515a986f9944918029df332418db0f706a819d3bf1a0bf7fa3"
+      },
+      "lib/vite/recorder/playwright-logo.svg": {
+        "bytes": 5033,
+        "sha256": "6b0a4367bdeab10995bc239278f04c68c10e48adbec15e799e01909a0d66dcb9"
+      },
+      "lib/vite/traceViewer/assets/codeMirrorModule-LEHpjmcn.js": {
+        "bytes": 313054,
+        "sha256": "e3d682edfb4dd1fa17882466dd15058120278b27ff1101785a57b6df4db7ada5"
+      },
+      "lib/vite/traceViewer/assets/defaultSettingsView-BNmKHKpQ.js": {
+        "bytes": 658064,
+        "sha256": "f21839cd274944763d12ad24529345b9f8ebf339409f51f4dbe52f9d9baeb09c"
+      },
+      "lib/vite/traceViewer/assets/urlMatch-BYQrIQwR.js": {
+        "bytes": 819,
+        "sha256": "168c4dee4815ea8d3c131a504033cd23d4b15aefa0209dd10ad3f643e8f1d8a7"
+      },
+      "lib/vite/traceViewer/assets/xtermModule-CsJ4vdCR.js": {
+        "bytes": 292244,
+        "sha256": "4aa82b0448cef1cf951bbe0ac80bf2d2b7c5d279dd74bcc798a9e563e98e5295"
+      },
+      "lib/vite/traceViewer/codeMirrorModule.DYBRYzYX.css": {
+        "bytes": 6421,
+        "sha256": "70bf421a13e87857ca684bfa2cc55f06d7c5a50f71253a3ff1d74769b14a957e"
+      },
+      "lib/vite/traceViewer/codicon.DCmgc-ay.ttf": {
+        "bytes": 80340,
+        "sha256": "0f1d5219934e96e83b8db162d60b4d8c09b5de1e7d38031cbafe4a3c0f2889c9"
+      },
+      "lib/vite/traceViewer/defaultSettingsView.CjdS-WJx.css": {
+        "bytes": 112258,
+        "sha256": "de9c068d0e8043820fe42f30558e972eb7e2a8a45a34f65c7c8f73fa2dbc9fd0"
+      },
+      "lib/vite/traceViewer/index.CzXZzn5A.css": {
+        "bytes": 2111,
+        "sha256": "4ec2a3d49db259ce9025cb4fa48d73b1afd58215e567eef3b4a4cbf76c1674d9"
+      },
+      "lib/vite/traceViewer/index.DMMX1gXU.js": {
+        "bytes": 6547,
+        "sha256": "f33ceae71f13fde446a244c113548fec5ef890bf7b93ded7b861bebcebaa3e23"
+      },
+      "lib/vite/traceViewer/index.html": {
+        "bytes": 2363,
+        "sha256": "5ced36d3feb5bbbc0e8350330be0a293a1b4784ddecb6e58e1851323a93640cc"
+      },
+      "lib/vite/traceViewer/manifest.webmanifest": {
+        "bytes": 429,
+        "sha256": "d8540500603a32a39fe7e5a0375dc0f9ebafd11118e06a846db7efc608223ab9"
+      },
+      "lib/vite/traceViewer/playwright-logo.svg": {
+        "bytes": 5033,
+        "sha256": "6b0a4367bdeab10995bc239278f04c68c10e48adbec15e799e01909a0d66dcb9"
+      },
+      "lib/vite/traceViewer/snapshot.html": {
+        "bytes": 389,
+        "sha256": "11c80efe4f4424fa59004bcc71fed77a420d2da5f199790e355c30a5b965d0cd"
+      },
+      "lib/vite/traceViewer/snapshot.v8KI4P3m.js": {
+        "bytes": 660,
+        "sha256": "97a3cd6d67aaac66efc838d7d743ac51bbf7d272e1287981c11758fca21a0657"
+      },
+      "lib/vite/traceViewer/sw.bundle.js": {
+        "bytes": 95855,
+        "sha256": "5237c6c68ba1f3591caf8cf951be4873192342a72fbcc31e5a667f7a7904c624"
+      },
+      "lib/vite/traceViewer/uiMode.BZQ54Kgt.css": {
+        "bytes": 60311,
+        "sha256": "a548cd88f2041433da2d60fd3a33ef23af2fb8ddf2557b7bef79806364498e57"
+      },
+      "lib/vite/traceViewer/uiMode.Ut8wwJNp.js": {
+        "bytes": 38514,
+        "sha256": "0ab1e917250833c3f6b3ed3ae3f359158bf68cd2d9951163ee6edff9b8ed1e5b"
+      },
+      "lib/vite/traceViewer/uiMode.html": {
+        "bytes": 727,
+        "sha256": "95bf648d76d380b779770aae1c560b58ee456096b2b3b02922e629af29e3d492"
+      },
+      "lib/vite/traceViewer/xtermModule.DYP7pi_n.css": {
+        "bytes": 4150,
+        "sha256": "7c5a01f382f76539fc9b4db6b18e18a7035741845fd14968c5cdc0a7e373d817"
+      },
+      "lib/xdg-open": {
+        "bytes": 25778,
+        "sha256": "2e79a4d5171dd384d20a75b023dfe0e9f4330cdb5d441f6c3859a11fce3db51a"
+      },
+      "package.json": {
+        "bytes": 876,
+        "sha256": "759e376f995bf39edd4810d699b99469bab1d7428b6fbc78d41912f367df7ba9"
+      },
+      "types/protocol.d.ts": {
+        "bytes": 814471,
+        "sha256": "17c6561066a9708a09115ad4b49ff23cf81a607f54278c9b9b5865964906f415"
+      },
+      "types/structs.d.ts": {
+        "bytes": 2103,
+        "sha256": "32727845ab5bd8a9ef3e4844c567c09f6d418fcf0f90d381c00652a6f23e7f6e"
+      },
+      "types/types.d.ts": {
+        "bytes": 1003279,
+        "sha256": "60200590d8ecf247a6e9c769c6b79bd8e688c3af14ef208072d0c6954b25f125"
+      }
+    },
+    "links": {},
+    "root": "/Users/iannganga/Desktop/Make-Kenya-Clean/node_modules/playwright-core",
+    "version": "1.61.1"
+  },
+  "version": 1
+}

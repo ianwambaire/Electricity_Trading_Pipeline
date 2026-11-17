@@ -1,0 +1,81 @@
+{
+  "artifacts": {
+    "deploy/staging/forecast-consistency-release/preflight_readonly.py": {
+      "bytes": 34587,
+      "sha256": "bbd94119fbed5b7e0d6c154167fa44ec32e3a0733c3d49c02521c5bfbf126463"
+    },
+    "deploy/staging/forecast-consistency-release/run_preflight.py": {
+      "bytes": 8818,
+      "sha256": "0598ec061225a70fbe8f418f337299afaf242e4d463780d34e6b594aa8e0a48a"
+    },
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/REVIEW.md": {
+      "bytes": 5385,
+      "sha256": "22775fe09a01a200c2ada09ef1314e2c405842f9721d06f1b5c3e298c24160dc"
+    },
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/build.py": {
+      "bytes": 1431,
+      "sha256": "7cb2daa96f0cf28c21f8f23072136a3d813aeac9309a7ebc4ac65e198ac9c031"
+    },
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/inspect.py": {
+      "bytes": 10053,
+      "sha256": "0e900dccdcd189938c1a17211b7e35fd886cfc99b9201e46de2b23d7da99782d"
+    },
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/producer.py": {
+      "bytes": 3379,
+      "sha256": "f9d24eb3ba673f354eaa4e7d8307210c13d9cca3f21cc36ce99a3488a15019ce"
+    },
+    "deploy/staging/realized-parent-traversal-diagnostic-v1/run.py": {
+      "bytes": 8430,
+      "sha256": "84bf49c72049b085c095be3f345f6d1562e161d9b1d3767f7916f03cffb486cd"
+    },
+    "deploy/staging/realized-performance-release-v1/MANIFEST.json": {
+      "bytes": 1930736,
+      "sha256": "a3dceba7641ceaa9030709b1b7d4ce59460b54f5123b7e89f15d95bba39b0a83"
+    },
+    "deploy/staging/realized-performance-release-v1/guards.py": {
+      "bytes": 13604,
+      "sha256": "74499a76fbb43acbe07f53440770707c6bab8ed5d3a0f542666dc4ea7a32a7c1"
+    },
+    "deploy/staging/ssh-connectivity-check/MANIFEST.json": {
+      "bytes": 1381,
+      "sha256": "89c54b9b34a25dde2325659bebc0d7b5c29e2c5b5f472ef07bdd15a6c56a48e3"
+    },
+    "deploy/staging/ssh-connectivity-check/REVIEW.md": {
+      "bytes": 7608,
+      "sha256": "0a19bf04cb996e2a597953e410d77c875cba527aafb7e5c106b6eb20db7b28f7"
+    },
+    "deploy/staging/ssh-connectivity-check/build.py": {
+      "bytes": 1279,
+      "sha256": "24bd355fded3b731910fe3239dd780aae4ef3cb9f78e4efd47d3df82d06fd73e"
+    },
+    "deploy/staging/ssh-connectivity-check/run.py": {
+      "bytes": 11556,
+      "sha256": "1d02edc366ac6ae0c4828daf9607637ebf2b27daf523dd00a61138b636678efa"
+    },
+    "tests/test_realized_parent_traversal_diagnostic.py": {
+      "bytes": 16131,
+      "sha256": "c43093c1cfce9a11030ca05c7d6df2a2fea32fbd2974f04cabef4d39037302b5"
+    },
+    "tests/test_ssh_connectivity_check.py": {
+      "bytes": 12481,
+      "sha256": "2676f0d61dd9f3190a56d4f0cf81b1454cff5cee85244690130df2776ac9f306"
+    }
+  },
+  "connectivity_manifest": "89c54b9b34a25dde2325659bebc0d7b5c29e2c5b5f472ef07bdd15a6c56a48e3",
+  "execution_authorized": false,
+  "limits": {
+    "escalation_seconds": 5,
+    "local_seconds": 40,
+    "remote_seconds": 20,
+    "ssh_attempts": 1,
+    "stream_bytes": 8192
+  },
+  "origin_manifest": "a3dceba7641ceaa9030709b1b7d4ce59460b54f5123b7e89f15d95bba39b0a83",
+  "payload": {
+    "bytes": 17768,
+    "sha256": "01385df1ceef55ab23b89f7f27f8b6a758f0334b9fe43c0a52cff436a72be55e"
+  },
+  "release": "phase-realized-parent-traversal-diagnostic-20261108-v1",
+  "remote_command": "sudo -n /usr/bin/timeout --signal=TERM --kill-after=5s 20s /usr/bin/python3 -I -S -B -",
+  "version": 1
+}

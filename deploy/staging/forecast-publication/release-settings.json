@@ -1,0 +1,8 @@
+{
+  "origin": "https://staging.powerflowenergy.dev",
+  "cognito_issuer": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_NLoYFRvex",
+  "cognito_client_id": "4t8s6a673a18qhbauqac8rhdcf",
+  "cognito_domain": "https://us-east-1nloyfrvex.auth.us-east-1.amazoncognito.com",
+  "api_port": 8010,
+  "previous_release": "phase-staging-https-ready-20261026-context-hotfix-20261029"
+}

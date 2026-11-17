@@ -27,6 +27,8 @@ def switch(tmp_path):
                       .replace('/var/lib/powerflow-staging', str(records)))
     harness = tmp_path / 'harness.sh'
     harness.write_text("""
+# Unset Bash's special timer so only the mocked sleep advances the clock.
+unset SECONDS
 SECONDS=0
 sleep() { SECONDS=$((SECONDS + $1)); }
 timeout() { shift; "$@"; }

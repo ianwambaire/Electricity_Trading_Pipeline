@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the isolated PowerFlow production publication feed
+
+[Timer]
+OnCalendar=*-*-* *:00/10:00 UTC
+AccuracySec=15s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

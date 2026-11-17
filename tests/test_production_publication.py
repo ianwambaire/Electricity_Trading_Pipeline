@@ -173,11 +173,23 @@ def test_complete_snapshot_with_frozen_model_and_dated_metadata(tmp_path, writer
     folder.mkdir()
     now = dt.datetime(2026, 11, 17, 12, 30, tzinfo=dt.timezone.utc)
     import shutil
+    # The worker generates these reports at runtime. Keep the frozen model
+    # artifacts real, but supply generated reports in the isolated fixture.
+    reports = {
+        writer.REPORTS / 'actual_vs_predicted.csv':
+            'timestamp,actual_price,predicted_price\n2026-11-17T11:00:00Z,23,22\n',
+        writer.REPORTS / 'detected_anomalies.csv':
+            'timestamp,price_eur_mwh\n2026-11-17T11:00:00Z,23\n',
+        writer.REPORTS / 'feature_importance.csv':
+            'feature,importance,signed_coefficient\nprice_eur_mwh,1,1\n',
+    }
     for path in writer.REQUIRED:
         target = source / path
         target.parent.mkdir(parents=True, exist_ok=True)
         if path in (writer.SILVER, writer.PRICE):
             target.write_text('timestamp,price_eur_mwh\n2026-11-17T11:00:00Z,23\n')
+        elif path in reports:
+            target.write_text(reports[path])
         else:
             shutil.copyfile(ROOT / path, target)
     diagnostic = source / writer.OPTIONAL[-1]
@@ -190,6 +202,8 @@ def test_complete_snapshot_with_frozen_model_and_dated_metadata(tmp_path, writer
         db.execute('CREATE TABLE data_quality_results(id,check_time,check_name,status)')
     digest, _ = writer.stage_data(source, folder, os.getuid(), now)
     writer.verify_data(folder, digest)
+    for path, content in reports.items():
+        assert (folder / path).read_text() == content
     assert (folder / writer.OPTIONAL[-1]).read_bytes() == old
     (source / writer.MANIFEST.with_name('next24h_model.joblib')).write_bytes(b'tampered')
     replacement = tmp_path / 'replacement'

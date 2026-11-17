@@ -32,6 +32,19 @@ def namespace(tmp_path):
     root=tmp_path/'store';root.mkdir(mode=0o750);(root/'releases').mkdir(mode=0o750);(root/'contract').write_bytes(store.MARKER);(root/'contract').chmod(0o640)
     return root
 
+@pytest.mark.skipif(not hasattr(os, "O_PATH") or os.geteuid() == 0,
+                    reason="Requires Linux search-only permissions under an unprivileged user")
+def test_store_opens_through_search_only_parent(namespace):
+    parent = namespace.parent
+    parent.chmod(0o100)
+    try:
+        with pytest.raises(PermissionError):
+            os.listdir(parent)
+        with store.opened(namespace) as (root_fd, _):
+            assert store.read_file(root_fd, "contract") == store.MARKER
+    finally:
+        parent.chmod(0o700)
+
 def test_receipt_verified_completed_hour_metrics(inputs):
     b=build(*inputs,now=NOW)
     assert b['coverage']==dict(history_rows=24,verified_rows=24,unverified_rows=0,eligible_rows=23,realized_pairs=23)

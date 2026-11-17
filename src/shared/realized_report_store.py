@@ -16,8 +16,8 @@ from .realized_report import MAX_BYTES,require,validate,encode,stamp
 MARKER=b'powerflow-realized-performance-v1\n'
 FLAGS=os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW
 
-def directory(parent,name):
-    fd=os.open(name,FLAGS,dir_fd=parent);s=os.fstat(fd)
+def directory(parent,name,*,flags=FLAGS):
+    fd=os.open(name,flags,dir_fd=parent);s=os.fstat(fd)
     try:require(stat.S_ISDIR(s.st_mode) and s.st_uid in {0,1000,os.geteuid()} and not s.st_mode&0o022);return fd
     except Exception:os.close(fd);raise
 
@@ -34,7 +34,17 @@ def opened(root):
     p=Path(root);require(p.is_absolute() and '..'not in p.parts)
     fd=os.open('/',FLAGS)
     try:
-        for part in p.parts[1:]:nxt=directory(fd,part);os.close(fd);fd=nxt
+        # Linux O_PATH allows traversal through search-only ancestors. The
+        # report root and release directories still need readable descriptors.
+        traversal_flags=getattr(os,'O_PATH',os.O_RDONLY)|os.O_DIRECTORY|os.O_NOFOLLOW
+        for part in p.parts[1:-1]:
+            nxt=directory(fd,part,flags=traversal_flags)
+            os.close(fd)
+            fd=nxt
+        if p.parts[1:]:
+            nxt=directory(fd,p.name)
+            os.close(fd)
+            fd=nxt
         require(read_file(fd,'contract',100)==MARKER)
         releases=directory(fd,'releases')
         try:yield fd,releases

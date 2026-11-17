@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shutil
 import sqlite3
+import stat
 import tempfile
 import sys
 import time
@@ -236,6 +237,34 @@ class SnapshotSource(operational_capture.Source):
     def __init__(self, source, owner, snapshot):
         super().__init__(source, owner)
         self.snapshot_path = snapshot
+
+    def file(self, folder, name, limit=100000):
+        require = operational_capture.require
+        folder = Path(folder)
+        require(name in operational_capture.NAMES and folder.parent == self.root / RECEIPTS,
+                'SOURCE_PATH')
+        operational_capture.identifier(folder.name)
+        parent = operational_capture.directory(folder)
+        try:
+            info = os.fstat(parent)
+            require(info.st_uid == self.owner and not info.st_mode & 0o022, 'SOURCE_METADATA')
+            # The unit mounts the producer read-only. O_NOATIME would require
+            # ownership or CAP_FOWNER, which this publisher does not have.
+            flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+            with os.fdopen(os.open(name, flags, dir_fd=parent), 'rb') as stream:
+                before = os.fstat(stream.fileno())
+                require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1 and
+                        before.st_uid == self.owner and not before.st_mode & 0o077 and
+                        before.st_size <= limit, 'SOURCE_METADATA')
+                raw = stream.read(limit + 1)
+                after = os.fstat(stream.fileno())
+                current = os.stat(name, dir_fd=parent, follow_symlinks=False)
+                signature = operational_capture.signature
+                require(len(raw) <= limit and signature(before) == signature(after) ==
+                        signature(current), 'SOURCE_CHANGED')
+                return raw
+        finally:
+            os.close(parent)
 
     @contextlib.contextmanager
     def snapshot(self):

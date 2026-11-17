@@ -1,6 +1,7 @@
 """Offline production publication tests using isolated stores and synthetic evidence."""
 import contextlib
 import datetime as dt
+import errno
 import hashlib
 import importlib.util
 import json
@@ -15,7 +16,8 @@ from test_automatic_publication import FLOW, fake_api
 from test_current_operations import association, make_withheld  # pytest fixture and helper
 from test_inference_evidence import captured  # pytest fixture
 from test_forecast_publication import storage
-from shared.operational_evidence_producer import from_snapshot
+from test_operational_terminal import STATE, fixture_source, source_api, stable  # pytest fixture
+from shared.operational_evidence_producer import associate, from_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / 'deploy/staging/forecast-publication'
@@ -99,6 +101,45 @@ def test_snapshot_adapter_reads_operational_evidence_in_read_only_transaction(
         failed_reader.execute('SELECT 1')
     assert source.read_bytes() == original
     assert target.read_bytes() == snapshot
+
+
+@pytest.mark.parametrize('replace_with_symlink', [False, True])
+def test_production_receipt_read_without_noatime_capability(
+        tmp_path, writer, stable, monkeypatch, replace_with_symlink):
+    with monkeypatch.context() as patch:
+        source, database = fixture_source(stable, tmp_path, patch)
+    adapter = writer.SnapshotSource(source.root, source.owner, database)
+    api, _ = source_api(stable)
+    actual_open = os.open
+    noatime = getattr(os, 'O_NOATIME', 1 << 30)
+    monkeypatch.setattr(os, 'O_NOATIME', noatime, raising=False)
+    receipt_dir = next((source.root / writer.RECEIPTS).iterdir())
+    calls = []
+
+    def restricted_open(path, flags, *args, **kwargs):
+        if path in writer.operational_capture.NAMES:
+            calls.append(flags)
+            if flags & noatime:
+                raise PermissionError(errno.EPERM, os.strerror(errno.EPERM))
+            if replace_with_symlink:
+                (receipt_dir / path).unlink()
+                (receipt_dir / path).symlink_to(database)
+        return actual_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(os, 'open', restricted_open)
+    flow_id = stable['flow']['id']
+    if replace_with_symlink:
+        with pytest.raises(OSError) as error:
+            writer.operational_capture.capture_terminal(flow_id, STATE, source=adapter, api=api,
+                                                        clock=lambda: stable['observed_at'])
+        assert error.value.errno == errno.ELOOP
+        count = 1
+    else:
+        assert writer.operational_capture.capture_terminal(
+            flow_id, STATE, source=adapter, api=api,
+            clock=lambda: stable['observed_at']) == associate(**stable)
+        count = len(writer.operational_capture.NAMES)
+    assert calls == [os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK] * count
 
 
 def test_invalid_database_never_replaces_previous_pointer(tmp_path, writer):

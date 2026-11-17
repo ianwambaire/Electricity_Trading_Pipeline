@@ -87,11 +87,13 @@ def publish(root,document,*,now=None):
             if previous:
                 old=validate(content(releases,previous),now);require(stamp(document['generated_at'])>=stamp(old['generated_at']))
                 if document['generated_at']==old['generated_at']:require(digest==previous)
-            try:os.mkdir(digest,0o2700,dir_fd=releases)
+            # The provisioned parent supplies group inheritance. Keep the new
+            # directory private until the report has been written and synced.
+            try:os.mkdir(digest,0o700,dir_fd=releases)
             except FileExistsError:require(content(releases,digest)==raw)
             else:
                 target=directory(releases,digest)
-                try:write(target,'report.json',raw);os.fchmod(target,0o2750);os.fsync(target)
+                try:write(target,'report.json',raw);os.fchmod(target,0o750);os.fsync(target)
                 finally:os.close(target)
             require(content(releases,digest)==raw);os.fsync(releases)
             temporary='.current-'+uuid.uuid4().hex;write(fd,temporary,(digest+'\n').encode())

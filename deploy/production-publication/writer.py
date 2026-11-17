@@ -40,6 +40,7 @@ MODELS = Path('artifacts/models')
 MANIFEST = MODELS / 'releases/next24h/next24h_release_manifest.json'
 HISTORY = REPORTS / 'next24h_forecast_history.csv'
 RECEIPTS = REPORTS / 'next24h_inference'
+EVIDENCE_READER_SHA256 = 'f0e94ea827c76cdfbd84ad1eb686d65f490c52babd5bb15379c4d739e4dc7477'
 REQUIRED = (
     SILVER, PRICE, REPORTS / 'actual_vs_predicted.csv',
     REPORTS / 'detected_anomalies.csv', REPORTS / 'final_holdout_metrics.csv',
@@ -275,6 +276,27 @@ class SnapshotSource(operational_capture.Source):
             yield db
 
 
+def capture_terminal(flow_id, state_id, *, source, api=operational_capture.query, clock=utcnow):
+    # Reuse the reviewed issue-time adapter without changing the archived
+    # staging helper or the public evidence timestamp contract.
+    module_dir = Path(__file__).resolve().parent
+    path = module_dir / 'operational_evidence_producer.py'
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        path = module_dir.parent / 'staging/operational-capture-correction-v1' / path.name
+        raw = path.read_bytes()
+    require(hashlib.sha256(raw).hexdigest() == EVIDENCE_READER_SHA256, 'EVIDENCE_READER_HASH')
+    namespace = {'__name__': 'shared.production_evidence_reader', '__package__': 'shared'}
+    exec(compile(raw, str(path), 'exec'), namespace)
+
+    # Keep the existing flow checks, source capture and final state recheck.
+    capture = operational_capture.capture_terminal
+    globals_for_capture = dict(capture.__globals__, from_snapshot=namespace['from_snapshot'])
+    bound_capture = FunctionType(capture.__code__, globals_for_capture)
+    return bound_capture(flow_id, state_id, source=source, api=api, clock=clock)
+
+
 def deliver_forecast(receipt, flow, destination, manifest_hash, owner):
     def build(forecast, provenance, model, evidence, expected, now):
         # automatic.deliver has pinned all five source byte strings before
@@ -341,7 +363,7 @@ def run(source, root, owner):
     with tempfile.TemporaryDirectory(prefix='.partial-', dir=root / 'data/releases') as temp:
         folder = Path(temp)
         digest, hashes = stage_data(source, folder, owner, utcnow())
-        ops, ops_digest = operational_capture.capture_terminal(
+        ops, ops_digest = capture_terminal(
             flow['id'], flow['state']['id'], source=SnapshotSource(source, owner, folder / DB))
         evidence = operational_evidence.validate(ops, ops_digest, utcnow())
         realized = build_realized(source / HISTORY, folder / PRICE, source / RECEIPTS)

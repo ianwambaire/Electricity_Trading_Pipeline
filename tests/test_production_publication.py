@@ -13,11 +13,12 @@ from types import SimpleNamespace
 import pytest
 
 from test_automatic_publication import FLOW, fake_api
+from test_operational_capture_correction import actual_writer_fixture
 from test_current_operations import association, make_withheld  # pytest fixture and helper
 from test_inference_evidence import captured  # pytest fixture
 from test_forecast_publication import storage
 from test_operational_terminal import STATE, fixture_source, source_api, stable  # pytest fixture
-from shared.operational_evidence_producer import associate, from_snapshot
+from shared.operational_evidence_producer import associate, from_snapshot, receipt_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / 'deploy/staging/forecast-publication'
@@ -142,6 +143,42 @@ def test_production_receipt_read_without_noatime_capability(
     assert calls == [os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK] * count
 
 
+def test_production_capture_normalizes_only_persisted_issue_timestamps(
+        tmp_path, writer, stable, monkeypatch):
+    facts = actual_writer_fixture(stable)
+    companion = tmp_path / 'operational_evidence_producer.py'
+    reviewed = ROOT / 'deploy/staging/operational-capture-correction-v1' / companion.name
+    companion.write_bytes(reviewed.read_bytes())
+    monkeypatch.setattr(writer, '__file__', str(tmp_path / 'writer.py'))
+    with monkeypatch.context() as patch:
+        source, database = fixture_source(facts, tmp_path, patch)
+    adapter = writer.SnapshotSource(source.root, source.owner, database)
+    api, calls = source_api(facts)
+    receipt_dir = next((source.root / writer.RECEIPTS).iterdir())
+    receipt_before = {p.name: p.read_bytes() for p in receipt_dir.iterdir()}
+    db_before = database.read_bytes()
+    issue = json.loads(facts['records'][0]['message'])['next24h_forecast_issue_time']
+    assert issue[10] == ' '
+    observed = facts['observed_at'] + dt.timedelta(hours=3)
+    # Exercise the actual terminal capture path used by run(), including SQLite.
+    raw, digest = writer.capture_terminal(facts['flow']['id'], STATE, source=adapter, api=api,
+                                          clock=lambda: observed)
+    evidence = writer.operational_evidence.validate(raw, digest, observed)
+    assert evidence['inference']['issue_time'] == issue.replace(' ', 'T', 1)
+    bundle, receipt_digest = receipt_bundle(facts['receipts'][0], observed)
+    assert evidence['delivery']['bundle_sha256'] == receipt_digest
+    bundle_bytes = json.dumps(bundle, sort_keys=True, separators=(',', ':')).encode()
+    with pytest.raises(writer.forecast_publication.ExpiredPublication):
+        writer.forecast_publication.validate(bundle_bytes, receipt_digest, observed)
+    assert calls == [False, True, False]
+    assert database.read_bytes() == db_before
+    assert {p.name: p.read_bytes() for p in receipt_dir.iterdir()} == receipt_before
+    companion.write_bytes(companion.read_bytes() + b'\n')
+    with pytest.raises(ValueError, match='EVIDENCE_READER_HASH'):
+        writer.capture_terminal(facts['flow']['id'], STATE, source=adapter, api=api)
+    assert calls == [False, True, False]
+
+
 def test_invalid_database_never_replaces_previous_pointer(tmp_path, writer):
     source = tmp_path.resolve() / 'producer.db'
     with contextlib.closing(sqlite3.connect(source)) as db:
@@ -233,7 +270,7 @@ def test_withholding_updates_other_stores_without_issuing_forecast(tmp_path, wri
     monkeypatch.setattr(writer, 'discover',
                         lambda _: {'id': 'flow', 'state': {'id': 'state'}})
     monkeypatch.setattr(writer, 'stage_data', lambda *args: ('data', {str(writer.PRICE): 'price', str(writer.MANIFEST): 'manifest'}))
-    monkeypatch.setattr(writer.operational_capture, 'capture_terminal', lambda *a, **k: (b'ops', 'hash'))
+    monkeypatch.setattr(writer, 'capture_terminal', lambda *a, **k: (b'ops', 'hash'))
     monkeypatch.setattr(writer.operational_evidence, 'validate',
                         lambda *a: {'inference': {'outcome': 'WITHHELD', 'receipt_id': None}})
     monkeypatch.setattr(writer, 'build_realized', lambda *a: {'state': 'READY',

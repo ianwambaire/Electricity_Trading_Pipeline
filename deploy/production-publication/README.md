@@ -20,26 +20,29 @@ The 17 November EC2 inventory measured approximately 48 MiB of source inputs per
 ## Build the writer package after the manual Git checkpoint
 
 Use the reviewed writer commit and keep the archive checksum separately. These commands select only tracked files and do not include a checkout, credentials or model data.
+Include the reviewed operational evidence producer as a companion file. The writer verifies its pinned hash before use. Its adaptation is limited to the existing UTC issue-time spelling in the receipt and pipeline summary.
 
 ```bash
 set -euo pipefail
 writer_sha=$(git rev-parse HEAD)
-git diff --exit-code HEAD -- deploy/production-publication src requirements deploy/staging/forecast-publication
+git diff --exit-code HEAD -- deploy/production-publication src requirements deploy/staging/forecast-publication deploy/staging/operational-capture-correction-v1/operational_evidence_producer.py
 work=$(mktemp -d)
 mkdir "$work/bundle"
 git archive "$writer_sha" src requirements/api.lock requirements/shared.txt \
-  deploy/production-publication deploy/staging/forecast-publication/{automatic,prepare,publish}.py |
+  deploy/production-publication deploy/staging/forecast-publication/{automatic,prepare,publish}.py \
+  deploy/staging/operational-capture-correction-v1/operational_evidence_producer.py |
   tar -xf - -C "$work/bundle"
 (
   cd "$work/bundle"
   mv deploy/staging/forecast-publication/{automatic,prepare,publish}.py .
+  mv deploy/staging/operational-capture-correction-v1/operational_evidence_producer.py .
   mv deploy/production-publication/{writer.py,*.service,*.timer,README.md} .
   printf '%s\n' "$writer_sha" > SOURCE-SHA
   find . -type f ! -name SHA256SUMS -print | LC_ALL=C sort | while IFS= read -r name; do
     shasum -a 256 "$name"
   done > SHA256SUMS
   COPYFILE_DISABLE=1 tar -czf "$work/$writer_sha.tar.gz" SOURCE-SHA SHA256SUMS \
-    src requirements writer.py automatic.py prepare.py publish.py README.md \
+    src requirements writer.py automatic.py prepare.py publish.py operational_evidence_producer.py README.md \
     powerflow-production-publication.{service,timer}
 )
 (cd "$work" && shasum -a 256 "$writer_sha.tar.gz" > RECEIPT.sha256)
@@ -88,7 +91,7 @@ for path in "$root" "$base" /etc/systemd/system/"$unit".{service,timer}; do
   sudo -n test ! -L "$path"
 done
 sudo -n install -d -o root -g root -m 0755 "$base" "$release"
-sudo -n cp -R SOURCE-SHA SHA256SUMS src requirements writer.py automatic.py prepare.py publish.py \
+sudo -n cp -R SOURCE-SHA SHA256SUMS src requirements writer.py automatic.py prepare.py publish.py operational_evidence_producer.py \
   README.md "$unit".{service,timer} "$release/"
 sudo -n chown -R root:root "$release"
 sudo -n chmod -R go-w,a+rX "$release"

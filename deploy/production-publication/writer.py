@@ -242,6 +242,7 @@ class SnapshotSource(operational_capture.Source):
         with contextlib.closing(sqlite3.connect(
             self.snapshot_path.as_uri() + '?mode=ro&immutable=1', uri=True)) as db:
             db.execute('PRAGMA query_only=ON')
+            db.execute('BEGIN')
             yield db
 
 

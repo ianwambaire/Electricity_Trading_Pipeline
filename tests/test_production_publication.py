@@ -12,8 +12,10 @@ from types import SimpleNamespace
 import pytest
 
 from test_automatic_publication import FLOW, fake_api
+from test_current_operations import association, make_withheld  # pytest fixture and helper
 from test_inference_evidence import captured  # pytest fixture
 from test_forecast_publication import storage
+from shared.operational_evidence_producer import from_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / 'deploy/staging/forecast-publication'
@@ -48,6 +50,55 @@ def test_online_wal_backup_only_copies_committed_rows(tmp_path, writer):
         assert hashlib.sha256(wal.read_bytes()).hexdigest() == before
         assert producer.execute('SELECT count(*) FROM pipeline_runs').fetchone()[0] == 2
     assert not (tmp_path / 'snapshot.db-wal').exists()
+
+
+def test_snapshot_adapter_reads_operational_evidence_in_read_only_transaction(
+        tmp_path, writer, association):
+    make_withheld(association, with_incident=False)
+    source = tmp_path.resolve() / 'producer.db'
+    target = source.with_name('snapshot.db')
+    with contextlib.closing(sqlite3.connect(source)) as db:
+        db.executescript("""
+            CREATE TABLE pipeline_runs(id INTEGER PRIMARY KEY, run_time, status, message);
+            CREATE TABLE pipeline_stage_timings(run_id, stage_name, start_timestamp_utc,
+                                                end_timestamp_utc, status);
+            CREATE TABLE operational_incidents(timestamp_utc, component, event_type, details_json);
+            CREATE TABLE data_quality_results(id, check_time, check_name, status);
+        """)
+        db.execute('INSERT INTO pipeline_runs VALUES (1, :run_time, :status, :message)',
+                   association['records'][0])
+        db.execute('INSERT INTO pipeline_stage_timings VALUES '
+                   '(:run_id, :stage_name, :start_timestamp_utc, :end_timestamp_utc, :status)',
+                   association['stages'][0])
+        db.commit()
+    original = source.read_bytes()
+    writer.backup(source, target, os.getuid())
+    snapshot = target.read_bytes()
+    adapter = writer.SnapshotSource(source.parent, os.getuid(), target)
+    args = {key: association[key] for key in
+            ('flow', 'tasks', 'receipts', 'expected_deployment', 'observed_at')}
+
+    with adapter.snapshot() as reader:
+        raw, digest = from_snapshot(reader, **args)
+        evidence = writer.operational_evidence.validate(raw, digest, args['observed_at'])
+        assert evidence['inference']['outcome'] == 'WITHHELD'
+        assert evidence['delivery']['outcome'] == 'SKIPPED_WITHHELD'
+        assert reader.in_transaction
+        assert reader.execute('PRAGMA query_only').fetchone() == (1,)
+        with pytest.raises(sqlite3.OperationalError, match='readonly'):
+            reader.execute('DELETE FROM pipeline_runs')
+    with pytest.raises(sqlite3.ProgrammingError, match='closed'):
+        reader.execute('SELECT 1')
+
+    # The read-only URI still prevents a write if query_only is disabled.
+    with pytest.raises(sqlite3.OperationalError, match='readonly'):
+        with adapter.snapshot() as failed_reader:
+            failed_reader.execute('PRAGMA query_only=OFF')
+            failed_reader.execute('DELETE FROM pipeline_runs')
+    with pytest.raises(sqlite3.ProgrammingError, match='closed'):
+        failed_reader.execute('SELECT 1')
+    assert source.read_bytes() == original
+    assert target.read_bytes() == snapshot
 
 
 def test_invalid_database_never_replaces_previous_pointer(tmp_path, writer):

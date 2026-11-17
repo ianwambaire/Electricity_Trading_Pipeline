@@ -249,11 +249,14 @@ def test_asgi_response_through_http_client_preserves_fail_closed_contract(tmp_pa
     from datetime import timedelta
     from joserfc import jwk
     from test_forecast_source_consistency import make_client,write_bundle
-    from test_forecast_publication import fixture,NOW
+    from test_forecast_publication import fixture,ISSUE
     client,settings,root,clock,reads=make_client(tmp_path,monkeypatch,jwk.RSAKey.generate_key(2048,parameters={'kid':'key-one','alg':'RS256','use':'sig'}))
     if mode=='missing_pointer':root.mkdir();(root/'releases').mkdir()
     if mode=='invalid':write_bundle(root,{'version':1})
-    if mode=='expired':write_bundle(root,fixture());clock[0]=NOW+timedelta(hours=4)
+    if mode=='expired':
+        write_bundle(root,fixture())
+        # The refresh deadline is earlier than the issued horizon expiry.
+        clock[0]=ISSUE+timedelta(hours=24)
     with client:
         response=client.get('/forecast/next24')
         wire=b'HTTP/1.1 '+str(response.status_code).encode()+b' Response\r\n'+b''.join(k+b': '+v+b'\r\n' for k,v in response.headers.raw)+b'\r\n'+response.content

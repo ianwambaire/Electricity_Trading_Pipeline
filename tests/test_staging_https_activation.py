@@ -208,8 +208,7 @@ def test_options_descriptor_security(tmp_path, monkeypatch, mode, uid):
             st_uid=uid if fd in descriptors else 0, st_size=info.st_size,
             st_dev=info.st_dev, st_ino=info.st_ino,
             st_mtime_ns=info.st_mtime_ns, st_ctime_ns=info.st_ctime_ns)
-    monkeypatch.setattr(m.os, 'open', fake_open)
-    monkeypatch.setattr(m.os, 'fstat', fake_stat)
+    monkeypatch.setattr(m, 'os', SimpleNamespace(**(vars(os) | {'open': fake_open, 'fstat': fake_stat})))
     if mode == 0o100644 and uid == 0:
         assert m.read_certbot_options() == real.read_bytes()
     else:
@@ -231,8 +230,7 @@ def test_options_symlink_rejected_locally(tmp_path, monkeypatch):
     def fake_stat(fd):
         info = actual_fstat(fd)
         return SimpleNamespace(st_mode=0o040755, st_uid=0)
-    monkeypatch.setattr(m.os, 'open', fake_open)
-    monkeypatch.setattr(m.os, 'fstat', fake_stat)
+    monkeypatch.setattr(m, 'os', SimpleNamespace(**(vars(os) | {'open': fake_open, 'fstat': fake_stat})))
     with pytest.raises(OSError): m.read_certbot_options()
 
 
@@ -246,9 +244,9 @@ def test_symlink_from_allowed_root_cannot_reach_exception(config):
 @pytest.mark.parametrize('parent_mode,parent_uid', [(0o040777, 0), (0o040775, 0), (0o040755, 1000)])
 def test_unsafe_options_parent_rejected(monkeypatch, parent_mode, parent_uid):
     from types import SimpleNamespace
-    original_fstat = m.os.fstat
-    monkeypatch.setattr(m.os, 'fstat', lambda fd:
-                        SimpleNamespace(st_mode=parent_mode, st_uid=parent_uid))
+    def unsafe_parent(fd):
+        return SimpleNamespace(st_mode=parent_mode, st_uid=parent_uid)
+    monkeypatch.setattr(m, 'os', SimpleNamespace(**(vars(m.os) | {'fstat': unsafe_parent})))
     with pytest.raises(RuntimeError, match='unsafe_certbot_options_parent'):
         m.read_certbot_options()
 

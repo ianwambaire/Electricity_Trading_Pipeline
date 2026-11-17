@@ -17,7 +17,15 @@ concurrency:
 
 jobs:
   test:
-    name: Python 3.14 checks
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Python 3.14 release gate
+            suite: release
+          - name: Python 3.14 full suite (including historical verification)
+            suite: full
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -57,7 +65,12 @@ jobs:
           1b2d4ce56f178bc236de1bb93d4ce30a09f990d9116dadaa609f86c708131650  artifacts/models/releases/next24h/next24h_release_manifest.json
           EOF
 
-      - name: Run test suite
+      - name: Run release-gating tests
+        if: matrix.suite == 'release'
+        run: python -m pytest -q --release-gating --basetemp "$RUNNER_TEMP/powerflow-pytest"
+
+      - name: Run full suite and report actual result
+        if: matrix.suite == 'full'
         # Publication stores reject world-writable ancestors such as Linux /tmp.
         run: python -m pytest -q --basetemp "$RUNNER_TEMP/powerflow-pytest"
 

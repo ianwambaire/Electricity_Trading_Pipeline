@@ -277,7 +277,7 @@ def test_permissions_and_ownership_fail_closed(tmp_path, monkeypatch):
     def unexpected_owner(fd):
         original = real(fd)
         return SimpleNamespace(st_mode=original.st_mode, st_uid=os.geteuid()+10001)
-    monkeypatch.setattr(store.os, 'fstat', unexpected_owner)
+    monkeypatch.setattr(store, 'os', SimpleNamespace(**(vars(os) | {'fstat': unexpected_owner})))
     assert store.read_current(root, now=NOW)['status'] == 'INVALID'
 
 

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 import pytest
 ROOT=Path(__file__).parents[1]
 FOLDER=ROOT/'deploy/staging/forecast-publication/automation-install-diagnostic'
@@ -22,6 +23,10 @@ def restore_process_umask():
 @pytest.fixture
 def fixture(tmp_path,monkeypatch):
     payload=load('inspect');runner=load('run');monkeypatch.setattr(payload,'OWNER',os.getuid());monkeypatch.setattr(payload,'GROUP',os.getgid())
+    # The fixture cannot request O_NOATIME on ancestors owned by the host.
+    monkeypatch.setattr(payload, 'os', SimpleNamespace(**{
+        name: value for name, value in vars(os).items() if name != 'O_NOATIME'
+    }))
     prod=tmp_path/'production';(prod/'src/shared').mkdir(parents=True)
     tools=tmp_path/'tools';(tools/'shared').mkdir(parents=True)
     tools.chmod(0o700);(tools/'shared').chmod(0o700)

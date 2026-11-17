@@ -31,7 +31,11 @@ class LinuxView:
     def __init__(self):
         self.owners = {}
         self.before_open = None
-    def __getattr__(self, name): return getattr(os, name)
+    def __getattr__(self, name):
+        # Exercise the supported optional-flag path on host-owned ancestors.
+        if name == 'O_NOATIME':
+            raise AttributeError(name)
+        return getattr(os, name)
     def view(self, info):
         values = {name: getattr(info, name) for name in ['st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns', 'st_mode']}
         values.update(st_uid=self.owners.get(info.st_ino, 1000), st_gid=1000)

@@ -3,7 +3,6 @@ import contextlib
 import datetime as dt
 import errno
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -21,17 +20,6 @@ from test_operational_terminal import STATE, fixture_source, source_api, stable 
 from shared.operational_evidence_producer import associate, from_snapshot, receipt_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
-TOOLS = ROOT / 'deploy/staging/forecast-publication'
-
-
-@pytest.fixture
-def writer(monkeypatch):
-    monkeypatch.syspath_prepend(str(TOOLS))
-    spec = importlib.util.spec_from_file_location(
-        'production_writer', ROOT / 'deploy/production-publication/writer.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_online_wal_backup_only_copies_committed_rows(tmp_path, writer):

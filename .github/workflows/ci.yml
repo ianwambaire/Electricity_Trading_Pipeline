@@ -88,7 +88,7 @@ jobs:
       - run: python -m pip check
       - run: python scripts/check_api_runtime.py
       - name: Run API authorization and runtime regressions without research packages
-        run: python -m pytest -q --basetemp "$RUNNER_TEMP/powerflow-api-pytest" -m "not model_runtime" tests/test_api.py tests/test_api_security.py tests/test_account_management.py tests/test_mfa.py tests/test_backend_hardening.py tests/test_public_market_api.py tests/test_api_deployment.py tests/test_phase5_restoration.py tests/test_streamlit_decoupling.py
+        run: python -m pytest -q --basetemp "$RUNNER_TEMP/powerflow-api-pytest" -m "not model_runtime" tests/test_api.py tests/test_api_security.py tests/test_account_management.py tests/test_mfa.py tests/test_backend_hardening.py tests/test_public_market_api.py tests/test_api_deployment.py tests/test_phase5_restoration.py tests/test_streamlit_decoupling.py tests/test_production_publication_rehearsal.py
 
   orchestration-runtime:
     name: Separate production orchestration imports

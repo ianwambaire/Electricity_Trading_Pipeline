@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -32,3 +33,14 @@ def temporary_database(tmp_path, monkeypatch):
     store_data.initialize_database()
 
     return database_path
+
+
+@pytest.fixture
+def writer(monkeypatch):
+    tooling = PROJECT_ROOT / 'deploy/staging/forecast-publication'
+    monkeypatch.syspath_prepend(str(tooling))
+    spec = importlib.util.spec_from_file_location(
+        'production_writer', PROJECT_ROOT / 'deploy/production-publication/writer.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

@@ -10,7 +10,8 @@ import uuid
 import pandas as pd
 from shared import realized_report as contract
 from shared.operational_evidence_producer import receipt_bundle
-from shared.forecast_evaluation import REALIZED_COLUMNS
+from shared.forecast_evaluation import REALIZED_COLUMNS, match_realized_forecasts
+from processing.build_silver_dataset import aggregate_hourly_prices
 
 MAX_SOURCE=64*1024*1024
 
@@ -33,8 +34,6 @@ def read(path,limit):
         return raw
 
 def build(history_path,prices_path,receipt_root,*,now=None):
-    from models.next24h_monitoring import match_realized_forecasts
-    from processing.build_silver_dataset import aggregate_hourly_prices
     now=now or dt.datetime.now(dt.timezone.utc)
     if not Path(history_path).exists():return contract.failure('MISSING_HISTORY',now)
     if not Path(prices_path).exists():return contract.failure('MISSING_OBSERVATIONS',now)

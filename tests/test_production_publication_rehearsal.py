@@ -5,9 +5,12 @@ import datetime as dt
 import io
 import json
 import os
+from pathlib import Path
 import shutil
 import sqlite3
 import stat
+import subprocess
+import sys
 
 from fastapi.testclient import TestClient
 import pandas as pd
@@ -20,7 +23,72 @@ from models.inference_evidence import receipt
 from test_current_operations import association, summary  # pytest fixture and helper
 from test_forecast_publication import ISSUE
 from test_operational_terminal import fixture_source, source_api, stable  # pytest fixture and helpers
-from test_production_publication import ROOT, writer  # pytest fixture
+
+
+ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ROOT / "deploy/staging/forecast-publication"
+
+
+def test_publication_runtime_does_not_import_inference(tmp_path):
+    environment = dict(os.environ, PYTHONPATH=os.pathsep.join((str(ROOT / 'src'), str(TOOLS))),
+                       PYTHONDONTWRITEBYTECODE='1')
+    subprocess.run(
+        [sys.executable, '-s', '-c', """
+import sys
+from importlib.abc import MetaPathFinder
+from pathlib import Path
+import runpy
+
+class RejectInference(MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'joblib', 'sklearn', 'prefect', 'lightgbm', 'xgboost'}:
+            raise AssertionError(f'Unexpected publisher dependency: {fullname}')
+
+sys.meta_path.insert(0, RejectInference())
+location, scratch = sys.argv[1:]
+sys.argv[:] = [location, '--check-imports']
+writer = runpy.run_path(location, run_name='__main__')
+missing = Path(scratch) / 'missing'
+assert writer['build_realized'](missing, missing, missing)['reason'] == 'MISSING_HISTORY'
+""", str(ROOT / 'deploy/production-publication/writer.py'), str(tmp_path)],
+        env=environment, check=True,
+    )
+
+
+@pytest.mark.skipif(sys.platform != 'linux' or os.geteuid() != 0,
+                    reason='Permission regression requires disposable Linux with root')
+def test_sealed_publisher_venv_is_executable_and_read_only_for_api():
+    import grp
+    import pwd
+    import tempfile
+
+    reader = pwd.getpwnam('powerflow-api')
+    group = grp.getgrnam('powerflow-api')
+    assert group.gr_gid == 992 and reader.pw_gid == group.gr_gid and reader.pw_uid != 0
+    # Use a traversable parent even when pytest's root scratch directory is 0700.
+    with tempfile.TemporaryDirectory(prefix='powerflow-reader-', dir='/tmp') as scratch:
+        release = Path(scratch)
+        release.chmod(0o755)
+        environment = release / 'venv'
+        subprocess.run([sys.executable, '-m', 'venv', '--without-pip', environment], check=True)
+        os.chown(environment, 0, 0)
+        environment.chmod(0o750)
+        python = environment / 'bin/python'
+        reader_options = dict(user=reader.pw_uid, group=group.gr_gid, extra_groups=[])
+        with pytest.raises(PermissionError):
+            subprocess.run([python, '-V'], **reader_options, check=True)
+        subprocess.run(['/bin/bash', ROOT / 'deploy/production-publication/seal-venv.sh',
+                        environment], check=True)
+        subprocess.run([python, '-I', '-c', """
+import os
+import sys
+from pathlib import Path
+
+root = Path(sys.prefix)
+for path in (root, root / 'bin', root / 'lib', root / 'pyvenv.cfg'):
+    assert os.access(path, os.R_OK)
+    assert not os.access(path, os.W_OK)
+"""], **reader_options, check=True)
 
 
 def stage_fixture(writer, facts, tmp_path, monkeypatch, expired):
@@ -136,6 +204,28 @@ def check_api_reads(namespace, now, published, monkeypatch):
             assert forecast.json()['detail']['code'] == 'FORECAST_WITHHELD'
 
 
+@contextlib.contextmanager
+def as_publication_reader(tmp_path):
+    # The disposable Linux runner uses root:powerflow-api for the writer and
+    # a dedicated pytest base directory. Ordinary tests retain their own uid.
+    if sys.platform != 'linux' or os.geteuid() != 0 or os.getegid() != 992:
+        yield
+        return
+
+    import pwd
+
+    reader = pwd.getpwnam('powerflow-api')
+    assert (reader.pw_uid, reader.pw_gid) == (992, 992)
+    for directory in (tmp_path.parent, tmp_path):
+        os.chown(directory, 0, reader.pw_gid)
+        directory.chmod(0o750)
+    os.seteuid(reader.pw_uid)
+    try:
+        yield
+    finally:
+        os.seteuid(0)
+
+
 @pytest.mark.parametrize('case', ['fresh', 'expired', 'tampered', 'invalid'])
 def test_production_writer_to_reader_rehearsal(tmp_path, writer, stable, monkeypatch, capsys, case):
     source, db, now = stage_fixture(writer, stable, tmp_path, monkeypatch, case == 'expired')
@@ -143,6 +233,9 @@ def test_production_writer_to_reader_rehearsal(tmp_path, writer, stable, monkeyp
     namespace = tmp_path.resolve() / 'publication'
     for store in ('data', 'forecast', 'operations', 'realized'):
         (namespace / store / 'releases').mkdir(parents=True)
+        for directory in (namespace / store, namespace / store / 'releases'):
+            directory.chmod(0o2750)
+    namespace.chmod(0o2750)
     for store, module in [('operations', writer.operational_evidence_store),
                           ('realized', writer.realized_report_store)]:
         marker = namespace / store / 'contract'
@@ -166,7 +259,12 @@ def test_production_writer_to_reader_rehearsal(tmp_path, writer, stable, monkeyp
 
     writer.run(source, namespace, os.getuid())
     outcome = json.loads(capsys.readouterr().out)
-    writer.check(namespace)
+    with as_publication_reader(tmp_path):
+        if os.geteuid() != os.getuid():
+            with pytest.raises(PermissionError):
+                (namespace / '.reader-write-probe').touch(exist_ok=False)
+        writer.check(namespace)
+        check_api_reads(namespace, now, case == 'fresh', monkeypatch)
     check = json.loads(capsys.readouterr().out)
     assert db.read_bytes() == original
     assert check['data'] == outcome['data']
@@ -174,9 +272,11 @@ def test_production_writer_to_reader_rehearsal(tmp_path, writer, stable, monkeyp
     assert check['operations']
     assert check['forecast_rows'] == (0 if case == 'expired' else 24)
     assert outcome['forecast'] == ('SKIPPED_EXPIRED' if case == 'expired' else 'PUBLISHED')
-    check_api_reads(namespace, now, case == 'fresh', monkeypatch)
-    for current in (namespace / 'data/current', namespace / 'operations/current',
-                    namespace / 'realized/current'):
+    assert check['forecast_delivery'] == outcome['forecast']
+    pointers = {p.parent.name for p in namespace.glob('*/current')}
+    assert pointers == ({'data', 'operations', 'realized', 'forecast'} if case == 'fresh' else
+                        {'data', 'operations', 'realized'})
+    for current in namespace.glob('*/current'):
         assert current.exists()
         assert not stat.S_IMODE(current.stat().st_mode) & 0o022
     # Simulate the approved rollback in the disposable namespace.

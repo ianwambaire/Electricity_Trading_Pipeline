@@ -36,13 +36,13 @@ git archive "$writer_sha" src requirements/api.lock requirements/shared.txt \
   cd "$work/bundle"
   mv deploy/staging/forecast-publication/{automatic,prepare,publish}.py .
   mv deploy/staging/operational-capture-correction-v1/operational_evidence_producer.py .
-  mv deploy/production-publication/{writer.py,*.service,*.timer,README.md} .
+  mv deploy/production-publication/{writer.py,seal-venv.sh,*.service,*.timer,README.md} .
   printf '%s\n' "$writer_sha" > SOURCE-SHA
   find . -type f ! -name SHA256SUMS -print | LC_ALL=C sort | while IFS= read -r name; do
     shasum -a 256 "$name"
   done > SHA256SUMS
   COPYFILE_DISABLE=1 tar -czf "$work/$writer_sha.tar.gz" SOURCE-SHA SHA256SUMS \
-    src requirements writer.py automatic.py prepare.py publish.py operational_evidence_producer.py README.md \
+    src requirements writer.py automatic.py prepare.py publish.py operational_evidence_producer.py seal-venv.sh README.md \
     powerflow-production-publication.{service,timer}
 )
 (cd "$work" && shasum -a 256 "$writer_sha.tar.gz" > RECEIPT.sha256)
@@ -92,13 +92,16 @@ for path in "$root" "$base" /etc/systemd/system/"$unit".{service,timer}; do
 done
 sudo -n install -d -o root -g root -m 0755 "$base" "$release"
 sudo -n cp -R SOURCE-SHA SHA256SUMS src requirements writer.py automatic.py prepare.py publish.py operational_evidence_producer.py \
-  README.md "$unit".{service,timer} "$release/"
+  README.md seal-venv.sh "$unit".{service,timer} "$release/"
 sudo -n chown -R root:root "$release"
 sudo -n chmod -R go-w,a+rX "$release"
 sudo -n bash -c 'cd "$1" && sha256sum --strict -c SHA256SUMS' _ "$release"
 sudo -n /usr/bin/python3.14 -m venv "$release/venv"
 sudo -n "$release/venv/bin/python" -m pip install -r "$release/requirements/api.lock"
 sudo -n "$release/venv/bin/python" -m pip check
+sudo -n /bin/bash "$release/seal-venv.sh" "$release/venv"
+sudo -n -u powerflow-api env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$release/src" \
+  "$release/venv/bin/python" -s "$release/writer.py" --check-imports
 sudo -n ln -s "$release" "$base/current"
 sudo -n install -d -o root -g powerflow-api -m 2750 "$root" \
   "$root"/{data,forecast,operations,realized}{,/releases}
@@ -106,8 +109,8 @@ printf 'powerflow-operational-evidence-v1\n' | sudo -n tee "$root/operations/con
 printf 'powerflow-realized-performance-v1\n' | sudo -n tee "$root/realized/contract" >/dev/null
 sudo -n chown root:powerflow-api "$root"/{operations,realized}/contract
 sudo -n chmod 0640 "$root"/{operations,realized}/contract
-sudo -n install -m 0644 "$release/$unit.service" "$release/$unit.timer" /etc/systemd/system/
-sudo -n systemd-analyze verify /etc/systemd/system/"$unit".{service,timer}
+sudo -n install -m 0644 "$release/$unit.service" /etc/systemd/system/
+sudo -n systemd-analyze verify /etc/systemd/system/"$unit".service
 sudo -n systemctl daemon-reload
 sudo -n systemctl start "$unit.service"
 sudo -n journalctl -u "$unit.service" -n 20 --no-pager
@@ -121,14 +124,9 @@ sudo -n -u powerflow-api env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$release/src"
   "$release/venv/bin/python" -s "$release/writer.py" --check
 ```
 
-The check must succeed from the API reader account. Record the four pointers, the time, and the forecast issue. If there are zero forecast rows, confirm the matching operational withholding/expiry evidence. This is evidence for a correct withheld state and is insufficient for live-primary cutover acceptance. Repeat after a new natural run produces a primary publication, check the same reader command, then start the timer and observe a scheduled tick:
+The check must succeed from the API reader account. Record the four pointers, the time, and the forecast issue. If there are zero forecast rows, confirm the matching operational withholding/expiry evidence. This is evidence for a correct withheld state and is insufficient for live-primary cutover acceptance. The one-shot activation leaves the timer uninstalled. Timer installation and observation of its recovery behavior require separate approval.
 
-```bash
-sudo -n systemctl enable --now powerflow-production-publication.timer
-systemctl list-timers powerflow-production-publication.timer --all
-```
-
-Configure the existing candidate proposal with the following values only during its separately authorized deployment. Keep its read-only mount and staging namespace masks.
+Use the isolated unit and environment template in `deploy/production-api` during the separately authorized API deployment. The production feed configuration uses these values.
 
 ```dotenv
 POWERFLOW_API_DATA_ROOT=/srv/powerflow/production-published/data/current
@@ -143,7 +141,9 @@ POWERFLOW_PRICE_ONLY_FALLBACK=false
 For the initial bootstrap the recorded previous state is no active pointers. Disable and stop only this timer and writer, then withdraw their pointers by renaming within each store. Keep the release directories and journal for diagnosis. Verify public routing still points to the legacy application if this is before cutover.
 
 ```bash
-sudo -n systemctl disable --now powerflow-production-publication.timer
+if systemctl cat powerflow-production-publication.timer >/dev/null 2>&1; then
+  sudo -n systemctl disable --now powerflow-production-publication.timer
+fi
 sudo -n systemctl stop powerflow-production-publication.service
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 for store in data forecast operations realized; do

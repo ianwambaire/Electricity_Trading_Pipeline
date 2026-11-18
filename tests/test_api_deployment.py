@@ -5,6 +5,11 @@ from __future__ import annotations
 import configparser
 from pathlib import Path
 
+import pytest
+from fastapi.testclient import TestClient
+
+from api.app import create_app
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SERVICE_PATH = PROJECT_ROOT / "deploy" / "powerflow-api.service"
@@ -50,6 +55,46 @@ def test_api_systemd_unit_sets_required_pythonpath() -> None:
     assert "EnvironmentFile=" not in unit
     assert "NoNewPrivileges=true" in unit
     assert "ProtectHome=read-only" in unit
+
+
+@pytest.mark.parametrize('override', [
+    {},
+    {'POWERFLOW_API_ENV': 'staging'},
+    {'POWERFLOW_API_DATA_ROOT': '/srv/powerflow/published'},
+    {'POWERFLOW_API_DATA_ROOT': '/srv/powerflow/published/../production-published/data/current'},
+    {'POWERFLOW_API_ENV': 'staging',
+     'POWERFLOW_API_DATA_ROOT': '/srv/powerflow/published',
+     'POWERFLOW_FORECAST_PUBLICATION_ROOT': '/srv/powerflow/forecast-publications',
+     'POWERFLOW_OPERATIONAL_PUBLICATION_ROOT': '/srv/powerflow/operational-publications',
+     'POWERFLOW_REALIZED_REPORT_ROOT': '/srv/powerflow/realized-performance',
+     'POWERFLOW_PRICE_ONLY_FALLBACK': 'true',
+     'POWERFLOW_PRICE_ONLY_FALLBACK_PATH': '/srv/powerflow/production-published/data/current/forecast.json'},
+    {'POWERFLOW_OPERATIONAL_PUBLICATION_ROOT': '/srv/powerflow/operational-publications'},
+    {'POWERFLOW_REALIZED_REPORT_ROOT': '/srv/powerflow/realized-performance'},
+    {'POWERFLOW_PRICE_ONLY_FALLBACK': 'true',
+     'POWERFLOW_PRICE_ONLY_FALLBACK_PATH': '/srv/powerflow/price-only-forecast/current'},
+])
+def test_isolated_production_api_configuration(monkeypatch, override):
+    directory = PROJECT_ROOT / 'deploy/production-api'
+    for line in (directory / 'api.env.example').read_text().splitlines():
+        if line and not line.startswith('#'):
+            name, value = line.split('=', 1)
+            monkeypatch.setenv(name, override.get(name, value))
+    for name, value in override.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv('POWERFLOW_API_COGNITO_AUDIENCE', raising=False)
+    if override:
+        with pytest.raises(ValueError, match='Production publication'):
+            create_app()
+        return
+    with TestClient(create_app(), base_url='http://127.0.0.1:8011') as client:
+        assert client.get('/health').status_code == 200
+        assert client.get('/auth/me').status_code == 401
+    service = (directory / 'powerflow-production-react-api.service').read_text()
+    assert '--host 127.0.0.1 --port 8011' in service
+    assert 'User=powerflow-api' in service
+    assert 'ReadOnlyPaths=/srv/powerflow/production-published' in service
+    assert 'InaccessiblePaths=-/srv/powerflow/published ' in service
 
 
 def test_nginx_api_fragment_preserves_prefix_and_forwarding_headers() -> None:

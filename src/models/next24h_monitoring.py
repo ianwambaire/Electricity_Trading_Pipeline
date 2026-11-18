@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 
 from shared.forecast_evaluation import (
-    summarize_realized_performance, MONITORING_MIN_PAIRS, HORIZON_MIN_PAIRS, REALIZED_COLUMNS,
+    match_realized_forecasts, summarize_realized_performance, MONITORING_MIN_PAIRS,
+    HORIZON_MIN_PAIRS, REALIZED_COLUMNS,
 )
 
 from models.next24h_production import HISTORY_PATH, _atomic_csv
@@ -31,63 +32,6 @@ def load_observed_prices(path: Path = RAW_PRICE_PATH) -> pd.DataFrame:
         raise ValueError("Observed ENTSO-E prices contain duplicate timestamps.")
     hourly = aggregate_hourly_prices(prices.set_index("timestamp"))
     return hourly.reset_index().rename(columns={"timestamp": "target_timestamp"})
-
-
-def match_realized_forecasts(
-    history: pd.DataFrame,
-    observed: pd.DataFrame,
-    *, now: pd.Timestamp | None = None,
-) -> pd.DataFrame:
-    if history.empty or observed.empty:
-        return pd.DataFrame(columns=REALIZED_COLUMNS)
-    current=pd.Timestamp.now(tz='UTC') if now is None else pd.Timestamp(now)
-    if current.tzinfo is None:raise ValueError('UTC scoring time required.')
-    current=current.tz_convert('UTC')
-    issued = history.copy()
-    actual = observed.copy()
-    issued["forecast_issue_time"] = pd.to_datetime(
-        issued["forecast_issue_time"], errors="raise", utc=True
-    )
-    issued["target_timestamp"] = pd.to_datetime(
-        issued["target_timestamp"], errors="raise", utc=True
-    )
-    if "issued_at_utc" not in issued.columns:
-        # Legacy rows have no auditable issuance time, so cannot be scored safely.
-        return pd.DataFrame(columns=REALIZED_COLUMNS)
-    issued["issued_at_utc"] = pd.to_datetime(
-        issued["issued_at_utc"], errors="raise", utc=True
-    )
-    actual["target_timestamp"] = pd.to_datetime(
-        actual["target_timestamp"], errors="raise", utc=True
-    )
-    if actual["target_timestamp"].duplicated().any():
-        raise ValueError("Actual hourly price timestamps must be unique.")
-    for key in ('horizon_hours','predicted_price_eur_mwh'):issued[key]=pd.to_numeric(issued[key],errors='raise')
-    actual['price_eur_mwh']=pd.to_numeric(actual['price_eur_mwh'],errors='raise')
-    if issued.duplicated(['model_release','forecast_issue_time','horizon_hours']).any():raise ValueError('Duplicate forecast identity.')
-    if not np.isfinite(issued[['horizon_hours','predicted_price_eur_mwh']].to_numpy(dtype=float)).all() or not np.isfinite(actual['price_eur_mwh'].to_numpy(dtype=float)).all():raise ValueError('Invalid forecast or observed value.')
-    if not (issued['horizon_hours'].between(1,24)&(issued['horizon_hours']%1==0)&((issued['target_timestamp']-issued['forecast_issue_time'])==pd.to_timedelta(issued['horizon_hours'],unit='h'))).all():raise ValueError('Invalid forecast target alignment.')
-    actual=actual.loc[actual.target_timestamp+pd.Timedelta(hours=1)<=current]
-    issued = issued.loc[
-        (issued["forecast_issue_time"] < issued["target_timestamp"])
-        & (issued["issued_at_utc"] < issued["target_timestamp"])
-    ]
-    matched = issued.merge(
-        actual[["target_timestamp", "price_eur_mwh"]],
-        on="target_timestamp", how="inner", validate="many_to_one",
-    ).rename(columns={"price_eur_mwh": "actual_price_eur_mwh"})
-    matched = matched.loc[
-        matched["predicted_price_eur_mwh"].notna()
-        & matched["actual_price_eur_mwh"].notna()
-    ].copy()
-    matched["signed_error"] = (
-        matched["predicted_price_eur_mwh"] - matched["actual_price_eur_mwh"]
-    )
-    matched["absolute_error"] = matched["signed_error"].abs()
-    matched["squared_error"] = matched["signed_error"] ** 2
-    return matched.loc[:, REALIZED_COLUMNS].sort_values(
-        ["target_timestamp", "forecast_issue_time", "horizon_hours"]
-    ).reset_index(drop=True)
 
 
 def performance_metrics(

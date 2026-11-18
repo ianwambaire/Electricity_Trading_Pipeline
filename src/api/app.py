@@ -38,6 +38,8 @@ from .restricted_reports import ForecastProvenance, forecast_provenance, Account
 
 APPLICATION_NAME = "PowerFlow API"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PRODUCTION_PUBLICATIONS = Path("/srv/powerflow/production-published")
+PRODUCTION_DATA_ROOT = PRODUCTION_PUBLICATIONS / "data/current"
 _SENSITIVE_KEY = re.compile(
     r"(?:password|secret|token|api[_-]?key|access[_-]?key|authorization)",
     re.IGNORECASE,
@@ -356,7 +358,27 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     if settings is None and os.environ.get('POWERFLOW_REALIZED_REPORT_ROOT'):
         realized_root=Path(os.environ['POWERFLOW_REALIZED_REPORT_ROOT'])
         if not realized_root.is_absolute() or '..'in realized_root.parts:raise ValueError('Invalid realized publication root')
-        if runtime.deployed and realized_root!=Path('/srv/powerflow/realized-performance'):raise ValueError('Unapproved realized publication root')
+    if settings is None and runtime.deployed:
+        publication_roots = (
+            configured.next24_publication_root,
+            configured.operational_publication_root,
+            realized_root,
+        )
+        production_roots = tuple(PRODUCTION_PUBLICATIONS / store for store in
+                                 ("forecast", "operations", "realized"))
+        deployed_paths = (Path(data_root), *publication_roots, configured.price_only_fallback_path)
+        if any(path is not None and (not path.is_absolute() or '..' in path.parts)
+               for path in deployed_paths):
+            raise ValueError("Production publication paths must be absolute and unambiguous")
+        if deployed_paths[0] == PRODUCTION_DATA_ROOT:
+            if (runtime.environment != "production" or publication_roots != production_roots
+                    or configured.price_only_fallback_path is not None):
+                raise ValueError("Production publication configuration must use the isolated feed")
+        elif any(path is not None and path.is_relative_to(PRODUCTION_PUBLICATIONS)
+                 for path in deployed_paths):
+            raise ValueError("Production publications require the production data root")
+        elif realized_root is not None and realized_root != Path('/srv/powerflow/realized-performance'):
+            raise ValueError('Unapproved realized publication root')
     market_store = MarketStore(configured.market_silver)
 
     @asynccontextmanager

@@ -276,7 +276,7 @@ class SnapshotSource(operational_capture.Source):
             yield db
 
 
-def capture_terminal(flow_id, state_id, *, source, api=operational_capture.query, clock=utcnow):
+def load_evidence_reader():
     # Reuse the reviewed issue-time adapter without changing the archived
     # staging helper or the public evidence timestamp contract.
     module_dir = Path(__file__).resolve().parent
@@ -289,10 +289,13 @@ def capture_terminal(flow_id, state_id, *, source, api=operational_capture.query
     require(hashlib.sha256(raw).hexdigest() == EVIDENCE_READER_SHA256, 'EVIDENCE_READER_HASH')
     namespace = {'__name__': 'shared.production_evidence_reader', '__package__': 'shared'}
     exec(compile(raw, str(path), 'exec'), namespace)
+    return namespace['from_snapshot']
 
+
+def capture_terminal(flow_id, state_id, *, source, api=operational_capture.query, clock=utcnow):
     # Keep the existing flow checks, source capture and final state recheck.
     capture = operational_capture.capture_terminal
-    globals_for_capture = dict(capture.__globals__, from_snapshot=namespace['from_snapshot'])
+    globals_for_capture = dict(capture.__globals__, from_snapshot=load_evidence_reader())
     bound_capture = FunctionType(capture.__code__, globals_for_capture)
     return bound_capture(flow_id, state_id, source=source, api=api, clock=clock)
 
@@ -400,17 +403,26 @@ def check(root):
     with read_snapshot(folder / DB) as db:
         db.execute('SELECT id,run_time,status,message FROM pipeline_runs LIMIT 0')
         db.execute('SELECT id,check_time,check_name,status FROM data_quality_results LIMIT 0')
-    operations = operational_evidence_store.read_current(root / 'operations', now=now)
+    operations = operational_evidence_store.read_current(root / 'operations', now=now, admin=True)
     require(operations['status'] == 'VALID', 'OPERATIONS_NOT_CURRENT')
     realized, realized_digest = realized_report_store.read_active(root / 'realized', now)
     require(realized['state'] == 'READY' and now - forecast_publication.time(realized['generated_at'])
             < dt.timedelta(minutes=90), 'REALIZED_NOT_CURRENT')
+    require(realized['sources']['prices_sha256'] == metadata['files'][str(PRICE)],
+            'REALIZED_SNAPSHOT_MISMATCH')
     try:
         forecast = forecast_availability.read_active(root / 'forecast', now)
     except (forecast_publication.MissingPublication, forecast_publication.ExpiredPublication):
         forecast = None
+    delivery = operations['admin']['delivery']
+    if delivery['outcome'] == 'PUBLISHED':
+        require(forecast is not None
+                and publish.pointer(root / 'forecast') == delivery['bundle_sha256']
+                and forecast['execution']['run_id'] == delivery['receipt_id'],
+                'OPERATIONS_FORECAST_MISMATCH')
     print(json.dumps({'data': digest, 'operations': operations['evidence_id'],
-                      'realized': realized_digest, 'forecast_rows': len(forecast['forecasts']) if forecast else 0,
+                      'realized': realized_digest, 'forecast_delivery': delivery['outcome'],
+                      'forecast_rows': len(forecast['forecasts']) if forecast else 0,
                       'future_targets': sum(forecast_publication.time(row['target_time']) > now
                                             for row in forecast['forecasts']) if forecast else 0,
                       'issue': forecast['provenance']['issue_time'] if forecast else None}))
@@ -442,6 +454,12 @@ if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['--check']:
             check(ROOT)
+        elif sys.argv[1:] == ['--check-imports']:
+            from api.app import create_app
+            from api.database import read_snapshot
+
+            load_evidence_reader()
+            print('Publication writer and reader imports passed.')
         else:
             require(not sys.argv[1:], 'ARGUMENTS')
             main()

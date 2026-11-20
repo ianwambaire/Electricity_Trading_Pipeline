@@ -376,7 +376,8 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
             raise ValueError("Production publication paths must be absolute and unambiguous")
         if deployed_paths[0] == PRODUCTION_DATA_ROOT:
             if (runtime.environment != "production" or publication_roots != production_roots
-                    or configured.price_only_fallback_path is not None):
+                    or configured.price_only_fallback_path not in
+                    (None, PRODUCTION_PUBLICATIONS / 'fallback/current.json')):
                 raise ValueError("Production publication configuration must use the isolated feed")
         elif any(path is not None and path.is_relative_to(PRODUCTION_PUBLICATIONS)
                  for path in deployed_paths):

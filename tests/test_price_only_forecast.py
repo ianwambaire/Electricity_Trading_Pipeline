@@ -219,3 +219,40 @@ def test_primary_forecast_with_24_future_hours_takes_precedence(tmp_path, monkey
             assert actual["predicted_price_eur_mwh"] == expected["predicted_price_eur_mwh"]
             assert actual["model_release"] == expected["model_release"]
             assert datetime.fromisoformat(actual["target_time"].replace("Z", "+00:00")) == datetime.fromisoformat(expected["target_time"])
+
+
+@pytest.mark.parametrize("path", [
+    None,
+    "/srv/powerflow/production-published/fallback/current.json",
+    "/srv/powerflow/production-published/fallback/other.json",
+    "/srv/powerflow/price-only-forecast/current.json",
+    "/tmp/fallback/current.json",
+    "/srv/powerflow/production-published/fallback/../other/current.json",
+    "fallback/current.json",
+])
+def test_normal_production_entry_point_allows_only_isolated_fallback(monkeypatch, path):
+    from api.security import SecuritySettings
+    from api.runtime import RuntimeSettings
+    monkeypatch.setenv("POWERFLOW_API_DATA_ROOT", "/srv/powerflow/production-published/data/current")
+    monkeypatch.setenv("POWERFLOW_FORECAST_PUBLICATION_ROOT", "/srv/powerflow/production-published/forecast")
+    monkeypatch.setenv("POWERFLOW_OPERATIONAL_PUBLICATION_ROOT", "/srv/powerflow/production-published/operations")
+    monkeypatch.setenv("POWERFLOW_REALIZED_REPORT_ROOT", "/srv/powerflow/production-published/realized")
+    monkeypatch.setenv("POWERFLOW_PRICE_ONLY_FALLBACK", "true" if path else "false")
+    if path:
+        monkeypatch.setenv("POWERFLOW_PRICE_ONLY_FALLBACK_PATH", path)
+    else:
+        monkeypatch.delenv("POWERFLOW_PRICE_ONLY_FALLBACK_PATH", raising=False)
+    arguments = dict(
+        security_settings=SecuritySettings(
+            "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Fixture",
+            frozenset({"fixtureclient"}),
+        ),
+        runtime_settings=RuntimeSettings("production", ("testserver",)),
+    )
+    if path not in (None, "/srv/powerflow/production-published/fallback/current.json"):
+        with pytest.raises(ValueError, match="Production publication"):
+            create_app(**arguments)
+    else:
+        with TestClient(create_app(**arguments)) as client:
+            assert client.get("/health").status_code == 200
+            assert client.get("/auth/me").status_code == 401

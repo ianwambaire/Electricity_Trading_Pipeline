@@ -397,7 +397,9 @@ def test_stage_timing_records_success_failure_and_total(temporary_database, monk
     assert rows.iloc[0]["duration_seconds"] == 8.0
     summary = summarize_pipeline_timings(rows)
     assert summary["latest_total_seconds"] == 8.0
-    assert summary["slowest_stage"] in {"Gold validation", "Silver build"}
+    stages = rows.loc[rows["stage_name"] != "Total pipeline"]
+    slowest = stages.loc[stages["duration_seconds"].idxmax(), "stage_name"]
+    assert summary["slowest_stage"] == slowest
     assert summary["recent_average_seconds"] is None
 
 

@@ -23,7 +23,7 @@ from api.model_summaries import model_summaries
 from models.realized_reporting import build as build_realized
 from shared import forecast_availability, forecast_publication, operational_capture, operational_evidence
 from shared import operational_evidence_store, realized_report_store
-from shared.operational_evidence_producer import latest_natural
+from shared.operational_scheduling import latest_natural, natural
 
 # These three already-reviewed tools are copied from a pinned Git revision.
 import automatic
@@ -289,6 +289,8 @@ def load_evidence_reader():
     require(hashlib.sha256(raw).hexdigest() == EVIDENCE_READER_SHA256, 'EVIDENCE_READER_HASH')
     namespace = {'__name__': 'shared.production_evidence_reader', '__package__': 'shared'}
     exec(compile(raw, str(path), 'exec'), namespace)
+    # Keep the archived receipt adapter, with the shared scheduler-time checks.
+    namespace['natural'] = natural
     return namespace['from_snapshot']
 
 

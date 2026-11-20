@@ -12,6 +12,8 @@ import uuid
 UTC = dt.timezone.utc
 MAX_BYTES = 16384
 MAX_AGE = dt.timedelta(minutes=90)
+# Prefect can dispatch a scheduled run just before the nominal boundary.
+SCHEDULER_START_TOLERANCE = dt.timedelta(seconds=1)
 EXECUTIONS = {'SCHEDULED', 'PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'CRASHED'}
 INFERENCES = {'NOT_RUN', 'GENERATED', 'UNCHANGED', 'WITHHELD', 'UNAVAILABLE', 'FAILED', 'UNKNOWN'}
 DELIVERIES = {'NOT_RUN', 'PUBLISHED', 'SKIPPED_WITHHELD', 'SKIPPED_EXPIRED',
@@ -110,9 +112,9 @@ def _validate(raw, digest, now):
     completed = timestamp(e['completed_at']) if e['completed_at'] is not None else None
     require(scheduled <= observed <= now, 'TIMELINE')
     if started is not None:
-        require(scheduled <= started <= observed, 'TIMELINE')
+        require(scheduled - SCHEDULER_START_TOLERANCE <= started <= observed, 'TIMELINE')
     if completed is not None:
-        require((started or scheduled) <= completed <= observed, 'TIMELINE')
+        require(max(started or scheduled, scheduled) <= completed <= observed, 'TIMELINE')
     if e['outcome'] in {'SCHEDULED', 'PENDING'}:
         require(started is None and completed is None and i['outcome'] == d['outcome'] == 'NOT_RUN', 'TIMELINE')
     elif e['outcome'] == 'RUNNING':

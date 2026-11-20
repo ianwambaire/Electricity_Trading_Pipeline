@@ -44,3 +44,52 @@ def writer(monkeypatch):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(scope="module")
+def frozen_operational_contract():
+    """Build historical helpers against their original, hash-pinned contract."""
+    def bind(builder, manifest):
+        original_read = builder.read
+        source = PROJECT_ROOT / "src/shared/operational_evidence.py"
+        fixture = PROJECT_ROOT / "tests/fixtures/operational_evidence_v1.py.txt"
+        expected = manifest["config"]["files"]["helper/shared/operational_evidence.py"]
+
+        def read(path, limit=4 * 1024 * 1024):
+            if Path(path) == source:
+                raw = original_read(fixture, limit)
+                assert builder.sha(raw) == expected["sha256"]
+                assert len(raw) == expected["bytes"]
+                return raw
+            return original_read(path, limit)
+
+        builder.read = read
+    return bind
+
+
+@pytest.fixture(scope="module", autouse=True)
+def frozen_helper_builders(request, frozen_operational_contract):
+    """Keep archived builder tests and their pinned test files unchanged."""
+    names = {
+        "test_operational_capture_helper_release",
+        "test_operational_capture_helper_release_v2",
+    }
+    if request.module.__name__ not in names:
+        yield
+        return
+
+    import json
+    original_load = request.module.load
+    manifest = json.loads(
+        (PROJECT_ROOT / "deploy/staging/operational-evidence-release-v5/MANIFEST.json").read_bytes()
+    )
+
+    def load(name, extra=None):
+        module = original_load(name, extra)
+        if name == "build":
+            frozen_operational_contract(module, manifest)
+        return module
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(request.module, "load", load)
+        yield

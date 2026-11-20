@@ -115,8 +115,12 @@ class ForecastPublication(StrictResponseModel):
     issue_time: datetime
     expires_at: datetime
     completed_at: datetime
-    availability_policy: Literal['ISSUE_HORIZON_V1', 'PRICE_ONLY_FALLBACK_V1'] | None = None
+    availability_policy: Literal['ISSUE_HORIZON_V1', 'PRICE_ONLY_FALLBACK_V1', 'LATEST_PRICE_HISTORY_V1'] | None = None
     refresh_due_at: datetime | None = None
+    source_latest_at: datetime | None = None
+    source_age_seconds: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    source_snapshot_at: datetime | None = None
+    source_sha256: str | None = None
 
 
 class Next24ForecastResponse(StrictResponseModel):
@@ -489,6 +493,22 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
     def pipeline_status() -> PipelineStatusResponse:
         return _latest_pipeline_status(configured.operational_database)
 
+    def available_fallback(selection):
+        if configured.price_only_fallback_path is None:
+            return None
+        now = datetime.now(timezone.utc)
+        if selection.bundle is not None and all(
+            datetime.fromisoformat(row["target_time"].replace("Z", "+00:00")) > now
+            for row in selection.bundle["forecasts"]
+        ):
+            return None
+        from shared.price_only_forecast import CACHED_HISTORY_POLICY, read_snapshot
+        fallback = read_snapshot(configured.price_only_fallback_path, now)
+        if fallback is not None and (selection.status in {"EXPIRED", "MISSING_PUBLICATION"}
+                                     or fallback['availability_policy'] == CACHED_HISTORY_POLICY):
+            return fallback
+        return None
+
     @application.get("/forecast/next24", response_model=Next24ForecastResponse, response_model_exclude_none=True)
     def next24_forecast(response: Response) -> Next24ForecastResponse:
         response.headers["Cache-Control"] = "no-store"
@@ -497,24 +517,27 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
         from shared.forecast_publication import time as publication_time, MAX_AGE
         from shared.forecast_availability import SERVING_HORIZON, AVAILABILITY_POLICY
         selection = select_publication(configured.next24_publication_root)
-        if selection.status in {"EXPIRED", "MISSING_PUBLICATION"} and configured.price_only_fallback_path is not None:
-            from shared.price_only_forecast import MODEL_RELEASE, load
-            fallback = load(configured.price_only_fallback_path, datetime.now(timezone.utc))
-            if fallback is not None:
-                issue, completed, expiry, values = fallback
-                return Next24ForecastResponse(
-                    row_count=24,
-                    forecasts=[
-                        Next24ForecastRow(issue_time=issue, target_time=issue + timedelta(hours=horizon),
-                                          horizon_hours=horizon, predicted_price_eur_mwh=value,
-                                          model_release=MODEL_RELEASE)
-                        for horizon, value in enumerate(values, 1)
-                    ],
-                    publication=ForecastPublication(
-                        status="VALID", issue_time=issue, completed_at=completed,
-                        expires_at=expiry, availability_policy="PRICE_ONLY_FALLBACK_V1",
-                    ),
-                )
+        fallback = available_fallback(selection)
+        if fallback is not None:
+            from shared.price_only_forecast import MODEL_RELEASE
+            issue, completed, expiry, values = fallback['forecast']
+            return Next24ForecastResponse(
+                row_count=24,
+                forecasts=[
+                    Next24ForecastRow(issue_time=issue, target_time=issue + timedelta(hours=horizon),
+                                      horizon_hours=horizon, predicted_price_eur_mwh=value,
+                                      model_release=MODEL_RELEASE)
+                    for horizon, value in enumerate(values, 1)
+                ],
+                publication=ForecastPublication(
+                    status="VALID", issue_time=issue, completed_at=completed,
+                    expires_at=expiry, availability_policy=fallback['availability_policy'],
+                    source_latest_at=fallback.get('source_latest_at'),
+                    source_age_seconds=fallback.get('source_age_seconds'),
+                    source_snapshot_at=fallback.get('source_snapshot_at'),
+                    source_sha256=fallback.get('source_sha256'),
+                ),
+            )
         bundle = selection.require_valid()
         issue = publication_time(bundle["forecasts"][0]["issue_time"])
         return Next24ForecastResponse(row_count=24, forecasts=bundle["forecasts"], publication=ForecastPublication(
@@ -593,7 +616,16 @@ def create_app(settings: APISettings | None = None, *, security_settings: Securi
                 recorded = operations_summary(configured)
             except HTTPException:
                 recorded = unavailable_operations()
-            return selected.operations(recorded)
+            result = selected.operations(recorded)
+            fallback = available_fallback(selected)
+            if fallback is not None:
+                result = result.model_copy(update={
+                    "products": [item.model_copy(update={"status": "available"})
+                                 if item.product == "24-hour predictions" else item
+                                 for item in result.products],
+                    "forecast_reason": result.forecast_reason + " A seasonal fallback forecast is available using collected price history.",
+                })
+            return result
         issue, invalid = None, False
         try:
             issue = _next24_report(configured.next24_forecast).forecasts[0].issue_time

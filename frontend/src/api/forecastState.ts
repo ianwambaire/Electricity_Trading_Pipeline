@@ -10,6 +10,10 @@ export function classifyForecast(report: ForecastReport<Next24Row> | null, pipel
     const issue = Date.parse(report.publication.issue_time), expires = Date.parse(report.publication.expires_at)
     if (now < issue || now >= expires) return {label: 'WITHHELD', description: 'This forecast publication has expired or is not yet eligible.'}
     const remaining = report.forecasts.filter(row => Date.parse(row.target_time) > now).length
+    if (report.publication.availability_policy === 'LATEST_PRICE_HISTORY_V1') {
+      const ageHours = (now - Date.parse(report.publication.source_latest_at!)) / 3600000
+      return {label: 'Seasonal fallback forecast', description: `Estimates use the latest collected price history. Input data ends ${formatTime(report.publication.source_latest_at)} (${ageHours.toFixed(1)} hours old). ${remaining} of 24 forecast hours are still ahead.`}
+    }
     if (report.forecasts[0]?.model_release === PRICE_ONLY_FALLBACK_RELEASE) {
       return {label: 'Live fallback forecast', description: `Price-only estimates from the previous 14 days. ${remaining} of 24 forecast hours are still ahead.`}
     }

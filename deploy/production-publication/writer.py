@@ -1,9 +1,10 @@
-"""One-way production publication from persisted producer evidence. No inference."""
+"""Publish producer evidence and cache seasonal fallback price statistics."""
 import contextlib
 import datetime as dt
 import fcntl
 import hashlib
 import http.client
+import io
 import json
 import os
 from pathlib import Path
@@ -23,6 +24,7 @@ from api.model_summaries import model_summaries
 from models.realized_reporting import build as build_realized
 from shared import forecast_availability, forecast_publication, operational_capture, operational_evidence
 from shared import operational_evidence_store, realized_report_store
+from shared import price_only_forecast
 from shared.operational_scheduling import latest_natural, natural
 
 # These three already-reviewed tools are copied from a pinned Git revision.
@@ -67,6 +69,28 @@ def require(ok, code):
 
 def utcnow():
     return dt.datetime.now(dt.timezone.utc)
+
+
+def publish_fallback(source, root, owner):
+    raw = read_input(source, PRICE, owner)
+    snapshot = price_only_forecast.build_cached_history(io.BytesIO(raw), utcnow())
+    if snapshot is None:
+        return 'NO_USABLE_HISTORY'
+    directory = root / 'fallback'
+    directory.mkdir(mode=0o2750, exist_ok=True)
+    info = directory.lstat()
+    require(stat.S_ISDIR(info.st_mode) and directory.resolve() == directory
+            and info.st_uid == os.geteuid() and not info.st_mode & 0o022,
+            'FALLBACK_DIRECTORY')
+    pending = directory / ('.next-' + uuid.uuid4().hex)
+    try:
+        write(pending, json.dumps(snapshot, sort_keys=True, allow_nan=False).encode())
+        pending.chmod(0o640)
+        os.replace(pending, directory / 'current.json')
+        syncdir(directory)
+    finally:
+        pending.unlink(missing_ok=True)
+    return 'UPDATED'
 
 
 def syncdir(path):
@@ -449,6 +473,11 @@ def main():
     descriptor = os.open(ROOT / '.writer.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, 'rb') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        try:
+            fallback_status = publish_fallback(SOURCE, ROOT, 1000)
+        except (OSError, ValueError):
+            fallback_status = 'RETAINED_PREVIOUS_CACHE'
+        print(json.dumps({'seasonal_fallback': fallback_status}), flush=True)
         run(SOURCE, ROOT, 1000)
 
 

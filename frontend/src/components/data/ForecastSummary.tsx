@@ -31,6 +31,11 @@ export function ForecastSummary({ report, pipeline, errorCode, children }: { err
       ...(visibleReport?.publication ? [
         [first.model_release === PRICE_ONLY_FALLBACK_RELEASE ? 'Forecast completed' : 'Inference completed', formatTime(visibleReport.publication.completed_at)],
         [visibleReport.publication.availability_policy === 'ISSUE_HORIZON_V1' ? 'Forecast horizon expiry' : 'Freshness cutoff', formatTime(visibleReport.publication.expires_at)],
+        ...(visibleReport.publication.source_latest_at ? [
+          ['Input data through', formatTime(visibleReport.publication.source_latest_at)],
+          ['Input age at calculation · hours', (visibleReport.publication.source_age_seconds! / 3600).toFixed(1)],
+          ['Seasonal statistics calculated', formatTime(visibleReport.publication.source_snapshot_at)],
+        ] : []),
         ...(visibleReport.publication.refresh_due_at ? [['Refresh expected by',formatTime(visibleReport.publication.refresh_due_at)]] : []),
       ] as [string,string][] : []),
       ['Target start', formatTime(first.target_time)], ['Target end', formatTime(visibleReport.forecasts.at(-1)!.target_time)],

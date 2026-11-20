@@ -89,3 +89,27 @@ test('historical comparison client requests a bounded latest-500 page', async ()
     assert.equal((await api.oneHour()).row_count, 1)
   } finally { globalThis.fetch = original }
 })
+
+test('latest-history fallback exposes input age and validates its current forecast horizon', () => {
+  const forecasts = fixture.forecasts.map(row => ({...row, model_release:'fallback-price-only-seasonal-median-v1'}))
+  const publication = {
+    status:'VALID', issue_time:new Date(issue).toISOString(),
+    completed_at:new Date(issue+5*60000).toISOString(),
+    expires_at:new Date(issue+3600000).toISOString(),
+    availability_policy:'LATEST_PRICE_HISTORY_V1',
+    source_latest_at:new Date(issue-48*3600000).toISOString(),
+    source_snapshot_at:new Date(issue-3600000).toISOString(),
+    source_age_seconds:48*3600+5*60,
+    source_sha256:'a'.repeat(64),
+  }
+  const report=parseNext24({...fixture,forecasts,publication})
+  assert.equal(report.publication?.source_latest_at,publication.source_latest_at)
+  const state=classifyForecast(report,pipeline,issue+5*60000)
+  assert.equal(state.label,'Seasonal fallback forecast')
+  assert.match(state.description,/48.1 hours old/)
+  for (const changed of [
+    {source_age_seconds:0}, {source_sha256:'invalid'},
+    {source_snapshot_at:new Date(issue+3600000).toISOString()},
+    {expires_at:new Date(issue+2*3600000).toISOString()},
+  ]) assert.throws(()=>parseNext24({...fixture,forecasts,publication:{...publication,...changed}}))
+})

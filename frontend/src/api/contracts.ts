@@ -2,7 +2,7 @@ export interface Health { status: string; application: string; timestamp_utc: st
 export interface PipelineStatus { latest_run_status: string; latest_run_timestamp: string; forecast_status: string | null }
 export interface Next24Row { issue_time: string; target_time: string; horizon_hours: number; predicted_price_eur_mwh: number; model_release: string }
 export interface OneHourRow { target_time: string; actual_price_eur_mwh: number; predicted_price_eur_mwh: number }
-export interface ForecastPublication { status: 'VALID'; issue_time: string; expires_at: string; completed_at: string; availability_policy?: 'ISSUE_HORIZON_V1' | 'PRICE_ONLY_FALLBACK_V1'; refresh_due_at?: string }
+export interface ForecastPublication { status: 'VALID'; issue_time: string; expires_at: string; completed_at: string; availability_policy?: 'ISSUE_HORIZON_V1' | 'PRICE_ONLY_FALLBACK_V1' | 'LATEST_PRICE_HISTORY_V1'; refresh_due_at?: string; source_latest_at?: string; source_age_seconds?: number; source_snapshot_at?: string; source_sha256?: string }
 export interface ForecastReport<T> { row_count: number; forecasts: T[]; publication?: ForecastPublication }
 export interface VintageHealth { generated_at_utc: string; overall_status: string; sources: { source: string; status: string; latest_acquired_at_utc: string | null; expected_target_count: number|null; observed_target_count: number|null; missing_target_count: number|null; duplicate_identity_count: number|null; revision_count: number|null; consecutive_collection_failures: number|null; s3_sync_status: string|null }[] }
 export interface Readiness { generated_at_utc: string; dataset_status: string; distinct_issue_cycles: number; distinct_calendar_days: number; complete_issue_cycles: number; horizon_coverage_count: number; output_rows: number; duplicate_key_count: number|null; leakage_check_passed: boolean|null }
@@ -38,11 +38,16 @@ export function parseNext24(value: unknown): ForecastReport<Next24Row> {
     const issue = time(p.issue_time), expires = time(p.expires_at), completed = time(p.completed_at)
     const horizonPolicy = p.availability_policy === 'ISSUE_HORIZON_V1'
     const fallbackPolicy = p.availability_policy === 'PRICE_ONLY_FALLBACK_V1'
-    if (p.availability_policy != null && !horizonPolicy && !fallbackPolicy) throw new Error('Invalid publication policy')
+    const cachedHistoryPolicy = p.availability_policy === 'LATEST_PRICE_HISTORY_V1'
+    if (p.availability_policy != null && !horizonPolicy && !fallbackPolicy && !cachedHistoryPolicy) throw new Error('Invalid publication policy')
     const expectedExpiry = Date.parse(issue) + (horizonPolicy ? 24 : 3) * 3600000
     const expiry = Date.parse(expires)
     const completion = Date.parse(completed)
-    const validExpiry = fallbackPolicy
+    const validExpiry = cachedHistoryPolicy
+      ? rows[0].model_release === 'fallback-price-only-seasonal-median-v1'
+        && completion < Date.parse(issue) + 3600000
+        && expiry === Date.parse(issue) + 3600000
+      : fallbackPolicy
       ? rows[0].model_release === 'fallback-price-only-seasonal-median-v1'
         && completion < Date.parse(issue) + 3600000
         && expiry > completion && expiry <= Math.min(expectedExpiry, completion + 15 * 60000)
@@ -53,6 +58,16 @@ export function parseNext24(value: unknown): ForecastReport<Next24Row> {
     publication = {status: 'VALID', issue_time: issue, expires_at: expires, completed_at: completed}
     if (horizonPolicy) publication = {...publication, availability_policy:'ISSUE_HORIZON_V1', refresh_due_at:time(p.refresh_due_at)}
     if (fallbackPolicy) publication.availability_policy = 'PRICE_ONLY_FALLBACK_V1'
+    if (cachedHistoryPolicy) {
+      const latest = time(p.source_latest_at), snapshot = time(p.source_snapshot_at)
+      const age = number(p.source_age_seconds), digest = text(p.source_sha256)
+      if (Date.parse(latest) > Date.parse(snapshot) || Date.parse(snapshot) > completion
+        || Date.parse(latest) > Date.parse(issue) || age < 0
+        || Math.abs(age - (completion - Date.parse(latest)) / 1000) > 0.001
+        || !/^[a-f0-9]{64}$/.test(digest)) throw new Error('Invalid source history')
+      publication = {...publication, availability_policy:'LATEST_PRICE_HISTORY_V1',
+        source_latest_at:latest, source_age_seconds:age, source_snapshot_at:snapshot, source_sha256:digest}
+    }
   }
   return { row_count: 24, forecasts: rows, ...(publication ? {publication} : {}) }
 }
